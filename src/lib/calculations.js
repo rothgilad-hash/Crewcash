@@ -1,0 +1,100 @@
+export function getTotalParts(participants, isYachtCost) {
+  if (!isYachtCost) return participants.length
+  return participants.reduce((sum, p) => sum + (p.is_gil ? 2 : 1), 0)
+}
+
+export function calculateBalances(expenses, participants) {
+  const balances = {}
+  participants.forEach(p => { balances[p.id] = { paid: 0, owes: 0, net: 0, name: p.name, is_gil: p.is_gil } })
+
+  expenses.forEach(exp => {
+    const totalParts = getTotalParts(participants, exp.is_yacht_cost)
+    if (totalParts === 0) return
+    const partValue = exp.amount / totalParts
+
+    if (exp.paid_by && balances[exp.paid_by]) {
+      balances[exp.paid_by].paid += exp.amount
+    }
+
+    participants.forEach(p => {
+      const parts = (exp.is_yacht_cost && p.is_gil) ? 2 : 1
+      balances[p.id].owes += parts * partValue
+    })
+  })
+
+  Object.keys(balances).forEach(id => {
+    balances[id].net = Math.round((balances[id].paid - balances[id].owes) * 100) / 100
+  })
+
+  return balances
+}
+
+export function simplifyDebts(balances) {
+  const creditors = []
+  const debtors = []
+
+  Object.entries(balances).forEach(([id, b]) => {
+    if (b.net > 0.5) creditors.push({ id, amount: b.net, name: b.name })
+    else if (b.net < -0.5) debtors.push({ id, amount: -b.net, name: b.name })
+  })
+
+  const transactions = []
+
+  while (creditors.length > 0 && debtors.length > 0) {
+    creditors.sort((a, b) => b.amount - a.amount)
+    debtors.sort((a, b) => b.amount - a.amount)
+
+    const creditor = creditors[0]
+    const debtor = debtors[0]
+    const amount = Math.min(creditor.amount, debtor.amount)
+
+    transactions.push({
+      from: debtor.id,
+      fromName: debtor.name,
+      to: creditor.id,
+      toName: creditor.name,
+      amount: Math.round(amount)
+    })
+
+    creditor.amount -= amount
+    debtor.amount -= amount
+
+    if (creditor.amount < 0.5) creditors.shift()
+    if (debtor.amount < 0.5) debtors.shift()
+  }
+
+  return transactions
+}
+
+export function formatCurrency(amount, currency = 'ILS') {
+  const symbols = { ILS: '₪', EUR: '€', USD: '$' }
+  const sym = symbols[currency] || currency
+  return `${sym}${Math.abs(amount).toLocaleString('he-IL', { maximumFractionDigits: 0 })}`
+}
+
+export function getCategoryIcon(cat) {
+  const icons = {
+    yacht: '⛵', fuel: '⛽', food: '🍽️', supermarket: '🛒',
+    alcohol: '🍷', transport: '🚕', activities: '🏊', gear: '🎒',
+    accommodation: '🏨', health: '💊', other: '💰'
+  }
+  return icons[cat] || '💰'
+}
+
+export function getLeaderboard(expenses, participants) {
+  const stats = {}
+  participants.forEach(p => {
+    stats[p.id] = { name: p.name, totalPaid: 0, alcoholSpend: 0, foodSpend: 0, expenseCount: 0 }
+  })
+
+  expenses.forEach(exp => {
+    if (exp.paid_by && stats[exp.paid_by]) {
+      stats[exp.paid_by].totalPaid += exp.amount
+      stats[exp.paid_by].expenseCount += 1
+      if (exp.category === 'alcohol') stats[exp.paid_by].alcoholSpend += exp.amount
+      if (exp.category === 'food') stats[exp.paid_by].foodSpend += exp.amount
+    }
+  })
+
+  return Object.values(stats)
+}

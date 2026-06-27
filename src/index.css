@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: #F9FAFB;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+    touch-action: pan-y;
+  }
+
+  /* Prevent iOS zoom on input focus — must be at least 16px */
+  input, select, textarea {
+    font-family: inherit;
+    font-size: 16px !important;
+  }
+
+  /* Remove iOS input styling */
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  input[type="email"],
+  select,
+  textarea {
+    -webkit-appearance: none;
+    appearance: none;
+    border-radius: 12px;
+  }
+
+  /* Better tap feedback */
+  button, a {
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
+@layer utilities {
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection color */
+::selection {
+  background-color: #DBEAFE;
+  color: #1E40AF;
+}

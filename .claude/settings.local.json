@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/chenr/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/c363a503-b634-44c7-b7bf-0572999952b9/0d8b445c-4ced-479a-9750-d84bd14d4a14/skills/xlsx/**)",
+      "Bash(python -c ' *)",
+      "PowerShell(python -c \"import pandas as pd; path = r'C:\\\\Users\\\\chenr\\\\Desktop\\\\������ ����-2026.xlsx'; sheets = pd.read_excel\\(path, sheet_name=None, header=None\\); [print\\(f'=== {n} ===\\\\n{df.to_string\\(\\)}\\\\n'\\) for n,df in sheets.items\\(\\)]\")",
+      "PowerShell(python3 --version 2>&1)",
+      "PowerShell(py --version 2>&1)",
+      "PowerShell(python3 -c \"import openpyxl; wb = openpyxl.load_workbook\\(r'C:\\\\Users\\\\chenr\\\\Desktop\\\\������ ����-2026.xlsx'\\); print\\('Sheets:', wb.sheetnames\\)\")",
+      "PowerShell(python3 -c \"print\\('hello'\\)\" 2>&1)",
+      "mcp__Claude_Preview__preview_start"
+    ]
+  }
+}
