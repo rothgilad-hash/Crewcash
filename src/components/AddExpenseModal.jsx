@@ -157,20 +157,6 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
           </div>
         )}
 
-        {/* Paid by */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">{t('paidBy')}</label>
-          <select
-            className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500 text-gray-900 bg-white transition-colors"
-            value={form.paid_by}
-            onChange={e => set('paid_by', e.target.value)}
-          >
-            <option value="">— {t('paidBy')} —</option>
-            {participants.map(p => (
-              <option key={p.id} value={p.id}>{p.name}{p.is_gil ? ' ⭐' : ''}</option>
-            ))}
-          </select>
-        </div>
 
         {/* Toggles */}
         <div className="space-y-1">

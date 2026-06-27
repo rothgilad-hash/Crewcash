@@ -4,7 +4,7 @@ import { useApp } from '../context/AppContext'
 import { calculateBalances, formatCurrency } from '../lib/calculations'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
-import { Plus, Star, Trash2 } from 'lucide-react'
+import { Plus, Star, Trash2, CheckCircle2, Circle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316']
@@ -32,6 +32,10 @@ export default function Participants() {
     const msg = isHe ? `למחוק את ${name}?` : `Delete ${name}?`
     if (!window.confirm(msg)) return
     await supabase.from('participants').delete().eq('id', id)
+  }
+
+  const togglePaid = async (id, current) => {
+    await supabase.from('participants').update({ has_paid_economist: !current }).eq('id', id)
   }
 
   return (
@@ -84,19 +88,36 @@ export default function Participants() {
                     </div>
                   </div>
 
-                  {/* Net + delete */}
+                  {/* Net + actions */}
                   <div className="flex flex-col items-end gap-2 flex-shrink-0">
                     <p className={`text-lg font-black ${isPos ? 'text-emerald-600' : 'text-red-500'}`}>
                       {isPos ? '+' : ''}{formatCurrency(b.net, 'EUR')}
                     </p>
-                    {isAdmin && (
-                      <button
-                        onClick={() => handleDelete(p.id, p.name)}
-                        className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-300 active:text-red-400 active:bg-red-50 transition-colors"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {isAdmin && (
+                        <button
+                          onClick={() => togglePaid(p.id, p.has_paid_economist)}
+                          className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold transition-colors ${
+                            p.has_paid_economist
+                              ? 'bg-emerald-100 text-emerald-600'
+                              : 'bg-gray-100 text-gray-400 active:bg-gray-200'
+                          }`}
+                        >
+                          {p.has_paid_economist
+                            ? <><CheckCircle2 size={13} /> {isHe ? 'שילם' : 'Paid'}</>
+                            : <><Circle size={13} /> {isHe ? 'טרם שילם' : 'Pending'}</>
+                          }
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleDelete(p.id, p.name)}
+                          className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-300 active:text-red-400 active:bg-red-50 transition-colors"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </motion.div>
