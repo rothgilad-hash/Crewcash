@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
@@ -18,16 +18,27 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
   const { trip, participants } = useApp()
   const [form, setForm] = useState(defaultForm)
   const [saving, setSaving] = useState(false)
+  const autoFilledDesc = useRef(false)
 
   useEffect(() => {
     if (expense) {
       setForm({ ...defaultForm, ...expense, amount: expense.amount?.toString() || '', paid_by: expense.paid_by || '' })
+      autoFilledDesc.current = false
     } else {
       setForm(defaultForm)
+      autoFilledDesc.current = false
     }
   }, [expense, open])
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const selectCategory = (cat) => {
+    setForm(f => {
+      const desc = (!f.description || autoFilledDesc.current) ? t('cat_' + cat) : f.description
+      autoFilledDesc.current = true
+      return { ...f, category: cat, description: desc }
+    })
+  }
 
   const handleSave = async () => {
     if (!form.description || !form.amount) return
@@ -72,7 +83,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
             className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500 text-gray-900 bg-white transition-colors"
             placeholder={t('description')}
             value={form.description}
-            onChange={e => set('description', e.target.value)}
+            onChange={e => { autoFilledDesc.current = false; set('description', e.target.value) }}
           />
         </div>
 
@@ -108,7 +119,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
             {CATEGORIES.map(cat => (
               <button
                 key={cat}
-                onClick={() => set('category', cat)}
+                onClick={() => selectCategory(cat)}
                 className={`flex flex-col items-center gap-1 p-3 rounded-2xl border-2 transition-all active:scale-95 ${
                   form.category === cat
                     ? 'border-blue-500 bg-blue-50'
