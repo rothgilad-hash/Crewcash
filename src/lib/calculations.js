@@ -7,18 +7,16 @@ export function calculateBalances(expenses, participants) {
   const balances = {}
   participants.forEach(p => { balances[p.id] = { paid: 0, owes: 0, net: 0, name: p.name, is_gil: p.is_gil } })
 
-  expenses.forEach(exp => {
-    const totalParts = getTotalParts(participants, exp.is_yacht_cost)
+  // Yacht costs are pre-paid directly to the company — exclude from economist's collection
+  const collectableExpenses = expenses.filter(e => !e.is_yacht_cost)
+
+  collectableExpenses.forEach(exp => {
+    const totalParts = participants.length
     if (totalParts === 0) return
     const partValue = exp.amount / totalParts
 
-    if (exp.paid_by && balances[exp.paid_by]) {
-      balances[exp.paid_by].paid += exp.amount
-    }
-
     participants.forEach(p => {
-      const parts = (exp.is_yacht_cost && p.is_gil) ? 2 : 1
-      balances[p.id].owes += parts * partValue
+      balances[p.id].owes += partValue
     })
   })
 
