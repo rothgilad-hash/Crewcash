@@ -5,12 +5,13 @@ import { useApp } from '../context/AppContext'
 import { getCategoryIcon } from '../lib/calculations'
 import Modal from './Modal'
 
-const CATEGORIES = ['yacht', 'fuel', 'food', 'supermarket', 'alcohol', 'transport', 'activities', 'gear', 'accommodation', 'health', 'other']
+const CATEGORIES = ['yacht', 'fuel', 'food', 'supermarket', 'alcohol', 'transport', 'activities', 'gear', 'accommodation', 'health', 'insurance', 'other']
+const INSURANCE_SUBCATEGORIES = ['insurance_main', 'insurance_deductible']
 const CURRENCIES = ['ILS', 'EUR', 'USD']
 
 const defaultForm = {
   description: '', amount: '', currency: 'EUR', category: 'other',
-  paid_by: '', is_yacht_cost: false, is_cash: false, notes: ''
+  sub_category: '', paid_by: '', is_yacht_cost: false, is_cash: false, notes: ''
 }
 
 export default function AddExpenseModal({ open, onClose, expense = null }) {
@@ -36,7 +37,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
     setForm(f => {
       const desc = (!f.description || autoFilledDesc.current) ? t('cat_' + cat) : f.description
       autoFilledDesc.current = true
-      return { ...f, category: cat, description: desc }
+      return { ...f, category: cat, sub_category: cat === 'insurance' ? 'insurance_main' : '', description: desc }
     })
   }
 
@@ -49,6 +50,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
       amount: parseFloat(form.amount),
       currency: form.currency,
       category: form.category,
+      sub_category: form.sub_category || null,
       paid_by: form.paid_by || null,
       is_yacht_cost: form.is_yacht_cost,
       is_cash: form.is_cash,
@@ -132,6 +134,28 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
             ))}
           </div>
         </div>
+
+        {/* Insurance sub-category */}
+        {form.category === 'insurance' && (
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{t('subCategory')}</label>
+            <div className="flex gap-3">
+              {INSURANCE_SUBCATEGORIES.map(sub => (
+                <button
+                  key={sub}
+                  onClick={() => set('sub_category', sub)}
+                  className={`flex-1 py-3 rounded-2xl border-2 text-sm font-semibold transition-all active:scale-95 ${
+                    form.sub_category === sub
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 bg-white text-gray-600'
+                  }`}
+                >
+                  {t('subcat_' + sub)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Paid by */}
         <div>

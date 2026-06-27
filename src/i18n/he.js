@@ -71,7 +71,12 @@ export default {
     cat_gear: 'ציוד',
     cat_accommodation: 'לינה',
     cat_health: 'בריאות',
+    cat_insurance: 'ביטוח',
     cat_other: 'אחר',
+
+    subcat_insurance_main: 'ביטוח ראשי',
+    subcat_insurance_deductible: 'הקטנת השתתפות עצמית',
+    subCategory: 'סוג ביטוח',
 
     // Participants
     addParticipant: 'הוסף משתתף',

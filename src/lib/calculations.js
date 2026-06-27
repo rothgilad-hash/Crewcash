@@ -76,7 +76,7 @@ export function getCategoryIcon(cat) {
   const icons = {
     yacht: '⛵', fuel: '⛽', food: '🍽️', supermarket: '🛒',
     alcohol: '🍷', transport: '🚕', activities: '🏊', gear: '🎒',
-    accommodation: '🏨', health: '💊', other: '💰'
+    accommodation: '🏨', health: '💊', insurance: '🛡️', other: '💰'
   }
   return icons[cat] || '💰'
 }

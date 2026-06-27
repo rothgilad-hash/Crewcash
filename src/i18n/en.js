@@ -66,7 +66,12 @@ export default {
     cat_gear: 'Gear',
     cat_accommodation: 'Accommodation',
     cat_health: 'Health',
+    cat_insurance: 'Insurance',
     cat_other: 'Other',
+
+    subcat_insurance_main: 'Main Insurance',
+    subcat_insurance_deductible: 'Deductible Reduction',
+    subCategory: 'Insurance Type',
 
     addParticipant: 'Add Participant',
     participantName: 'Name',
