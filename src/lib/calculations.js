@@ -17,15 +17,30 @@ export function calculateBalances(expenses, participants) {
     })
   }
 
-  // Yacht — only late joiners owe their share to the economist
+  // Yacht adjustments for late joiners
   const yachtTotal = expenses.filter(e => e.is_yacht_cost).reduce((s, e) => s + e.amount, 0)
   if (yachtTotal > 0) {
-    const yachtParts = participants.reduce((sum, p) => sum + (p.is_gil ? 2 : 1), 0)
-    if (yachtParts > 0) {
-      participants.filter(p => p.joined_late).forEach(p => {
-        const parts = p.is_gil ? 2 : 1
-        balances[p.id].owes += (parts / yachtParts) * yachtTotal
-      })
+    const existing = participants.filter(p => !p.joined_late)
+    const late = participants.filter(p => p.joined_late)
+
+    if (late.length > 0) {
+      const oldParts = existing.reduce((sum, p) => sum + (p.is_gil ? 2 : 1), 0)
+      const newParts = participants.reduce((sum, p) => sum + (p.is_gil ? 2 : 1), 0)
+
+      if (oldParts > 0 && newParts > 0) {
+        // Existing members get a reduction — they overpaid their yacht share
+        existing.forEach(p => {
+          const parts = p.is_gil ? 2 : 1
+          const overpayment = yachtTotal * parts * (1 / oldParts - 1 / newParts)
+          balances[p.id].owes -= overpayment
+        })
+
+        // Late joiners owe their yacht share to the economist
+        late.forEach(p => {
+          const parts = p.is_gil ? 2 : 1
+          balances[p.id].owes += (parts / newParts) * yachtTotal
+        })
+      }
     }
   }
 
