@@ -5,20 +5,29 @@ export function getTotalParts(participants, isYachtCost) {
 
 export function calculateBalances(expenses, participants) {
   const balances = {}
-  participants.forEach(p => { balances[p.id] = { paid: 0, owes: 0, net: 0, name: p.name, is_gil: p.is_gil } })
+  participants.forEach(p => { balances[p.id] = { paid: 0, owes: 0, net: 0, name: p.name, is_gil: p.is_gil, joined_late: p.joined_late } })
 
-  // Yacht costs are pre-paid directly to the company — exclude from economist's collection
-  const collectableExpenses = expenses.filter(e => !e.is_yacht_cost)
-
-  collectableExpenses.forEach(exp => {
-    const totalParts = participants.length
-    if (totalParts === 0) return
-    const partValue = exp.amount / totalParts
-
-    participants.forEach(p => {
-      balances[p.id].owes += partValue
+  // Running expenses — split equally among all participants
+  const runningExpenses = expenses.filter(e => !e.is_yacht_cost)
+  const totalParts = participants.length
+  if (totalParts > 0) {
+    runningExpenses.forEach(exp => {
+      const partValue = exp.amount / totalParts
+      participants.forEach(p => { balances[p.id].owes += partValue })
     })
-  })
+  }
+
+  // Yacht — only late joiners owe their share to the economist
+  const yachtTotal = expenses.filter(e => e.is_yacht_cost).reduce((s, e) => s + e.amount, 0)
+  if (yachtTotal > 0) {
+    const yachtParts = participants.reduce((sum, p) => sum + (p.is_gil ? 2 : 1), 0)
+    if (yachtParts > 0) {
+      participants.filter(p => p.joined_late).forEach(p => {
+        const parts = p.is_gil ? 2 : 1
+        balances[p.id].owes += (parts / yachtParts) * yachtTotal
+      })
+    }
+  }
 
   Object.keys(balances).forEach(id => {
     balances[id].net = Math.round((balances[id].paid - balances[id].owes) * 100) / 100

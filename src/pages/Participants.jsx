@@ -13,7 +13,7 @@ export default function Participants() {
   const { t } = useTranslation()
   const { trip, participants, expenses, isAdmin, lang } = useApp()
   const [modalOpen, setModalOpen] = useState(false)
-  const [form, setForm] = useState({ name: '', is_gil: false })
+  const [form, setForm] = useState({ name: '', is_gil: false, joined_late: false })
   const [saving, setSaving] = useState(false)
   const isHe = lang === 'he'
 
@@ -22,8 +22,8 @@ export default function Participants() {
   const handleAdd = async () => {
     if (!form.name.trim()) return
     setSaving(true)
-    await supabase.from('participants').insert({ trip_id: trip.id, name: form.name.trim(), is_gil: form.is_gil })
-    setForm({ name: '', is_gil: false })
+    await supabase.from('participants').insert({ trip_id: trip.id, name: form.name.trim(), is_gil: form.is_gil, joined_late: form.joined_late })
+    setForm({ name: '', is_gil: false, joined_late: false })
     setModalOpen(false)
     setSaving(false)
   }
@@ -75,6 +75,7 @@ export default function Participants() {
                     <div className="flex items-center gap-1.5 mb-2">
                       <p className="font-bold text-gray-900 text-base">{p.name}</p>
                       {p.is_gil && <Star size={15} className="text-amber-400 fill-amber-400 flex-shrink-0" />}
+                      {p.joined_late && <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">⏰ {isHe ? 'מאוחר' : 'late'}</span>}
                     </div>
                     <div className="flex gap-3 text-sm">
                       <div className="bg-emerald-50 rounded-xl px-2.5 py-1">
@@ -158,6 +159,19 @@ export default function Participants() {
                 onChange={e => setForm(f => ({ ...f, is_gil: e.target.checked }))} />
               <div className={`w-11 h-6 rounded-full transition-colors ${form.is_gil ? 'bg-amber-400' : 'bg-gray-200'}`} />
               <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.is_gil ? 'translate-x-5' : ''}`} />
+            </div>
+          </label>
+
+          <label className="flex items-center justify-between py-4 px-4 bg-orange-50 border border-orange-200 rounded-2xl cursor-pointer active:bg-orange-100 transition-colors">
+            <div>
+              <p className="font-semibold text-gray-800 text-sm">⏰ {isHe ? 'הצטרף מאוחר' : 'Late joiner'}</p>
+              <p className="text-gray-400 text-xs mt-0.5">{isHe ? 'חייב גם חלקו ביאכטה דרך הקופה' : 'Owes yacht share through economist'}</p>
+            </div>
+            <div className="relative ms-3 flex-shrink-0">
+              <input type="checkbox" className="sr-only" checked={form.joined_late}
+                onChange={e => setForm(f => ({ ...f, joined_late: e.target.checked }))} />
+              <div className={`w-11 h-6 rounded-full transition-colors ${form.joined_late ? 'bg-orange-400' : 'bg-gray-200'}`} />
+              <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.joined_late ? 'translate-x-5' : ''}`} />
             </div>
           </label>
 
