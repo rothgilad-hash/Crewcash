@@ -18,7 +18,6 @@ export default function Expenses() {
 
   const filtered = filter === 'all' ? expenses : expenses.filter(e => e.category === filter)
   const total = filtered.reduce((s, e) => s + e.amount, 0)
-  const getParticipantName = (id) => participants.find(p => p.id === id)?.name || '—'
 
   const openEdit = (exp) => {
     if (!isAdmin) return
@@ -29,87 +28,88 @@ export default function Expenses() {
   }
 
   return (
-    <div className="flex flex-col" style={{ minHeight: 'calc(100dvh - 130px)' }}>
+    <div className="flex" style={{ minHeight: 'calc(100dvh - 130px)' }}>
 
-      {/* Vertical filter list */}
-      <div className="bg-white border-b border-gray-100 sticky top-14 z-30">
-        <div className="flex flex-wrap gap-2 px-4 py-3">
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setFilter(cat)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all active:scale-95 ${
-                filter === cat
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-600 active:bg-gray-200'
-              }`}
-            >
-              {cat !== 'all' && <span className="text-base">{getCategoryIcon(cat)}</span>}
+      {/* Vertical category sidebar */}
+      <div className="w-[72px] flex-shrink-0 bg-white border-e border-gray-100 overflow-y-auto sticky top-14 self-start" style={{ maxHeight: 'calc(100dvh - 130px)' }}>
+        {CATEGORIES.map(cat => (
+          <button
+            key={cat}
+            onClick={() => setFilter(cat)}
+            className={`w-full flex flex-col items-center justify-center gap-1 py-3 px-1 transition-all active:scale-95 border-b border-gray-50 ${
+              filter === cat
+                ? 'bg-blue-50 text-blue-600'
+                : 'text-gray-400 active:bg-gray-50'
+            }`}
+          >
+            <span className="text-xl leading-none">
+              {cat === 'all' ? '📋' : getCategoryIcon(cat)}
+            </span>
+            <span className={`text-[9px] font-semibold leading-tight text-center line-clamp-2 ${filter === cat ? 'text-blue-600' : 'text-gray-400'}`}>
               {cat === 'all' ? (isHe ? 'הכל' : 'All') : t('cat_' + cat)}
-            </button>
-          ))}
-        </div>
+            </span>
+            {filter === cat && (
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-600 rounded-r-full" />
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* List */}
-      <div className="flex-1 p-4 space-y-2.5">
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <span className="text-6xl mb-4">🧾</span>
-            <p className="text-gray-400 font-semibold text-lg">{t('noExpenses')}</p>
-            {isAdmin && <p className="text-gray-300 text-sm mt-1">{t('addFirst')}</p>}
+      {/* Main content */}
+      <div className="flex-1 flex flex-col min-w-0">
+
+        {/* List */}
+        <div className="flex-1 p-3 space-y-2">
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <span className="text-6xl mb-4">🧾</span>
+              <p className="text-gray-400 font-semibold text-lg">{t('noExpenses')}</p>
+              {isAdmin && <p className="text-gray-300 text-sm mt-1">{t('addFirst')}</p>}
+            </div>
+          ) : (
+            filtered.map((exp, i) => (
+              <motion.div
+                key={exp.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.025 }}
+                onClick={() => openEdit(exp)}
+                className={`bg-white rounded-2xl p-3.5 shadow-sm border border-gray-100 flex items-center gap-3 ${
+                  isAdmin ? 'active:bg-gray-50 active:border-blue-100' : ''
+                } transition-colors`}
+              >
+                <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-xl flex-shrink-0">
+                  {getCategoryIcon(exp.category)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <p className="font-semibold text-gray-900 truncate text-sm">{exp.description}</p>
+                    {exp.is_yacht_cost && (
+                      <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">×2</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                    {exp.sub_category && <span className="truncate">{t('subcat_' + exp.sub_category)}</span>}
+                    {exp.is_cash && <Banknote size={11} className="text-gray-300 flex-shrink-0" />}
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="font-bold text-gray-900 text-sm">{formatCurrency(exp.amount, exp.currency)}</p>
+                  <p className="text-[10px] text-gray-400">{exp.currency}</p>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+
+        {/* Total bar */}
+        {filtered.length > 0 && (
+          <div className="bg-white border-t border-gray-100 px-4 py-3.5 flex justify-between items-center">
+            <span className="text-gray-500 font-medium text-sm">{t('total')} ({filtered.length})</span>
+            <span className="text-xl font-black text-gray-900">{formatCurrency(total, 'EUR')}</span>
           </div>
-        ) : (
-          filtered.map((exp, i) => (
-            <motion.div
-              key={exp.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.025 }}
-              onClick={() => openEdit(exp)}
-              className={`bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-3.5 ${
-                isAdmin ? 'active:bg-gray-50 active:border-blue-100' : ''
-              } transition-colors`}
-            >
-              {/* Category icon */}
-              <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-2xl flex-shrink-0">
-                {getCategoryIcon(exp.category)}
-              </div>
-
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <p className="font-semibold text-gray-900 truncate text-[15px]">{exp.description}</p>
-                  {exp.is_yacht_cost && (
-                    <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">×2</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  {exp.sub_category
-                    ? <span className="truncate">{t('subcat_' + exp.sub_category)}</span>
-                    : null
-                  }
-                  {exp.is_cash && <Banknote size={13} className="text-gray-300 flex-shrink-0" />}
-                </div>
-              </div>
-
-              {/* Amount */}
-              <div className={`text-right flex-shrink-0 ${isHe ? 'text-left' : 'text-right'}`}>
-                <p className="font-bold text-gray-900 text-[15px]">{formatCurrency(exp.amount, exp.currency)}</p>
-                <p className="text-xs text-gray-400">{exp.currency}</p>
-              </div>
-            </motion.div>
-          ))
         )}
       </div>
-
-      {/* Total bar */}
-      {filtered.length > 0 && (
-        <div className="bg-white border-t border-gray-100 px-5 py-4 flex justify-between items-center">
-          <span className="text-gray-500 font-medium">{t('total')} ({filtered.length})</span>
-          <span className="text-2xl font-black text-gray-900">{formatCurrency(total, 'EUR')}</span>
-        </div>
-      )}
 
       {/* FAB */}
       {isAdmin && (
