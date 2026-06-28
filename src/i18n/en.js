@@ -79,6 +79,7 @@ export default {
     subcat_gear_defibrillator: 'Defibrillator',
     subcat_other_shirts: 'Shirts',
     subcat_other_gifts: 'Gifts',
+    subcat_other_misc: 'Miscellaneous',
     subcat_yacht_services_cleaning: 'Check-in & Cleaning',
     subcat_yacht_services_dinghy: 'Dinghy',
     subcat_yacht_services_sup: 'SUP',

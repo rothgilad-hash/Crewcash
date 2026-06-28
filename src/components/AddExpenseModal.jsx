@@ -12,7 +12,7 @@ const SUBCATEGORIES = {
   transport: ['transport_taxi_il', 'transport_taxi_abroad', 'transport_car_rental'],
   gear: ['gear_defibrillator'],
   yacht_services: ['yacht_services_cleaning', 'yacht_services_dinghy', 'yacht_services_sup'],
-  other: ['other_shirts', 'other_gifts'],
+  other: ['other_shirts', 'other_gifts', 'other_misc'],
 }
 const CURRENCIES = ['ILS', 'EUR', 'USD']
 

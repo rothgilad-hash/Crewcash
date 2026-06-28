@@ -102,7 +102,9 @@ export default function Expenses() {
                     )}
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                    {exp.sub_category && <span className="truncate">{t('subcat_' + exp.sub_category)}</span>}
+                    {exp.sub_category && <span className="flex-shrink-0">{t('subcat_' + exp.sub_category)}</span>}
+                    {exp.sub_category && exp.notes && <span className="text-gray-300">·</span>}
+                    {exp.notes && <span className="truncate">{exp.notes}</span>}
                     {exp.is_cash && <Banknote size={11} className="text-gray-300 flex-shrink-0" />}
                   </div>
                 </div>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { calculateBalances, formatCurrency, getCategoryIcon } from '../lib/calculations'
 import { motion } from 'framer-motion'
@@ -5,11 +6,13 @@ import { motion } from 'framer-motion'
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316']
 
 export default function Report() {
+  const { t } = useTranslation()
   const { participants, expenses, lang } = useApp()
   const isHe = lang === 'he'
   const balances = calculateBalances(expenses, participants)
 
-  const totalExpenses = expenses.filter(e => !e.is_yacht_cost).reduce((s, e) => s + e.amount, 0)
+  const runningExpenses = expenses.filter(e => !e.is_yacht_cost)
+  const totalExpenses = runningExpenses.reduce((s, e) => s + e.amount, 0)
 
   return (
     <div className="p-4 space-y-4">
@@ -19,7 +22,7 @@ export default function Report() {
         <h3 className="font-bold text-gray-900 text-base mb-1">{isHe ? 'סיכום הטיול' : 'Trip Summary'}</h3>
         <p className="text-3xl font-black text-gray-900">{formatCurrency(totalExpenses, 'EUR')}</p>
         <p className="text-gray-400 text-sm mt-1">
-          {isHe ? `${expenses.filter(e=>!e.is_yacht_cost).length} הוצאות · ${participants.length} משתתפים` : `${expenses.filter(e=>!e.is_yacht_cost).length} expenses · ${participants.length} participants`}
+          {runningExpenses.length} {isHe ? 'הוצאות' : 'expenses'} · {participants.length} {isHe ? 'משתתפים' : 'participants'}
         </p>
       </div>
 
@@ -30,15 +33,13 @@ export default function Report() {
         const personalPaid = b.paid || 0
         const remaining = Math.round((b.owes - cashPaid - personalPaid) * 100) / 100
 
-        const personalExpenses = expenses.filter(e => e.paid_by === p.id)
+        const personalExpenses = expenses.filter(e => e.paid_by === p.id && !e.is_yacht_cost)
 
-        const categoryBreakdown = expenses
-          .filter(e => !e.is_yacht_cost)
-          .reduce((acc, e) => {
-            const share = e.amount / participants.length
-            acc[e.category] = (acc[e.category] || 0) + share
-            return acc
-          }, {})
+        const categoryBreakdown = runningExpenses.reduce((acc, e) => {
+          const share = e.amount / participants.length
+          acc[e.category] = (acc[e.category] || 0) + share
+          return acc
+        }, {})
 
         return (
           <motion.div
@@ -58,37 +59,37 @@ export default function Report() {
                 <p className="font-bold text-gray-900">{p.name}{p.is_gil ? ' ⭐' : ''}</p>
                 <p className={`text-sm font-semibold ${remaining > 0.5 ? 'text-red-500' : remaining < -0.5 ? 'text-emerald-500' : 'text-gray-400'}`}>
                   {remaining > 0.5
-                    ? `${isHe ? 'חייב לקופה' : 'Owes'} ${formatCurrency(remaining, 'EUR')}`
+                    ? `${isHe ? 'חייב לקופה' : 'Owes kitty'} ${formatCurrency(remaining, 'EUR')}`
                     : remaining < -0.5
-                    ? `${isHe ? 'הקופה חייבת' : 'Kitty owes'} ${formatCurrency(Math.abs(remaining), 'EUR')}`
+                    ? `${isHe ? 'הקופה חייבת לו' : 'Kitty owes'} ${formatCurrency(Math.abs(remaining), 'EUR')}`
                     : (isHe ? 'מסולק ✓' : 'Settled ✓')}
                 </p>
               </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-400">{isHe ? 'חלק בהוצאות' : 'Share'}</p>
-                <p className="font-bold text-gray-900">{formatCurrency(b.owes, 'EUR')}</p>
-              </div>
             </div>
 
-            {/* Category breakdown */}
-            <div className="border-t border-gray-50 px-4 py-3 space-y-1.5">
-              <p className="text-xs font-semibold text-gray-400 mb-2">{isHe ? 'פירוט לפי קטגוריה' : 'By category'}</p>
-              {Object.entries(categoryBreakdown).sort((a,b) => b[1]-a[1]).map(([cat, amt]) => (
+            {/* Category breakdown — his share per category */}
+            <div className="border-t border-gray-100 px-4 py-3 space-y-1.5">
+              <p className="text-xs font-semibold text-gray-400 mb-2">{isHe ? 'חלקו לפי קטגוריה' : 'His share by category'}</p>
+              {Object.entries(categoryBreakdown).sort((a, c) => c[1] - a[1]).map(([cat, amt]) => (
                 <div key={cat} className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">{getCategoryIcon(cat)} {isHe ? cat : cat}</span>
+                  <span className="text-sm text-gray-600">{getCategoryIcon(cat)} {t('cat_' + cat)}</span>
                   <span className="text-sm font-semibold text-gray-800">{formatCurrency(amt, 'EUR')}</span>
                 </div>
               ))}
+              <div className="flex items-center justify-between border-t border-gray-100 pt-2 mt-1">
+                <span className="text-sm font-bold text-gray-700">{isHe ? 'סה״כ חלקו' : 'Total share'}</span>
+                <span className="text-sm font-black text-gray-900">{formatCurrency(b.owes, 'EUR')}</span>
+              </div>
             </div>
 
             {/* Personal payments */}
             {personalExpenses.length > 0 && (
-              <div className="border-t border-gray-50 px-4 py-3">
+              <div className="border-t border-gray-100 px-4 py-3">
                 <p className="text-xs font-semibold text-gray-400 mb-2">{isHe ? 'שילם מכיסו' : 'Paid personally'}</p>
                 {personalExpenses.map(e => (
                   <div key={e.id} className="flex items-center justify-between py-0.5">
-                    <span className="text-sm text-gray-600">{getCategoryIcon(e.category)} {e.description}</span>
-                    <span className="text-sm font-semibold text-emerald-600">+{formatCurrency(e.amount, 'EUR')}</span>
+                    <span className="text-sm text-gray-600">{getCategoryIcon(e.category)} {e.description}{e.notes ? ` · ${e.notes}` : ''}</span>
+                    <span className="text-sm font-semibold text-emerald-600">{formatCurrency(e.amount, 'EUR')}</span>
                   </div>
                 ))}
               </div>
@@ -96,8 +97,8 @@ export default function Report() {
 
             {/* Cash paid to economist */}
             {cashPaid > 0 && (
-              <div className="border-t border-gray-50 px-4 py-3 flex justify-between items-center">
-                <span className="text-sm text-gray-500">{isHe ? 'שילם לקופה במזומן' : 'Paid to kitty'}</span>
+              <div className="border-t border-gray-100 px-4 py-3 flex justify-between items-center">
+                <span className="text-sm text-gray-500">{isHe ? 'שילם לקופה במזומן' : 'Paid to kitty (cash)'}</span>
                 <span className="text-sm font-semibold text-blue-600">{formatCurrency(cashPaid, 'EUR')}</span>
               </div>
             )}
