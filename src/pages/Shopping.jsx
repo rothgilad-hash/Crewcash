@@ -215,7 +215,8 @@ export default function Shopping() {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           onClick={() => setModalOpen(true)}
-          className="fixed bottom-24 right-5 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-300 flex items-center justify-center active:scale-90 transition-transform z-30"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 76px)' }}
+          className="fixed left-1/2 -translate-x-1/2 w-12 h-12 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-300 flex items-center justify-center active:scale-90 transition-transform z-30"
         >
           <Plus size={28} />
         </motion.button>

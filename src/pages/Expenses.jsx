@@ -117,7 +117,8 @@ export default function Expenses() {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           onClick={openAdd}
-          className="fixed bottom-20 left-1/2 -translate-x-1/2 w-12 h-12 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-300 flex items-center justify-center active:scale-90 transition-transform z-30"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 76px)' }}
+          className="fixed left-1/2 -translate-x-1/2 w-12 h-12 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-300 flex items-center justify-center active:scale-90 transition-transform z-30"
         >
           <Plus size={24} />
         </motion.button>
