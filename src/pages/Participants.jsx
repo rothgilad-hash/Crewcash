@@ -119,13 +119,13 @@ export default function Participants() {
                   </div>
 
                   <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {isAdmin && !kittyOwes && (
+                    {isAdmin && (
                       <button
                         onClick={() => openPay(p)}
                         className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold transition-colors bg-blue-50 border border-blue-200 text-blue-600 active:bg-blue-100"
                       >
                         <Pencil size={12} />
-                        {settled ? (isHe ? 'ערוך' : 'Edit') : (isHe ? '+ תשלום' : '+ Pay')}
+                        {kittyOwes || settled ? (isHe ? 'ערוך' : 'Edit') : (isHe ? '+ תשלום' : '+ Pay')}
                       </button>
                     )}
                     {isAdmin && (
