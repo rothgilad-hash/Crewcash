@@ -22,8 +22,9 @@ const defaultForm = {
 }
 
 export default function AddExpenseModal({ open, onClose, expense = null }) {
-  const { t } = useTranslation()
-  const { trip, participants } = useApp()
+  const { t, i18n } = useTranslation()
+  const { trip, participants, lang } = useApp()
+  const isHe = lang === 'he'
   const [form, setForm] = useState(defaultForm)
   const [saving, setSaving] = useState(false)
   const autoFilledDesc = useRef(false)
@@ -177,7 +178,35 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
           </label>
         </div>
 
-        {/* 5. Notes */}
+        {/* 5. Paid by (personal payment) */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            👤 {isHe ? 'שולם ע״י (אם מישהו שילם מכיסו)' : 'Paid personally by (optional)'}
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => set('paid_by', '')}
+              className={`px-4 py-2.5 rounded-2xl border-2 text-sm font-semibold transition-all active:scale-95 ${
+                !form.paid_by ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-500'
+              }`}
+            >
+              {isHe ? 'הקופה' : 'Kitty'}
+            </button>
+            {participants.map(p => (
+              <button
+                key={p.id}
+                onClick={() => set('paid_by', p.id)}
+                className={`px-4 py-2.5 rounded-2xl border-2 text-sm font-semibold transition-all active:scale-95 ${
+                  form.paid_by === p.id ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-500'
+                }`}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 6. Notes */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">{t('notes')}</label>
           <input

@@ -11,6 +11,7 @@ export default {
     shopping: 'קניות',
     compare: 'השוואה',
     leaderboard: 'דירוג',
+    report: 'דוח',
     settings: 'הגדרות',
 
     // Landing

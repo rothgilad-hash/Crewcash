@@ -14,6 +14,10 @@ export function calculateBalances(expenses, participants) {
     runningExpenses.forEach(exp => {
       const partValue = exp.amount / totalParts
       participants.forEach(p => { balances[p.id].owes += partValue })
+      // Credit personal payer — they fronted this expense from their own pocket
+      if (exp.paid_by && balances[exp.paid_by]) {
+        balances[exp.paid_by].paid += exp.amount
+      }
     })
   }
 

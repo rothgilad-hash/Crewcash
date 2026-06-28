@@ -9,7 +9,7 @@ import Participants from './pages/Participants'
 import Debts from './pages/Debts'
 import Shopping from './pages/Shopping'
 import Compare from './pages/Compare'
-import Leaderboard from './pages/Leaderboard'
+import Report from './pages/Report'
 import Settings from './pages/Settings'
 
 function JoinRedirect() {
@@ -49,7 +49,7 @@ function ProtectedApp() {
         <Route path="/debts" element={<Debts />} />
         <Route path="/shopping" element={<Shopping />} />
         <Route path="/compare" element={<Compare />} />
-        <Route path="/leaderboard" element={<Leaderboard />} />
+        <Route path="/report" element={<Report />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>
     </Layout>

@@ -12,17 +12,14 @@ export default function Debts() {
 
   const balances = calculateBalances(expenses, participants)
 
-  const owesKitty = participants.filter(p => {
-    const b = balances[p.id] || { owes: 0 }
-    const remaining = Math.round((b.owes - (p.amount_paid || 0)) * 100) / 100
-    return remaining > 0.5
-  })
+  const getRemaining = (p) => {
+    const b = balances[p.id] || { owes: 0, paid: 0 }
+    const paid = (p.amount_paid || 0) + (b.paid || 0)
+    return Math.round((b.owes - paid) * 100) / 100
+  }
 
-  const kittyOwes = participants.filter(p => {
-    const b = balances[p.id] || { owes: 0 }
-    const remaining = Math.round((b.owes - (p.amount_paid || 0)) * 100) / 100
-    return remaining < -0.5
-  })
+  const owesKitty = participants.filter(p => getRemaining(p) > 0.5)
+  const kittyOwes = participants.filter(p => getRemaining(p) < -0.5)
 
   const allSettled = owesKitty.length === 0 && kittyOwes.length === 0
 
@@ -44,8 +41,7 @@ export default function Debts() {
               </h3>
               <div className="space-y-3">
                 {owesKitty.map((p, i) => {
-                  const b = balances[p.id] || { owes: 0 }
-                  const remaining = Math.round((b.owes - (p.amount_paid || 0)) * 100) / 100
+                  const remaining = getRemaining(p)
                   const idx = participants.indexOf(p)
                   return (
                     <motion.div
@@ -79,8 +75,7 @@ export default function Debts() {
               </h3>
               <div className="space-y-3">
                 {kittyOwes.map((p, i) => {
-                  const b = balances[p.id] || { owes: 0 }
-                  const remaining = Math.round((b.owes - (p.amount_paid || 0)) * 100) / 100
+                  const remaining = getRemaining(p)
                   const idx = participants.indexOf(p)
                   return (
                     <motion.div

@@ -10,6 +10,7 @@ export default {
     shopping: 'Shopping',
     compare: 'Compare',
     leaderboard: 'Rankings',
+    report: 'Report',
     settings: 'Settings',
 
     createTrip: 'Create New Trip',

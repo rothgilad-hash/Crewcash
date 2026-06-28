@@ -67,8 +67,8 @@ export default function Participants() {
       ) : (
         <AnimatePresence>
           {participants.map((p, i) => {
-            const b = balances[p.id] || { owes: 0 }
-            const paid = p.amount_paid || 0
+            const b = balances[p.id] || { owes: 0, paid: 0 }
+            const paid = (p.amount_paid || 0) + (b.paid || 0)
             const remaining = Math.round((b.owes - paid) * 100) / 100
             const kittyOwes = remaining < -0.5
             const settled = !kittyOwes && remaining <= 0.5
