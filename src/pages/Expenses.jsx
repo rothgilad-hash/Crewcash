@@ -31,25 +31,23 @@ export default function Expenses() {
   return (
     <div className="flex flex-col" style={{ minHeight: 'calc(100dvh - 130px)' }}>
 
-      {/* Horizontal filter scroll */}
+      {/* Vertical filter list */}
       <div className="bg-white border-b border-gray-100 sticky top-14 z-30">
-        <div className="overflow-x-auto no-scrollbar">
-          <div className="flex gap-2 px-4 py-3 w-max">
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setFilter(cat)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all active:scale-95 ${
-                  filter === cat
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-600 active:bg-gray-200'
-                }`}
-              >
-                {cat !== 'all' && <span className="text-base">{getCategoryIcon(cat)}</span>}
-                {cat === 'all' ? (isHe ? 'הכל' : 'All') : t('cat_' + cat)}
-              </button>
-            ))}
-          </div>
+        <div className="flex flex-wrap gap-2 px-4 py-3">
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setFilter(cat)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold transition-all active:scale-95 ${
+                filter === cat
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 active:bg-gray-200'
+              }`}
+            >
+              {cat !== 'all' && <span className="text-base">{getCategoryIcon(cat)}</span>}
+              {cat === 'all' ? (isHe ? 'הכל' : 'All') : t('cat_' + cat)}
+            </button>
+          ))}
         </div>
       </div>
 
