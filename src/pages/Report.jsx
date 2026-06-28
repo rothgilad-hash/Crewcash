@@ -145,6 +145,27 @@ export default function Report() {
                 <span className="text-sm font-semibold text-blue-600">{formatCurrency(cashPaid, 'EUR')}</span>
               </div>
             )}
+
+            {/* Kitty payback */}
+            {kittyPaidBack > 0 && (
+              <div className="border-t border-gray-100 px-4 py-3 space-y-1.5">
+                <p className="text-xs font-semibold text-gray-400 mb-2">{isHe ? 'חשבון עם הקופה' : 'Kitty settlement'}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">{isHe ? 'הקופה הייתה חייבת לו' : 'Kitty owed them'}</span>
+                  <span className="text-sm font-semibold text-emerald-600">{formatCurrency(Math.abs(b.owes - cashPaid - personalPaid), 'EUR')}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">{isHe ? 'הקופה החזירה' : 'Kitty returned'}</span>
+                  <span className="text-sm font-semibold text-blue-600">−{formatCurrency(kittyPaidBack, 'EUR')}</span>
+                </div>
+                <div className="flex items-center justify-between border-t border-gray-100 pt-1.5">
+                  <span className="text-sm font-bold text-gray-700">{isHe ? 'יתרה סופית' : 'Final balance'}</span>
+                  <span className={`text-sm font-black ${remaining > 0.5 ? 'text-red-500' : remaining < -0.5 ? 'text-emerald-500' : 'text-gray-400'}`}>
+                    {remaining > 0.5 ? formatCurrency(remaining, 'EUR') : remaining < -0.5 ? `−${formatCurrency(Math.abs(remaining), 'EUR')}` : (isHe ? 'מסולק ✓' : 'Settled ✓')}
+                  </span>
+                </div>
+              </div>
+            )}
           </motion.div>
         )
       })}

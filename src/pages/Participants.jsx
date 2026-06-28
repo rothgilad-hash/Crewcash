@@ -116,9 +116,9 @@ export default function Participants() {
                         {isHe ? 'הקופה חייבת לך' : 'Kitty owes you'} {formatCurrency(Math.abs(remaining), 'EUR')}
                       </p>
                     ) : settled ? (
-                      <p className="text-sm text-gray-400 mt-0.5">
-                        {isHe ? `שילם ${formatCurrency(paid, 'EUR')}` : `Paid ${formatCurrency(paid, 'EUR')}`}
-                      </p>
+                      (p.kitty_paid_back || 0) > 0
+                        ? <p className="text-sm font-semibold text-emerald-500 mt-0.5">{isHe ? 'אין חובות ✓' : 'No debts ✓'}</p>
+                        : <p className="text-sm text-gray-400 mt-0.5">{isHe ? `שילם ${formatCurrency(paid, 'EUR')}` : `Paid ${formatCurrency(paid, 'EUR')}`}</p>
                     ) : (
                       <p className="text-sm font-semibold text-red-500 mt-0.5">
                         {isHe ? 'נשאר לשלם' : 'Remaining'} {formatCurrency(remaining, 'EUR')}
