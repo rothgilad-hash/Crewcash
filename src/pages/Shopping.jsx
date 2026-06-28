@@ -209,17 +209,17 @@ export default function Shopping() {
         </div>
       )}
 
-      {/* FAB */}
+      {/* Add button */}
       {isAdmin && (
-        <motion.button
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          onClick={() => setModalOpen(true)}
-          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 76px)' }}
-          className="fixed left-1/2 -translate-x-1/2 w-12 h-12 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-300 flex items-center justify-center active:scale-90 transition-transform z-30"
-        >
-          <Plus size={28} />
-        </motion.button>
+        <div className="px-4 pb-2">
+          <button
+            onClick={() => setModalOpen(true)}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-blue-200 text-blue-600 font-semibold text-sm bg-blue-50 active:bg-blue-100 transition-colors"
+          >
+            <Plus size={18} />
+            {lang === 'he' ? 'הוסף פריט' : 'Add Item'}
+          </button>
+        </div>
       )}
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={t('addItem')}>

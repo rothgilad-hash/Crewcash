@@ -58,6 +58,19 @@ export default function Expenses() {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
 
+        {/* Add button */}
+        {isAdmin && (
+          <div className="p-3 pb-0">
+            <button
+              onClick={openAdd}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-blue-200 text-blue-600 font-semibold text-sm bg-blue-50 active:bg-blue-100 transition-colors"
+            >
+              <Plus size={18} />
+              {isHe ? 'הוסף הוצאה' : 'Add Expense'}
+            </button>
+          </div>
+        )}
+
         {/* List */}
         <div className="flex-1 p-3 space-y-2">
           {filtered.length === 0 ? (
@@ -112,17 +125,6 @@ export default function Expenses() {
       </div>
 
       {/* FAB */}
-      {isAdmin && (
-        <motion.button
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          onClick={openAdd}
-          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 76px)' }}
-          className="fixed left-1/2 -translate-x-1/2 w-12 h-12 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-300 flex items-center justify-center active:scale-90 transition-transform z-30"
-        >
-          <Plus size={24} />
-        </motion.button>
-      )}
 
       <AddExpenseModal open={modalOpen} onClose={() => setModalOpen(false)} expense={selected} />
     </div>
