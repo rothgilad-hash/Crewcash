@@ -85,7 +85,7 @@ export default function Settings() {
             )}
           </div>
           <div className="space-y-0">
-            <Field label={isHe ? 'שם השיוט' : 'Trip Name'} value={trip.name} />
+            <Field label={isHe ? 'שם הסירה' : 'Boat Name'} value={trip.name} />
             <Field label={isHe ? 'שנה' : 'Year'} value={trip.year} />
             <Field label={isHe ? 'מדינה' : 'Country'} value={trip.country} />
             <Field label={isHe ? 'שם האזור' : 'Region'} value={trip.region_name} />
@@ -134,7 +134,7 @@ export default function Settings() {
         className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 text-center">
         <div className="text-4xl mb-2">⛵</div>
         <p className="font-black text-gray-900">CrewCash</p>
-        <p className="text-gray-400 text-sm">v1.0.0 · {isHe ? 'עשוי עם ❤️ לשיוט' : 'Made with ❤️ for sailing'}</p>
+        <p className="text-gray-400 text-sm">v1.0.0</p>
       </motion.div>
 
       {/* Actions */}
@@ -160,7 +160,7 @@ export default function Settings() {
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title={isHe ? 'עריכת פרטי שיוט' : 'Edit Trip Details'}>
         <div className="space-y-3">
           {[
-            { key: 'name', label: isHe ? 'שם השיוט' : 'Trip Name' },
+            { key: 'name', label: isHe ? 'שם הסירה' : 'Boat Name' },
             { key: 'year', label: isHe ? 'שנה' : 'Year', type: 'number' },
             { key: 'country', label: isHe ? 'מדינה' : 'Country' },
             { key: 'region_name', label: isHe ? 'שם האזור' : 'Region' },
