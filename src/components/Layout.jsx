@@ -4,7 +4,7 @@ import { useApp } from '../context/AppContext'
 import { motion } from 'framer-motion'
 import {
   LayoutDashboard, Receipt, Users, ArrowLeftRight,
-  ShoppingCart, BarChart2, FileText
+  ShoppingCart, BarChart2, FileText, Settings
 } from 'lucide-react'
 
 const NAV = [
