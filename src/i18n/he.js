@@ -72,6 +72,7 @@ export default {
     cat_accommodation: 'לינה',
     cat_health: 'בריאות',
     cat_insurance: 'ביטוח',
+    cat_yacht_services: 'שירותי יאכטה',
     cat_other: 'אחר',
 
     subcat_insurance_main: 'ביטוח ראשי',
@@ -82,6 +83,9 @@ export default {
     subcat_gear_defibrillator: 'דפיברילטור',
     subcat_other_shirts: 'חולצות',
     subcat_other_gifts: 'מתנות',
+    subcat_yacht_services_cleaning: 'קבלה וניקיון',
+    subcat_yacht_services_dinghy: 'דינגי',
+    subcat_yacht_services_sup: 'סאפ',
     subCategory: 'תת-קטגוריה',
 
     // Participants

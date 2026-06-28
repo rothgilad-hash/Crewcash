@@ -5,12 +5,13 @@ import { useApp } from '../context/AppContext'
 import { getCategoryIcon } from '../lib/calculations'
 import Modal from './Modal'
 
-const CATEGORIES = ['yacht', 'fuel', 'food', 'supermarket', 'alcohol', 'transport', 'activities', 'gear', 'accommodation', 'health', 'insurance', 'other']
+const CATEGORIES = ['yacht', 'fuel', 'food', 'supermarket', 'alcohol', 'transport', 'activities', 'gear', 'accommodation', 'health', 'insurance', 'yacht_services', 'other']
 
 const SUBCATEGORIES = {
   insurance: ['insurance_main', 'insurance_deductible'],
   transport: ['transport_taxi_il', 'transport_taxi_abroad', 'transport_car_rental'],
   gear: ['gear_defibrillator'],
+  yacht_services: ['yacht_services_cleaning', 'yacht_services_dinghy', 'yacht_services_sup'],
   other: ['other_shirts', 'other_gifts'],
 }
 const CURRENCIES = ['ILS', 'EUR', 'USD']

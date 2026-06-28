@@ -67,6 +67,7 @@ export default {
     cat_accommodation: 'Accommodation',
     cat_health: 'Health',
     cat_insurance: 'Insurance',
+    cat_yacht_services: 'Yacht Services',
     cat_other: 'Other',
 
     subcat_insurance_main: 'Main Insurance',
@@ -77,6 +78,9 @@ export default {
     subcat_gear_defibrillator: 'Defibrillator',
     subcat_other_shirts: 'Shirts',
     subcat_other_gifts: 'Gifts',
+    subcat_yacht_services_cleaning: 'Check-in & Cleaning',
+    subcat_yacht_services_dinghy: 'Dinghy',
+    subcat_yacht_services_sup: 'SUP',
     subCategory: 'Sub-category',
 
     addParticipant: 'Add Participant',

@@ -6,7 +6,7 @@ import AddExpenseModal from '../components/AddExpenseModal'
 import { Plus, Banknote } from 'lucide-react'
 import { motion } from 'framer-motion'
 
-const CATEGORIES = ['all', 'yacht', 'fuel', 'food', 'supermarket', 'alcohol', 'transport', 'activities', 'gear', 'insurance', 'other']
+const CATEGORIES = ['all', 'yacht', 'fuel', 'food', 'supermarket', 'alcohol', 'transport', 'activities', 'gear', 'insurance', 'yacht_services', 'other']
 
 export default function Expenses() {
   const { t } = useTranslation()
