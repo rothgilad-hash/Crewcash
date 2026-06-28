@@ -4,7 +4,7 @@ import { useApp } from '../context/AppContext'
 import { calculateBalances, formatCurrency } from '../lib/calculations'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
-import { Plus, Star, Trash2 } from 'lucide-react'
+import { Plus, Star, Trash2, Pencil } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316']
@@ -42,13 +42,15 @@ export default function Participants() {
     await supabase.from('participants').delete().eq('id', id)
   }
 
-  const handleAddPayment = async () => {
-    if (!payAmount || !payOpen) return
-    const p = participants.find(x => x.id === payOpen)
-    if (!p) return
+  const openPay = (p) => {
+    setPayOpen(p.id)
+    setPayAmount((p.amount_paid || 0).toString())
+  }
+
+  const handleSavePayment = async () => {
+    if (!payOpen) return
     setSaving(true)
-    const newTotal = (p.amount_paid || 0) + parseFloat(payAmount)
-    await supabase.from('participants').update({ amount_paid: newTotal }).eq('id', payOpen)
+    await supabase.from('participants').update({ amount_paid: parseFloat(payAmount) || 0 }).eq('id', payOpen)
     setPayAmount('')
     setPayOpen(null)
     setSaving(false)
@@ -68,8 +70,10 @@ export default function Participants() {
             const b = balances[p.id] || { owes: 0 }
             const paid = p.amount_paid || 0
             const remaining = Math.round((b.owes - paid) * 100) / 100
-            const settled = remaining <= 0.5
+            const kittyOwes = remaining < -0.5
+            const settled = !kittyOwes && remaining <= 0.5
             const color = COLORS[i % COLORS.length]
+
             return (
               <motion.div
                 key={p.id}
@@ -93,22 +97,38 @@ export default function Participants() {
                       {p.is_gil && <Star size={14} className="text-amber-400 fill-amber-400 flex-shrink-0" />}
                       {p.joined_late && <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">⏰</span>}
                     </div>
-                    {settled ? (
-                      <p className="text-sm font-semibold text-emerald-500 mt-0.5">{isHe ? 'שולם ✓' : 'Paid ✓'}</p>
+
+                    {kittyOwes ? (
+                      <p className="text-sm font-semibold text-emerald-500 mt-0.5">
+                        {isHe ? 'הקופה חייבת לך' : 'Kitty owes you'} {formatCurrency(Math.abs(remaining), 'EUR')}
+                      </p>
+                    ) : settled ? (
+                      <p className="text-sm text-gray-400 mt-0.5">
+                        {isHe ? `שילם ${formatCurrency(paid, 'EUR')}` : `Paid ${formatCurrency(paid, 'EUR')}`}
+                      </p>
                     ) : (
                       <p className="text-sm font-semibold text-red-500 mt-0.5">
                         {isHe ? 'נשאר לשלם' : 'Remaining'} {formatCurrency(remaining, 'EUR')}
+                        {paid > 0 && (
+                          <span className="text-gray-400 font-normal text-xs ms-1.5">
+                            ({isHe ? `שילם ${formatCurrency(paid, 'EUR')}` : `paid ${formatCurrency(paid, 'EUR')}`})
+                          </span>
+                        )}
                       </p>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {isAdmin && !settled && (
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {isAdmin && !kittyOwes && (
                       <button
-                        onClick={() => { setPayOpen(p.id); setPayAmount('') }}
-                        className="px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 font-semibold text-xs active:bg-blue-100 transition-colors"
+                        onClick={() => openPay(p)}
+                        className={`flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
+                          settled
+                            ? 'bg-gray-50 border border-gray-200 text-gray-400'
+                            : 'bg-blue-50 border border-blue-200 text-blue-600 active:bg-blue-100'
+                        }`}
                       >
-                        + {isHe ? 'תשלום' : 'Payment'}
+                        {settled ? <Pencil size={12} /> : '+'}{settled ? '' : (isHe ? ' תשלום' : ' Pay')}
                       </button>
                     )}
                     {isAdmin && (
@@ -128,7 +148,7 @@ export default function Participants() {
       )}
 
       {isAdmin && (
-        <div className="px-4 pb-2">
+        <div className="pb-2">
           <button
             onClick={() => setAddOpen(true)}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-blue-200 text-blue-600 font-semibold text-sm bg-blue-50 active:bg-blue-100 transition-colors"
@@ -186,8 +206,8 @@ export default function Participants() {
         </div>
       </Modal>
 
-      {/* Add payment modal */}
-      <Modal open={!!payOpen} onClose={() => setPayOpen(null)} title={isHe ? 'הוסף תשלום' : 'Add Payment'}>
+      {/* Payment modal */}
+      <Modal open={!!payOpen} onClose={() => setPayOpen(null)} title={isHe ? 'עדכון תשלום' : 'Update Payment'}>
         <div className="space-y-4">
           {payOpen && (() => {
             const p = participants.find(x => x.id === payOpen)
@@ -196,25 +216,32 @@ export default function Participants() {
             return (
               <div className="bg-gray-50 rounded-2xl px-4 py-3">
                 <p className="text-sm text-gray-500">{p?.name}</p>
-                <p className="text-base font-bold text-red-500">{isHe ? 'נשאר לשלם' : 'Remaining'}: {formatCurrency(remaining, 'EUR')}</p>
+                <p className="text-base font-bold text-red-500">
+                  {isHe ? 'נשאר לשלם' : 'Remaining'}: {formatCurrency(Math.max(remaining, 0), 'EUR')}
+                </p>
               </div>
             )
           })()}
-          <input
-            type="number"
-            inputMode="decimal"
-            className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 focus:outline-none focus:border-blue-500 text-gray-900 bg-white"
-            placeholder={isHe ? 'סכום שקיבלת (EUR)' : 'Amount received (EUR)'}
-            value={payAmount}
-            onChange={e => setPayAmount(e.target.value)}
-            autoFocus
-          />
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              {isHe ? 'סה"כ שילם עד עכשיו (EUR)' : 'Total paid so far (EUR)'}
+            </label>
+            <input
+              type="number"
+              inputMode="decimal"
+              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 focus:outline-none focus:border-blue-500 text-gray-900 bg-white"
+              placeholder="0"
+              value={payAmount}
+              onChange={e => setPayAmount(e.target.value)}
+              autoFocus
+            />
+          </div>
           <div className="flex gap-3">
             <button onClick={() => setPayOpen(null)}
               className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold active:bg-gray-50">
               {t('cancel')}
             </button>
-            <button onClick={handleAddPayment} disabled={saving || !payAmount}
+            <button onClick={handleSavePayment} disabled={saving}
               className="flex-1 py-4 rounded-2xl bg-blue-600 text-white font-bold active:bg-blue-700 disabled:opacity-40">
               {saving ? '...' : t('save')}
             </button>
