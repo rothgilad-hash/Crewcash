@@ -122,13 +122,10 @@ export default function Participants() {
                     {isAdmin && !kittyOwes && (
                       <button
                         onClick={() => openPay(p)}
-                        className={`flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                          settled
-                            ? 'bg-gray-50 border border-gray-200 text-gray-400'
-                            : 'bg-blue-50 border border-blue-200 text-blue-600 active:bg-blue-100'
-                        }`}
+                        className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold transition-colors bg-blue-50 border border-blue-200 text-blue-600 active:bg-blue-100"
                       >
-                        {settled ? <Pencil size={12} /> : '+'}{settled ? '' : (isHe ? ' תשלום' : ' Pay')}
+                        <Pencil size={12} />
+                        {settled ? (isHe ? 'ערוך' : 'Edit') : (isHe ? '+ תשלום' : '+ Pay')}
                       </button>
                     )}
                     {isAdmin && (
