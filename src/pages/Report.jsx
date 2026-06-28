@@ -35,7 +35,8 @@ export default function Report() {
         const b = balances[p.id] || { owes: 0, paid: 0 }
         const cashPaid = p.amount_paid || 0
         const personalPaid = b.paid || 0
-        const remaining = Math.round((b.owes - cashPaid - personalPaid) * 100) / 100
+        const kittyPaidBack = p.kitty_paid_back || 0
+        const remaining = Math.round((b.owes - cashPaid - personalPaid + kittyPaidBack) * 100) / 100
 
         const personalExpenses = expenses.filter(e => e.paid_by === p.id && !e.is_yacht_cost)
 

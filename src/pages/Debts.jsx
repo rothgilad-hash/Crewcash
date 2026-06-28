@@ -15,7 +15,7 @@ export default function Debts() {
   const getRemaining = (p) => {
     const b = balances[p.id] || { owes: 0, paid: 0 }
     const paid = (p.amount_paid || 0) + (b.paid || 0)
-    return Math.round((b.owes - paid) * 100) / 100
+    return Math.round((b.owes - paid + (p.kitty_paid_back || 0)) * 100) / 100
   }
 
   const owesKitty = participants.filter(p => getRemaining(p) > 0.5)

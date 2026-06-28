@@ -14,6 +14,7 @@ export default function Participants() {
   const { trip, participants, expenses, isAdmin, lang } = useApp()
   const [addOpen, setAddOpen] = useState(false)
   const [payOpen, setPayOpen] = useState(null)
+  const [payMode, setPayMode] = useState('pay') // 'pay' | 'return'
   const [form, setForm] = useState({ name: '', is_gil: false, joined_late: false })
   const [payAmount, setPayAmount] = useState('')
   const [saving, setSaving] = useState(false)
@@ -43,14 +44,26 @@ export default function Participants() {
   }
 
   const openPay = (p) => {
+    const b = balances[p.id] || { owes: 0, paid: 0 }
+    const netOwes = b.owes - (b.paid || 0)
+    if (netOwes < 0) {
+      setPayMode('return')
+      setPayAmount((p.kitty_paid_back || 0).toString())
+    } else {
+      setPayMode('pay')
+      setPayAmount((p.amount_paid || 0).toString())
+    }
     setPayOpen(p.id)
-    setPayAmount((p.amount_paid || 0).toString())
   }
 
   const handleSavePayment = async () => {
     if (!payOpen) return
     setSaving(true)
-    await supabase.from('participants').update({ amount_paid: parseFloat(payAmount) || 0 }).eq('id', payOpen)
+    if (payMode === 'return') {
+      await supabase.from('participants').update({ kitty_paid_back: parseFloat(payAmount) || 0 }).eq('id', payOpen)
+    } else {
+      await supabase.from('participants').update({ amount_paid: parseFloat(payAmount) || 0 }).eq('id', payOpen)
+    }
     setPayAmount('')
     setPayOpen(null)
     setSaving(false)
@@ -69,7 +82,7 @@ export default function Participants() {
           {participants.map((p, i) => {
             const b = balances[p.id] || { owes: 0, paid: 0 }
             const paid = (p.amount_paid || 0) + (b.paid || 0)
-            const remaining = Math.round((b.owes - paid) * 100) / 100
+            const remaining = Math.round((b.owes - paid + (p.kitty_paid_back || 0)) * 100) / 100
             const kittyOwes = remaining < -0.5
             const settled = !kittyOwes && remaining <= 0.5
             const color = COLORS[i % COLORS.length]
@@ -204,24 +217,13 @@ export default function Participants() {
       </Modal>
 
       {/* Payment modal */}
-      <Modal open={!!payOpen} onClose={() => setPayOpen(null)} title={isHe ? 'עדכון תשלום' : 'Update Payment'}>
+      <Modal open={!!payOpen} onClose={() => setPayOpen(null)} title={payMode === 'return' ? (isHe ? 'החזר מהקופה' : 'Kitty Refund') : (isHe ? 'עדכון תשלום' : 'Update Payment')}>
         <div className="space-y-4">
-          {payOpen && (() => {
-            const p = participants.find(x => x.id === payOpen)
-            const b = balances[payOpen] || { owes: 0 }
-            const remaining = Math.round(((b.owes || 0) - (p?.amount_paid || 0)) * 100) / 100
-            return (
-              <div className="bg-gray-50 rounded-2xl px-4 py-3">
-                <p className="text-sm text-gray-500">{p?.name}</p>
-                <p className="text-base font-bold text-red-500">
-                  {isHe ? 'נשאר לשלם' : 'Remaining'}: {formatCurrency(Math.max(remaining, 0), 'EUR')}
-                </p>
-              </div>
-            )
-          })()}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              {isHe ? 'סה"כ שילם עד עכשיו (EUR)' : 'Total paid so far (EUR)'}
+              {payMode === 'return'
+                ? (isHe ? 'כמה הקופה החזירה לו עד עכשיו (EUR)' : 'Total returned by kitty (EUR)')
+                : (isHe ? 'סה״כ שילם עד עכשיו (EUR)' : 'Total paid so far (EUR)')}
             </label>
             <input
               type="number"
