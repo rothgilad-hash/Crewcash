@@ -30,11 +30,6 @@ export default function Dashboard() {
   const yachtTotal = expenses.filter(e => e.is_yacht_cost).reduce((s, e) => s + e.amount, 0)
   const otherTotal = expenses.filter(e => !e.is_yacht_cost).reduce((s, e) => s + e.amount, 0)
 
-  const categoryTotals = expenses.reduce((acc, e) => {
-    acc[e.category] = (acc[e.category] || 0) + e.amount; return acc
-  }, {})
-  const topCategory = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0]
-
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316']
 
   return (
@@ -71,7 +66,7 @@ export default function Dashboard() {
               <p className="font-bold text-lg">{formatCurrency(yachtTotal, 'EUR')}</p>
             </div>
             <div className="bg-white/15 rounded-2xl p-3.5">
-              <p className="text-blue-200 text-xs mb-1">🛒 {isHe ? 'שוטפות' : 'Expenses'}</p>
+              <p className="text-blue-200 text-xs mb-1">🧾 {isHe ? 'הוצאות נוספות' : 'Other Expenses'}</p>
               <p className="font-bold text-lg">{formatCurrency(otherTotal, 'EUR')}</p>
             </div>
           </div>
@@ -128,24 +123,6 @@ export default function Dashboard() {
         </motion.div>
       )}
 
-      {/* Stats row */}
-      {(expenses.length > 0 || topCategory) && (
-        <div className="grid grid-cols-2 gap-3">
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-            className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <p className="text-3xl font-black text-gray-900">{expenses.length}</p>
-            <p className="text-gray-400 text-sm mt-0.5">{isHe ? 'הוצאות' : 'Expenses'}</p>
-          </motion.div>
-          {topCategory && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
-              className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-              <p className="text-2xl">{CAT_EMOJI[topCategory[0]] || '💰'}</p>
-              <p className="font-black text-gray-900 mt-1">{formatCurrency(topCategory[1], 'EUR')}</p>
-              <p className="text-gray-400 text-xs mt-0.5">{t('cat_' + topCategory[0])}</p>
-            </motion.div>
-          )}
-        </div>
-      )}
 
       {/* Invite link */}
       {isAdmin && trip && (

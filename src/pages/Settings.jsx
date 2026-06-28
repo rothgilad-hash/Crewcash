@@ -2,15 +2,19 @@ import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { LogOut, Trash2, Globe, Copy, Check } from 'lucide-react'
+import { LogOut, Trash2, Globe, Copy, Check, Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import Modal from '../components/Modal'
 
 export default function Settings() {
   const { t, i18n } = useTranslation()
-  const { trip, isAdmin, lang, changeLang, leaveTrip } = useApp()
+  const { trip, setTrip, isAdmin, lang, changeLang, leaveTrip } = useApp()
   const navigate = useNavigate()
   const [copied, setCopied] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [form, setForm] = useState({})
+  const [saving, setSaving] = useState(false)
 
   const toggleLang = (l) => {
     i18n.changeLanguage(l)
@@ -37,7 +41,34 @@ export default function Settings() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const openEdit = () => {
+    setForm({
+      name: trip.name || '',
+      year: trip.year || '',
+      country: trip.country || '',
+      region_name: trip.region_name || '',
+      departure_area: trip.departure_area || '',
+      start_date: trip.start_date || '',
+    })
+    setEditOpen(true)
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    const { data } = await supabase.from('trips').update(form).eq('id', trip.id).select().single()
+    if (data) setTrip(data)
+    setSaving(false)
+    setEditOpen(false)
+  }
+
   const isHe = lang === 'he'
+
+  const Field = ({ label, value }) => value ? (
+    <div className="flex justify-between py-2 border-b border-gray-50 last:border-0">
+      <span className="text-gray-400 text-sm">{label}</span>
+      <span className="font-semibold text-gray-900 text-sm">{value}</span>
+    </div>
+  ) : null
 
   return (
     <div className="p-4 space-y-4">
@@ -45,34 +76,33 @@ export default function Settings() {
       {trip && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
-          <h3 className="font-bold text-gray-900 mb-3">{t('tripSettings')}</h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-500">{isHe ? 'שם' : 'Name'}</span>
-              <span className="font-semibold text-gray-900">{trip.name}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">{t('tripYear')}</span>
-              <span className="font-semibold text-gray-900">{trip.year}</span>
-            </div>
-            {trip.destination && (
-              <div className="flex justify-between">
-                <span className="text-gray-500">{t('destination')}</span>
-                <span className="font-semibold text-gray-900">{trip.destination}</span>
-              </div>
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="font-bold text-gray-900">{t('tripSettings')}</h3>
+            {isAdmin && (
+              <button onClick={openEdit} className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
+                <Pencil size={16} />
+              </button>
             )}
-            <div className="flex justify-between items-center pt-2 border-t border-gray-100 mt-2">
-              <span className="text-gray-500">{t('tripCode')}</span>
+          </div>
+          <div className="space-y-0">
+            <Field label={isHe ? 'שם השיוט' : 'Trip Name'} value={trip.name} />
+            <Field label={isHe ? 'שנה' : 'Year'} value={trip.year} />
+            <Field label={isHe ? 'מדינה' : 'Country'} value={trip.country} />
+            <Field label={isHe ? 'שם האזור' : 'Region'} value={trip.region_name} />
+            <Field label={isHe ? 'אזור יציאה' : 'Departure Area'} value={trip.departure_area} />
+            <Field label={isHe ? 'תאריך יציאה' : 'Departure Date'} value={trip.start_date} />
+            <div className="flex justify-between items-center py-2 border-b border-gray-50">
+              <span className="text-gray-400 text-sm">{t('tripCode')}</span>
               <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-gray-900">{trip.invite_token?.toUpperCase()}</span>
+                <span className="font-mono font-bold text-gray-900 text-sm">{trip.invite_token?.toUpperCase()}</span>
                 <button onClick={copyCode} className="p-1 text-gray-400 hover:text-blue-600 transition-colors">
-                  {copied ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
+                  {copied ? <Check size={15} className="text-emerald-500" /> : <Copy size={15} />}
                 </button>
               </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">{isHe ? 'סוג גישה' : 'Access type'}</span>
-              <span className={`font-semibold ${isAdmin ? 'text-blue-600' : 'text-gray-500'}`}>
+            <div className="flex justify-between py-2">
+              <span className="text-gray-400 text-sm">{isHe ? 'סוג גישה' : 'Access type'}</span>
+              <span className={`font-semibold text-sm ${isAdmin ? 'text-blue-600' : 'text-gray-500'}`}>
                 {isAdmin ? t('adminAccess') : t('readOnlyAccess')}
               </span>
             </div>
@@ -88,16 +118,12 @@ export default function Settings() {
           <h3 className="font-bold text-gray-900">{t('language')}</h3>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={() => toggleLang('he')}
-            className={`flex-1 py-3 rounded-2xl font-semibold transition-all ${lang === 'he' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-          >
+          <button onClick={() => toggleLang('he')}
+            className={`flex-1 py-3 rounded-2xl font-semibold transition-all ${lang === 'he' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             🇮🇱 עברית
           </button>
-          <button
-            onClick={() => toggleLang('en')}
-            className={`flex-1 py-3 rounded-2xl font-semibold transition-all ${lang === 'en' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-          >
+          <button onClick={() => toggleLang('en')}
+            className={`flex-1 py-3 rounded-2xl font-semibold transition-all ${lang === 'en' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             🇬🇧 English
           </button>
         </div>
@@ -111,29 +137,58 @@ export default function Settings() {
         <p className="text-gray-400 text-sm">v1.0.0 · {isHe ? 'עשוי עם ❤️ לשיוט' : 'Made with ❤️ for sailing'}</p>
       </motion.div>
 
-      {/* Danger zone */}
+      {/* Actions */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
         className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
-        <h3 className="font-bold text-red-500 mb-3">{t('dangerZone')}</h3>
         <div className="space-y-3">
-          <button
-            onClick={handleLeave}
-            className="w-full flex items-center gap-3 py-3 px-4 rounded-2xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
-          >
+          <button onClick={handleLeave}
+            className="w-full flex items-center gap-3 py-3 px-4 rounded-2xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors">
             <LogOut size={18} className="text-gray-500" />
             <span className="font-medium">{t('leaveTrip')}</span>
           </button>
           {isAdmin && (
-            <button
-              onClick={handleDelete}
-              className="w-full flex items-center gap-3 py-3 px-4 rounded-2xl border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
-            >
+            <button onClick={handleDelete}
+              className="w-full flex items-center gap-3 py-3 px-4 rounded-2xl border border-red-200 text-red-600 hover:bg-red-50 transition-colors">
               <Trash2 size={18} />
               <span className="font-medium">{t('deleteTrip')}</span>
             </button>
           )}
         </div>
       </motion.div>
+
+      {/* Edit modal */}
+      <Modal open={editOpen} onClose={() => setEditOpen(false)} title={isHe ? 'עריכת פרטי שיוט' : 'Edit Trip Details'}>
+        <div className="space-y-3">
+          {[
+            { key: 'name', label: isHe ? 'שם השיוט' : 'Trip Name' },
+            { key: 'year', label: isHe ? 'שנה' : 'Year', type: 'number' },
+            { key: 'country', label: isHe ? 'מדינה' : 'Country' },
+            { key: 'region_name', label: isHe ? 'שם האזור' : 'Region' },
+            { key: 'departure_area', label: isHe ? 'אזור יציאה' : 'Departure Area' },
+            { key: 'start_date', label: isHe ? 'תאריך יציאה' : 'Departure Date', type: 'date' },
+          ].map(({ key, label, type = 'text' }) => (
+            <div key={key}>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">{label}</label>
+              <input
+                type={type}
+                className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:outline-none focus:border-blue-500 text-gray-900 bg-white"
+                value={form[key] || ''}
+                onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+              />
+            </div>
+          ))}
+          <div className="flex gap-3 pt-2">
+            <button onClick={() => setEditOpen(false)}
+              className="flex-1 py-3.5 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold">
+              {t('cancel')}
+            </button>
+            <button onClick={handleSave} disabled={saving}
+              className="flex-1 py-3.5 rounded-2xl bg-blue-600 text-white font-bold disabled:opacity-40">
+              {saving ? '...' : t('save')}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

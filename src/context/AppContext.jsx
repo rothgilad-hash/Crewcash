@@ -94,7 +94,7 @@ export function AppProvider({ children }) {
 
   return (
     <AppContext.Provider value={{
-      trip, participants, expenses, shoppingItems,
+      trip, setTrip, participants, expenses, shoppingItems,
       isAdmin, loading, lang,
       loadTrip, joinTrip, createTrip, leaveTrip, changeLang,
       setParticipants, setExpenses, setShoppingItems
