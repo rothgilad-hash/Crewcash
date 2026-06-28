@@ -6,7 +6,13 @@ import { getCategoryIcon } from '../lib/calculations'
 import Modal from './Modal'
 
 const CATEGORIES = ['yacht', 'fuel', 'food', 'supermarket', 'alcohol', 'transport', 'activities', 'gear', 'accommodation', 'health', 'insurance', 'other']
-const INSURANCE_SUBCATEGORIES = ['insurance_main', 'insurance_deductible']
+
+const SUBCATEGORIES = {
+  insurance: ['insurance_main', 'insurance_deductible'],
+  transport: ['transport_taxi_il', 'transport_taxi_abroad', 'transport_car_rental'],
+  gear: ['gear_defibrillator'],
+  other: ['other_shirts', 'other_gifts'],
+}
 const CURRENCIES = ['ILS', 'EUR', 'USD']
 
 const defaultForm = {
@@ -37,7 +43,8 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
     setForm(f => {
       const desc = (!f.description || autoFilledDesc.current) ? t('cat_' + cat) : f.description
       autoFilledDesc.current = true
-      return { ...f, category: cat, sub_category: cat === 'insurance' ? 'insurance_main' : '', description: desc }
+      const subs = SUBCATEGORIES[cat]
+      return { ...f, category: cat, sub_category: subs ? subs[0] : '', description: desc }
     })
   }
 
@@ -135,16 +142,16 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
           </div>
         </div>
 
-        {/* Insurance sub-category */}
-        {form.category === 'insurance' && (
+        {/* Sub-category */}
+        {SUBCATEGORIES[form.category] && (
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">{t('subCategory')}</label>
-            <div className="flex gap-3">
-              {INSURANCE_SUBCATEGORIES.map(sub => (
+            <div className="flex flex-wrap gap-2">
+              {SUBCATEGORIES[form.category].map(sub => (
                 <button
                   key={sub}
                   onClick={() => set('sub_category', sub)}
-                  className={`flex-1 py-3 rounded-2xl border-2 text-sm font-semibold transition-all active:scale-95 ${
+                  className={`px-4 py-2.5 rounded-2xl border-2 text-sm font-semibold transition-all active:scale-95 ${
                     form.sub_category === sub
                       ? 'border-blue-500 bg-blue-50 text-blue-700'
                       : 'border-gray-200 bg-white text-gray-600'

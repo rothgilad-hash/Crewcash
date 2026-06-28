@@ -71,7 +71,13 @@ export default {
 
     subcat_insurance_main: 'Main Insurance',
     subcat_insurance_deductible: 'Deductible Reduction',
-    subCategory: 'Insurance Type',
+    subcat_transport_taxi_il: 'Taxi in Israel',
+    subcat_transport_taxi_abroad: 'Taxis Abroad',
+    subcat_transport_car_rental: 'Car Rental',
+    subcat_gear_defibrillator: 'Defibrillator',
+    subcat_other_shirts: 'Shirts',
+    subcat_other_gifts: 'Gifts',
+    subCategory: 'Sub-category',
 
     addParticipant: 'Add Participant',
     participantName: 'Name',

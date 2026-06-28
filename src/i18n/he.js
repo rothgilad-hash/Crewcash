@@ -76,7 +76,13 @@ export default {
 
     subcat_insurance_main: 'ביטוח ראשי',
     subcat_insurance_deductible: 'הקטנת השתתפות עצמית',
-    subCategory: 'סוג ביטוח',
+    subcat_transport_taxi_il: 'מונית בישראל',
+    subcat_transport_taxi_abroad: 'מוניות בחו"ל',
+    subcat_transport_car_rental: 'השכרת רכב',
+    subcat_gear_defibrillator: 'דפיברילטור',
+    subcat_other_shirts: 'חולצות',
+    subcat_other_gifts: 'מתנות',
+    subCategory: 'תת-קטגוריה',
 
     // Participants
     addParticipant: 'הוסף משתתף',

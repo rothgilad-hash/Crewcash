@@ -87,9 +87,10 @@ export default function Expenses() {
                   )}
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <span className="truncate">{getParticipantName(exp.paid_by)}</span>
-                  <span>·</span>
-                  <span>{t('cat_' + exp.category)}</span>
+                  {exp.sub_category
+                    ? <span className="truncate">{t('subcat_' + exp.sub_category)}</span>
+                    : null
+                  }
                   {exp.is_cash && <Banknote size={13} className="text-gray-300 flex-shrink-0" />}
                 </div>
               </div>
