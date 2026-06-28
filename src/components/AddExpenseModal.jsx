@@ -157,7 +157,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
 
         {/* 4. Toggles */}
         <div className="space-y-1">
-          {hasGil && (
+          {hasGil && form.category === 'yacht' && (
             <label className="flex items-center justify-between py-3.5 px-4 bg-blue-50 rounded-2xl cursor-pointer active:bg-blue-100 transition-colors">
               <span className="text-sm font-medium text-gray-800">⛵ {t('isYachtCost')}</span>
               <div className="relative">
