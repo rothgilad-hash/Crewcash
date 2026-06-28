@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
-import { calculateBalances, formatCurrency } from '../lib/calculations'
-import { Copy, Check, AlertCircle } from 'lucide-react'
-import { motion } from 'framer-motion'
-
-const CAT_EMOJI = { yacht: '⛵', fuel: '⛽', food: '🍽️', supermarket: '🛒', alcohol: '🍷', transport: '🚕', activities: '🏊', gear: '🎒', other: '💰' }
+import { calculateBalances, formatCurrency, getCategoryIcon } from '../lib/calculations'
+import { Copy, Check, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Dashboard() {
   const { t } = useTranslation()
@@ -29,6 +27,16 @@ export default function Dashboard() {
 
   const yachtTotal = expenses.filter(e => e.is_yacht_cost).reduce((s, e) => s + e.amount, 0)
   const otherTotal = expenses.filter(e => !e.is_yacht_cost).reduce((s, e) => s + e.amount, 0)
+
+  const [showBreakdown, setShowBreakdown] = useState(false)
+
+  const categoryBreakdown = expenses
+    .filter(e => !e.is_yacht_cost)
+    .reduce((acc, e) => {
+      const key = e.category
+      acc[key] = (acc[key] || 0) + e.amount
+      return acc
+    }, {})
 
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316']
 
@@ -65,11 +73,38 @@ export default function Dashboard() {
               <p className="text-blue-200 text-xs mb-1">⛵ {isHe ? 'יאכטה' : 'Yacht'}</p>
               <p className="font-bold text-lg">{formatCurrency(yachtTotal, 'EUR')}</p>
             </div>
-            <div className="bg-white/15 rounded-2xl p-3.5">
-              <p className="text-blue-200 text-xs mb-1">🧾 {isHe ? 'הוצאות נוספות' : 'Other Expenses'}</p>
-              <p className="font-bold text-lg">{formatCurrency(otherTotal, 'EUR')}</p>
-            </div>
+            <button
+              onClick={() => setShowBreakdown(v => !v)}
+              className="bg-white/15 rounded-2xl p-3.5 text-left w-full active:bg-white/25 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-blue-200 text-xs">🧾 {isHe ? 'הוצאות נוספות' : 'Other Expenses'}</p>
+                {showBreakdown ? <ChevronUp size={14} className="text-blue-200" /> : <ChevronDown size={14} className="text-blue-200" />}
+              </div>
+              <p className="font-bold text-lg mt-1">{formatCurrency(otherTotal, 'EUR')}</p>
+            </button>
           </div>
+
+          {/* Category breakdown */}
+          <AnimatePresence>
+            {showBreakdown && Object.keys(categoryBreakdown).length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden mt-3"
+              >
+                <div className="space-y-1.5">
+                  {Object.entries(categoryBreakdown).sort((a, b) => b[1] - a[1]).map(([cat, amt]) => (
+                    <div key={cat} className="flex items-center justify-between bg-white/10 rounded-xl px-3 py-2">
+                      <span className="text-blue-100 text-sm">{getCategoryIcon(cat)} {t('cat_' + cat)}</span>
+                      <span className="text-white font-semibold text-sm">{formatCurrency(amt, 'EUR')}</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
 
