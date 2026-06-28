@@ -17,7 +17,7 @@ const SUBCATEGORIES = {
 const CURRENCIES = ['ILS', 'EUR', 'USD']
 
 const defaultForm = {
-  description: '', amount: '', currency: 'EUR', category: 'other',
+  description: '', amount: '', currency: 'EUR', category: '',
   sub_category: '', paid_by: '', is_yacht_cost: false, is_cash: false, notes: ''
 }
 
@@ -31,7 +31,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
   useEffect(() => {
     if (expense) {
       setForm({ ...defaultForm, ...expense, amount: expense.amount?.toString() || '', paid_by: expense.paid_by || '' })
-      autoFilledDesc.current = false
+      autoFilledDesc.current = true
     } else {
       setForm(defaultForm)
       autoFilledDesc.current = false
@@ -50,11 +50,12 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
   }
 
   const handleSave = async () => {
-    if (!form.description || !form.amount) return
+    if (!form.category || !form.amount) return
+    const desc = form.description || t('cat_' + form.category)
     setSaving(true)
     const payload = {
       trip_id: trip.id,
-      description: form.description,
+      description: desc,
       amount: parseFloat(form.amount),
       currency: form.currency,
       category: form.category,
@@ -86,18 +87,50 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
     <Modal open={open} onClose={onClose} title={expense ? t('editExpense') : t('addExpense')}>
       <div className="space-y-5">
 
-        {/* Description */}
+        {/* 1. Category */}
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">{t('description')} *</label>
-          <input
-            className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500 text-gray-900 bg-white transition-colors"
-            placeholder={t('description')}
-            value={form.description}
-            onChange={e => { autoFilledDesc.current = false; set('description', e.target.value) }}
-          />
+          <label className="block text-sm font-semibold text-gray-700 mb-2">{t('category')}</label>
+          <div className="grid grid-cols-3 gap-2">
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat}
+                onClick={() => selectCategory(cat)}
+                className={`flex flex-col items-center gap-1 p-3 rounded-2xl border-2 transition-all active:scale-95 ${
+                  form.category === cat
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 bg-white active:bg-gray-50'
+                }`}
+              >
+                <span className="text-2xl">{getCategoryIcon(cat)}</span>
+                <span className="text-xs text-gray-600 font-medium leading-tight text-center">{t('cat_' + cat)}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Amount + Currency */}
+        {/* 2. Sub-category */}
+        {SUBCATEGORIES[form.category] && (
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{t('subCategory')}</label>
+            <div className="flex flex-wrap gap-2">
+              {SUBCATEGORIES[form.category].map(sub => (
+                <button
+                  key={sub}
+                  onClick={() => set('sub_category', sub)}
+                  className={`px-4 py-2.5 rounded-2xl border-2 text-sm font-semibold transition-all active:scale-95 ${
+                    form.sub_category === sub
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 bg-white text-gray-600'
+                  }`}
+                >
+                  {t('subcat_' + sub)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 3. Amount + Currency */}
         <div className="flex gap-3">
           <div className="flex-1">
             <label className="block text-sm font-semibold text-gray-700 mb-2">{t('amount')} *</label>
@@ -122,57 +155,13 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
           </div>
         </div>
 
-        {/* Category */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">{t('category')}</label>
-          <div className="grid grid-cols-3 gap-2">
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat}
-                onClick={() => selectCategory(cat)}
-                className={`flex flex-col items-center gap-1 p-3 rounded-2xl border-2 transition-all active:scale-95 ${
-                  form.category === cat
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 bg-white active:bg-gray-50'
-                }`}
-              >
-                <span className="text-2xl">{getCategoryIcon(cat)}</span>
-                <span className="text-xs text-gray-600 font-medium leading-tight text-center">{t('cat_' + cat)}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Sub-category */}
-        {SUBCATEGORIES[form.category] && (
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">{t('subCategory')}</label>
-            <div className="flex flex-wrap gap-2">
-              {SUBCATEGORIES[form.category].map(sub => (
-                <button
-                  key={sub}
-                  onClick={() => set('sub_category', sub)}
-                  className={`px-4 py-2.5 rounded-2xl border-2 text-sm font-semibold transition-all active:scale-95 ${
-                    form.sub_category === sub
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 bg-white text-gray-600'
-                  }`}
-                >
-                  {t('subcat_' + sub)}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-
-        {/* Toggles */}
+        {/* 4. Toggles */}
         <div className="space-y-1">
           {hasGil && (
             <label className="flex items-center justify-between py-3.5 px-4 bg-blue-50 rounded-2xl cursor-pointer active:bg-blue-100 transition-colors">
               <span className="text-sm font-medium text-gray-800">⛵ {t('isYachtCost')}</span>
               <div className="relative">
-                <input type="checkbox" className="sr-only peer" checked={form.is_yacht_cost} onChange={e => set('is_yacht_cost', e.target.checked)} />
+                <input type="checkbox" className="sr-only" checked={form.is_yacht_cost} onChange={e => set('is_yacht_cost', e.target.checked)} />
                 <div className={`w-11 h-6 rounded-full transition-colors ${form.is_yacht_cost ? 'bg-blue-600' : 'bg-gray-200'}`} />
                 <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.is_yacht_cost ? 'translate-x-5' : ''}`} />
               </div>
@@ -181,14 +170,14 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
           <label className="flex items-center justify-between py-3.5 px-4 bg-gray-50 rounded-2xl cursor-pointer active:bg-gray-100 transition-colors">
             <span className="text-sm font-medium text-gray-800">💵 {t('isCash')}</span>
             <div className="relative">
-              <input type="checkbox" className="sr-only peer" checked={form.is_cash} onChange={e => set('is_cash', e.target.checked)} />
+              <input type="checkbox" className="sr-only" checked={form.is_cash} onChange={e => set('is_cash', e.target.checked)} />
               <div className={`w-11 h-6 rounded-full transition-colors ${form.is_cash ? 'bg-blue-600' : 'bg-gray-200'}`} />
               <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.is_cash ? 'translate-x-5' : ''}`} />
             </div>
           </label>
         </div>
 
-        {/* Notes */}
+        {/* 5. Notes */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">{t('notes')}</label>
           <input
@@ -217,7 +206,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !form.description || !form.amount}
+            disabled={saving || !form.category || !form.amount}
             className="flex-1 py-4 rounded-2xl bg-blue-600 text-white font-bold active:bg-blue-700 transition-colors disabled:opacity-40"
           >
             {saving ? '...' : t('save')}
