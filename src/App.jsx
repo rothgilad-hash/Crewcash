@@ -9,6 +9,7 @@ import Participants from './pages/Participants'
 import Debts from './pages/Debts'
 import Shopping from './pages/Shopping'
 import Compare from './pages/Compare'
+import CashFlow from './pages/CashFlow'
 import Report from './pages/Report'
 import Settings from './pages/Settings'
 
@@ -49,6 +50,7 @@ function ProtectedApp() {
         <Route path="/debts" element={<Debts />} />
         <Route path="/shopping" element={<Shopping />} />
         <Route path="/compare" element={<Compare />} />
+        <Route path="/cash" element={<CashFlow />} />
         <Route path="/report" element={<Report />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>

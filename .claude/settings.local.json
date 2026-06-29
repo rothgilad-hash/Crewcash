@@ -8,7 +8,14 @@
       "PowerShell(py --version 2>&1)",
       "PowerShell(python3 -c \"import openpyxl; wb = openpyxl.load_workbook\\(r'C:\\\\Users\\\\chenr\\\\Desktop\\\\������ ����-2026.xlsx'\\); print\\('Sheets:', wb.sheetnames\\)\")",
       "PowerShell(python3 -c \"print\\('hello'\\)\" 2>&1)",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(node -e ' *)",
+      "PowerShell(Get-ChildItem \"C:\\\\Program Files\\\\nodejs\\\\node.exe\" -ErrorAction SilentlyContinue; Get-ChildItem \"$env:APPDATA\\\\npm\\\\node.cmd\" -ErrorAction SilentlyContinue; ls \"C:\\\\Program Files\\\\\" | Select-String node)",
+      "mcp__visualize__read_me",
+      "mcp__visualize__show_widget"
     ]
   }
 }

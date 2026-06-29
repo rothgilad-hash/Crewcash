@@ -18,7 +18,8 @@ const CURRENCIES = ['ILS', 'EUR', 'USD']
 
 const defaultForm = {
   description: '', amount: '', currency: 'EUR', category: '',
-  sub_category: '', paid_by: '', is_yacht_cost: false, is_cash: false, notes: ''
+  sub_category: '', paid_by: '', is_yacht_cost: false, is_cash: false, notes: '',
+  planned_date: '', is_paid: false
 }
 
 export default function AddExpenseModal({ open, onClose, expense = null }) {
@@ -64,7 +65,9 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
       paid_by: form.paid_by || null,
       is_yacht_cost: form.is_yacht_cost,
       is_cash: form.is_cash,
-      notes: form.notes
+      notes: form.notes,
+      planned_date: form.planned_date || null,
+      is_paid: form.is_paid
     }
     if (expense?.id) {
       await supabase.from('expenses').update(payload).eq('id', expense.id)
@@ -206,7 +209,22 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
           </div>
         </div>
 
-        {/* 6. Notes */}
+        {/* 6. Planned date */}
+        {form.is_cash && (
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              📅 {isHe ? 'תאריך משוער לתשלום' : 'Planned payment date'}
+            </label>
+            <input
+              type="date"
+              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500 text-gray-900 bg-white transition-colors"
+              value={form.planned_date}
+              onChange={e => set('planned_date', e.target.value)}
+            />
+          </div>
+        )}
+
+        {/* 7. Notes */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">{t('notes')}</label>
           <input

@@ -4,7 +4,7 @@ import { useApp } from '../context/AppContext'
 import { motion } from 'framer-motion'
 import {
   LayoutDashboard, Receipt, Users, ArrowLeftRight,
-  ShoppingCart, BarChart2, FileText, Settings
+  ShoppingCart, Wallet, FileText, Settings
 } from 'lucide-react'
 
 const NAV = [
@@ -13,7 +13,7 @@ const NAV = [
   { to: '/participants', icon: Users, key: 'participants' },
   { to: '/debts', icon: ArrowLeftRight, key: 'debts' },
   { to: '/shopping', icon: ShoppingCart, key: 'shopping' },
-  { to: '/compare', icon: BarChart2, key: 'compare' },
+  { to: '/cash', icon: Wallet, key: 'cash' },
   { to: '/report', icon: FileText, key: 'report' },
 ]
 

@@ -11,6 +11,7 @@ export default {
     compare: 'Compare',
     leaderboard: 'Rankings',
     report: 'Report',
+    cash: 'Cash',
     settings: 'Settings',
 
     createTrip: 'Create New Trip',

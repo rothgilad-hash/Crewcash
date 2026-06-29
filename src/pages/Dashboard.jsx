@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { calculateBalances, formatCurrency, getCategoryIcon } from '../lib/calculations'
-import { Copy, Check, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react'
+import { Copy, Check, AlertCircle, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 
 export default function Dashboard() {
   const { t } = useTranslation()
@@ -28,7 +29,15 @@ export default function Dashboard() {
   const yachtTotal = expenses.filter(e => e.is_yacht_cost).reduce((s, e) => s + e.amount, 0)
   const otherTotal = expenses.filter(e => !e.is_yacht_cost).reduce((s, e) => s + e.amount, 0)
 
+  const navigate = useNavigate()
   const [showBreakdown, setShowBreakdown] = useState(false)
+
+  const totalCollected = participants.reduce((s, p) => s + (p.amount_paid || 0), 0)
+  const cashSpent = expenses.filter(e => e.is_cash && e.is_paid).reduce((s, e) => s + e.amount, 0)
+  const kittyRefunds = participants.reduce((s, p) => s + (p.kitty_paid_back || 0), 0)
+  const cashBalance = totalCollected - cashSpent - kittyRefunds
+  const cashPct = totalCollected > 0 ? cashBalance / totalCollected : null
+  const cashAlert = cashPct !== null && cashPct <= 0.25 ? 'critical' : cashPct !== null && cashPct <= 0.5 ? 'warning' : null
 
   const categoryBreakdown = expenses
     .filter(e => !e.is_yacht_cost)
@@ -116,6 +125,38 @@ export default function Dashboard() {
           <p className="text-amber-700 text-sm font-medium">
             {isHe ? 'הוסף משתתפים ב"אנשים" כדי להתחיל לחשב!' : 'Add participants in "People" to start calculating!'}
           </p>
+        </motion.div>
+      )}
+
+      {/* Cash balance card */}
+      {totalCollected > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+          onClick={() => navigate('/cash')}
+          className={`rounded-3xl p-4 shadow-sm border cursor-pointer active:opacity-80 transition-opacity ${
+            cashAlert === 'critical' ? 'bg-red-50 border-red-200' :
+            cashAlert === 'warning' ? 'bg-amber-50 border-amber-200' :
+            'bg-white border-gray-100'
+          }`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-gray-400">💵 {isHe ? 'יתרת קופת מזומנים' : 'Cash Balance'}</p>
+            {cashAlert && <AlertTriangle size={16} className={cashAlert === 'critical' ? 'text-red-500' : 'text-amber-500'} />}
+          </div>
+          <p className={`text-2xl font-black ${cashAlert === 'critical' ? 'text-red-600' : cashAlert === 'warning' ? 'text-amber-600' : 'text-gray-900'}`}>
+            {formatCurrency(cashBalance, 'EUR')}
+          </p>
+          {cashPct !== null && (
+            <>
+              <div className="w-full bg-gray-100 rounded-full h-2 mt-2">
+                <div
+                  className={`h-2 rounded-full transition-all ${cashAlert === 'critical' ? 'bg-red-500' : cashAlert === 'warning' ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                  style={{ width: `${Math.max(0, Math.min(100, cashPct * 100))}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">{Math.round(cashPct * 100)}% {isHe ? 'נשאר' : 'remaining'}</p>
+            </>
+          )}
         </motion.div>
       )}
 

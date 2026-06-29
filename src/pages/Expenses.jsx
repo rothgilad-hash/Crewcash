@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
+import { supabase } from '../lib/supabase'
 import { formatCurrency, getCategoryIcon } from '../lib/calculations'
 import AddExpenseModal from '../components/AddExpenseModal'
-import { Plus, Banknote } from 'lucide-react'
+import { Plus, Banknote, CheckCircle2, Circle } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 const CATEGORIES = ['all', 'yacht', 'fuel', 'food', 'supermarket', 'alcohol', 'transport', 'activities', 'gear', 'insurance', 'yacht_services', 'other']
@@ -25,6 +26,11 @@ export default function Expenses() {
   }
   const openAdd = () => {
     setSelected(null); setModalOpen(true)
+  }
+
+  const togglePaid = async (e, exp) => {
+    e.stopPropagation()
+    await supabase.from('expenses').update({ is_paid: !exp.is_paid }).eq('id', exp.id)
   }
 
   return (
@@ -87,9 +93,11 @@ export default function Expenses() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.025 }}
                 onClick={() => openEdit(exp)}
-                className={`bg-white rounded-2xl p-3.5 shadow-sm border border-gray-100 flex items-center gap-3 ${
-                  isAdmin ? 'active:bg-gray-50 active:border-blue-100' : ''
-                } transition-colors`}
+                className={`rounded-2xl p-3.5 shadow-sm border flex items-center gap-3 transition-colors ${
+                  exp.is_cash && exp.is_paid
+                    ? 'bg-emerald-50 border-emerald-100'
+                    : 'bg-white border-gray-100'
+                } ${isAdmin ? 'active:bg-gray-50' : ''}`}
               >
                 <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-xl flex-shrink-0">
                   {getCategoryIcon(exp.category)}
@@ -105,12 +113,30 @@ export default function Expenses() {
                     {exp.sub_category && <span className="flex-shrink-0">{t('subcat_' + exp.sub_category)}</span>}
                     {exp.sub_category && exp.notes && <span className="text-gray-300">·</span>}
                     {exp.notes && <span className="truncate">{exp.notes}</span>}
-                    {exp.is_cash && <Banknote size={11} className="text-gray-300 flex-shrink-0" />}
+                    {exp.is_cash && !exp.sub_category && !exp.notes && <Banknote size={11} className="text-gray-300 flex-shrink-0" />}
+                    {exp.planned_date && !exp.is_paid && (
+                      <span className="flex-shrink-0 text-blue-400">
+                        {exp.sub_category || exp.notes ? '·' : ''} {new Date(exp.planned_date).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}
+                      </span>
+                    )}
                   </div>
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="font-bold text-gray-900 text-sm">{formatCurrency(exp.amount, exp.currency)}</p>
-                  <p className="text-[10px] text-gray-400">{exp.currency}</p>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="text-right">
+                    <p className="font-bold text-gray-900 text-sm">{formatCurrency(exp.amount, exp.currency)}</p>
+                    <p className="text-[10px] text-gray-400">{exp.currency}</p>
+                  </div>
+                  {isAdmin && exp.is_cash && (
+                    <button
+                      onClick={(e) => togglePaid(e, exp)}
+                      className="w-8 h-8 flex items-center justify-center rounded-xl active:bg-gray-100 transition-colors flex-shrink-0"
+                    >
+                      {exp.is_paid
+                        ? <CheckCircle2 size={20} className="text-emerald-500" />
+                        : <Circle size={20} className="text-gray-300" />
+                      }
+                    </button>
+                  )}
                 </div>
               </motion.div>
             ))
@@ -125,8 +151,6 @@ export default function Expenses() {
           </div>
         )}
       </div>
-
-      {/* FAB */}
 
       <AddExpenseModal open={modalOpen} onClose={() => setModalOpen(false)} expense={selected} />
     </div>

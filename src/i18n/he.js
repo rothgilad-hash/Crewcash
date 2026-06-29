@@ -12,6 +12,7 @@ export default {
     compare: 'השוואה',
     leaderboard: 'דירוג',
     report: 'דוח',
+    cash: 'מזומן',
     settings: 'הגדרות',
 
     // Landing
