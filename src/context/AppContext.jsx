@@ -57,25 +57,24 @@ export function AppProvider({ children }) {
 
   useEffect(() => {
     if (!trip) return
-    const channel = supabase.channel('trip-' + trip.id)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `trip_id=eq.${trip.id}` },
-        () => supabase.from('expenses').select('*').eq('trip_id', trip.id).order('created_at', { ascending: false }).then(({ data }) => setExpenses(data || [])))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `trip_id=eq.${trip.id}` },
-        () => supabase.from('participants').select('*').eq('trip_id', trip.id).order('created_at').then(({ data }) => {
+    const tripId = trip.id
+    const channel = supabase.channel('trip-' + tripId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `trip_id=eq.${tripId}` },
+        () => supabase.from('expenses').select('*').eq('trip_id', tripId).order('created_at', { ascending: false }).then(({ data }) => setExpenses(data || [])))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `trip_id=eq.${tripId}` },
+        () => supabase.from('participants').select('*').eq('trip_id', tripId).order('created_at').then(({ data }) => {
           setParticipants(data || [])
           reloadRefunds((data || []).map(p => p.id))
         }))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_items', filter: `trip_id=eq.${trip.id}` },
-        () => supabase.from('shopping_items').select('*').eq('trip_id', trip.id).order('category').order('created_at').then(({ data }) => setShoppingItems(data || [])))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_items', filter: `trip_id=eq.${tripId}` },
+        () => supabase.from('shopping_items').select('*').eq('trip_id', tripId).order('category').order('created_at').then(({ data }) => setShoppingItems(data || [])))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'kitty_refunds' },
-        () => {
-          supabase.from('participants').select('id').eq('trip_id', trip.id)
-            .then(({ data }) => reloadRefunds((data || []).map(p => p.id)))
-        })
+        () => supabase.from('participants').select('id').eq('trip_id', tripId)
+            .then(({ data }) => reloadRefunds((data || []).map(p => p.id))))
       .subscribe()
 
     return () => supabase.removeChannel(channel)
-  }, [trip, participants])
+  }, [trip, reloadRefunds])
 
   const joinTrip = async (inviteCode) => {
     const { data } = await supabase.from('trips').select('*').eq('invite_token', inviteCode.toLowerCase()).single()
