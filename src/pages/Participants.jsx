@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
 import { Plus, Star, Trash2, Pencil } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import SignaturePad from '../components/SignaturePad'
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316']
 
@@ -18,6 +19,8 @@ export default function Participants() {
   const [form, setForm] = useState({ name: '', is_gil: false, joined_late: false })
   const [payAmount, setPayAmount] = useState('')
   const [saving, setSaving] = useState(false)
+  const [sigOpen, setSigOpen] = useState(false)
+  const [sigTarget, setSigTarget] = useState(null)
   const isHe = lang === 'he'
 
   const balances = calculateBalances(expenses, participants)
@@ -61,12 +64,25 @@ export default function Participants() {
     setSaving(true)
     if (payMode === 'return') {
       await supabase.from('participants').update({ kitty_paid_back: parseFloat(payAmount) || 0 }).eq('id', payOpen)
+      const p = participants.find(x => x.id === payOpen)
+      setSigTarget({ id: payOpen, name: p?.name, amount: parseFloat(payAmount) || 0 })
+      setPayAmount('')
+      setPayOpen(null)
+      setSaving(false)
+      setSigOpen(true)
     } else {
       await supabase.from('participants').update({ amount_paid: parseFloat(payAmount) || 0 }).eq('id', payOpen)
+      setPayAmount('')
+      setPayOpen(null)
+      setSaving(false)
     }
-    setPayAmount('')
-    setPayOpen(null)
-    setSaving(false)
+  }
+
+  const handleSaveSignature = async (dataUrl) => {
+    if (!sigTarget) return
+    await supabase.from('participants').update({ kitty_signature: dataUrl }).eq('id', sigTarget.id)
+    setSigOpen(false)
+    setSigTarget(null)
   }
 
   return (
@@ -208,6 +224,16 @@ export default function Participants() {
           </div>
         </div>
       </Modal>
+
+      {/* Signature pad */}
+      <SignaturePad
+        open={sigOpen}
+        onClose={() => { setSigOpen(false); setSigTarget(null) }}
+        onSave={handleSaveSignature}
+        personName={sigTarget?.name || ''}
+        amount={sigTarget?.amount || 0}
+        lang={lang}
+      />
 
       {/* Payment modal */}
       <Modal open={!!payOpen} onClose={() => setPayOpen(null)} title={payMode === 'return' ? (isHe ? 'החזר מהקופה' : 'Kitty Refund') : (isHe ? 'עדכון תשלום' : 'Update Payment')}>
