@@ -46,16 +46,9 @@ export default function Participants() {
     await supabase.from('participants').delete().eq('id', id)
   }
 
-  const openPay = (p) => {
-    const b = balances[p.id] || { owes: 0, paid: 0 }
-    const remaining = Math.round((b.owes - (p.amount_paid || 0) - (b.paid || 0) + (p.kitty_paid_back || 0)) * 100) / 100
-    if (remaining < -0.5) {
-      setPayMode('return')
-      setPayAmount((p.kitty_paid_back || 0).toString())
-    } else {
-      setPayMode('pay')
-      setPayAmount((p.amount_paid || 0).toString())
-    }
+  const openPay = (p, mode) => {
+    setPayMode(mode)
+    setPayAmount(mode === 'return' ? (p.kitty_paid_back || 0).toString() : (p.amount_paid || 0).toString())
     setPayOpen(p.id)
   }
 
@@ -143,11 +136,19 @@ export default function Participants() {
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     {isAdmin && (
                       <button
-                        onClick={() => openPay(p)}
-                        className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold transition-colors bg-blue-50 border border-blue-200 text-blue-600 active:bg-blue-100"
+                        onClick={() => openPay(p, 'pay')}
+                        className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-semibold transition-colors bg-blue-50 border border-blue-200 text-blue-600 active:bg-blue-100"
                       >
                         <Pencil size={12} />
-                        {kittyOwes || settled ? (isHe ? 'ערוך' : 'Edit') : (isHe ? '+ תשלום' : '+ Pay')}
+                        {isHe ? 'שילם' : 'Paid'}
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button
+                        onClick={() => openPay(p, 'return')}
+                        className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-semibold transition-colors bg-emerald-50 border border-emerald-200 text-emerald-600 active:bg-emerald-100"
+                      >
+                        ↩ {isHe ? 'החזר' : 'Refund'}
                       </button>
                     )}
                     {isAdmin && (
