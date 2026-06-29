@@ -69,12 +69,17 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
       planned_date: form.planned_date || null,
       is_paid: form.is_paid
     }
+    let error
     if (expense?.id) {
-      await supabase.from('expenses').update(payload).eq('id', expense.id)
+      ({ error } = await supabase.from('expenses').update(payload).eq('id', expense.id))
     } else {
-      await supabase.from('expenses').insert(payload)
+      ({ error } = await supabase.from('expenses').insert(payload))
     }
     setSaving(false)
+    if (error) {
+      alert('שגיאה: ' + error.message)
+      return
+    }
     onClose()
   }
 
