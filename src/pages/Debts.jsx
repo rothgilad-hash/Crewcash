@@ -12,7 +12,11 @@ export default function Debts() {
 
   const balances = calculateBalances(expenses, participants)
 
-  const getKittyPaidBack = (pid) => kittyRefunds.filter(r => r.participant_id === pid).reduce((s, r) => s + r.amount, 0)
+  const getKittyPaidBack = (pid) => {
+    const fromTable = kittyRefunds.filter(r => r.participant_id === pid).reduce((s, r) => s + r.amount, 0)
+    const p = participants.find(x => x.id === pid)
+    return fromTable > 0 ? fromTable : (p?.kitty_paid_back || 0)
+  }
 
   const getRemaining = (p) => {
     const b = balances[p.id] || { owes: 0, paid: 0 }

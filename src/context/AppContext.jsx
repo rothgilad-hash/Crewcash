@@ -49,11 +49,11 @@ export function AppProvider({ children }) {
     }
   }, [loadTrip])
 
-  const reloadRefunds = (participantIds) => {
+  const reloadRefunds = useCallback((participantIds) => {
     if (!participantIds?.length) return
     supabase.from('kitty_refunds').select('*').in('participant_id', participantIds).order('created_at')
       .then(({ data }) => setKittyRefunds(data || []))
-  }
+  }, [])
 
   useEffect(() => {
     if (!trip) return
@@ -68,7 +68,10 @@ export function AppProvider({ children }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_items', filter: `trip_id=eq.${trip.id}` },
         () => supabase.from('shopping_items').select('*').eq('trip_id', trip.id).order('category').order('created_at').then(({ data }) => setShoppingItems(data || [])))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'kitty_refunds' },
-        () => reloadRefunds(participants.map(p => p.id)))
+        () => {
+          supabase.from('participants').select('id').eq('trip_id', trip.id)
+            .then(({ data }) => reloadRefunds((data || []).map(p => p.id)))
+        })
       .subscribe()
 
     return () => supabase.removeChannel(channel)
@@ -116,7 +119,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       trip, setTrip, participants, expenses, shoppingItems, kittyRefunds,
       isAdmin, loading, lang,
-      loadTrip, joinTrip, createTrip, leaveTrip, changeLang,
+      loadTrip, joinTrip, createTrip, leaveTrip, changeLang, reloadRefunds,
       setParticipants, setExpenses, setShoppingItems
     }}>
       {children}

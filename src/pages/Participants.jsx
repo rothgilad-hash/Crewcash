@@ -12,7 +12,7 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'
 
 export default function Participants() {
   const { t } = useTranslation()
-  const { trip, participants, expenses, kittyRefunds, isAdmin, lang } = useApp()
+  const { trip, participants, expenses, kittyRefunds, isAdmin, lang, reloadRefunds } = useApp()
   const [addOpen, setAddOpen] = useState(false)
   const [payOpen, setPayOpen] = useState(null)
   const [payMode, setPayMode] = useState('pay')
@@ -25,8 +25,12 @@ export default function Participants() {
 
   const balances = calculateBalances(expenses, participants)
 
-  const getKittyPaidBack = (pid) =>
-    kittyRefunds.filter(r => r.participant_id === pid).reduce((s, r) => s + r.amount, 0)
+  const getKittyPaidBack = (pid) => {
+    const fromTable = kittyRefunds.filter(r => r.participant_id === pid).reduce((s, r) => s + r.amount, 0)
+    const p = participants.find(x => x.id === pid)
+    // fallback to old field if no new refunds recorded yet
+    return fromTable > 0 ? fromTable : (p?.kitty_paid_back || 0)
+  }
 
   const handleAdd = async () => {
     if (!form.name.trim()) return
@@ -59,6 +63,7 @@ export default function Participants() {
       const { data: refund } = await supabase.from('kitty_refunds')
         .insert({ participant_id: payOpen, amount: amt })
         .select().single()
+      reloadRefunds(participants.map(x => x.id))
       setPayAmount('')
       setPayOpen(null)
       setSaving(false)
@@ -76,6 +81,7 @@ export default function Participants() {
   const handleSaveSignature = async (dataUrl) => {
     if (!sigTarget?.refundId) return
     await supabase.from('kitty_refunds').update({ signature: dataUrl }).eq('id', sigTarget.refundId)
+    reloadRefunds(participants.map(x => x.id))
     setSigOpen(false)
     setSigTarget(null)
   }

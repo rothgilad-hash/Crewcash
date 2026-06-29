@@ -169,12 +169,14 @@ export default function Dashboard() {
             {participants.map((p, i) => {
               const b = balances[p.id] || { paid: 0, owes: 0 }
               const cashPaid = (p.amount_paid || 0) + (b.paid || 0)
-              const kpb = kittyRefunds.filter(r => r.participant_id === p.id).reduce((s, r) => s + r.amount, 0)
+              const kpbFromTable = kittyRefunds.filter(r => r.participant_id === p.id).reduce((s, r) => s + r.amount, 0)
+              const kpb = kpbFromTable > 0 ? kpbFromTable : (p.kitty_paid_back || 0)
               const remaining = Math.round((b.owes - cashPaid + kpb) * 100) / 100
               const isNeg = remaining > 0.5
               const maxAbs = Math.max(...participants.map(x => {
                 const bx = balances[x.id] || { paid: 0, owes: 0 }
-                const kpb = kittyRefunds.filter(r => r.participant_id === x.id).reduce((s, r) => s + r.amount, 0)
+                const kpbT = kittyRefunds.filter(r => r.participant_id === x.id).reduce((s, r) => s + r.amount, 0)
+                const kpb = kpbT > 0 ? kpbT : (x.kitty_paid_back || 0)
                 return Math.abs(Math.round((bx.owes - (x.amount_paid || 0) - (bx.paid || 0) + kpb) * 100) / 100)
               }), 1)
               return (

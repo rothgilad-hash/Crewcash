@@ -14,7 +14,12 @@ export default function CashFlow() {
 
   const totalCollected = participants.reduce((s, p) => s + (p.amount_paid || 0), 0)
   const cashSpent = expenses.filter(e => e.is_cash && e.is_paid).reduce((s, e) => s + e.amount, 0)
-  const kittyRefundsTotal = kittyRefunds.reduce((s, r) => s + r.amount, 0)
+  const kittyRefundsFromTable = kittyRefunds.reduce((s, r) => s + r.amount, 0)
+  const kittyRefundsLegacy = participants.reduce((s, p) => {
+    const hasNewRefunds = kittyRefunds.some(r => r.participant_id === p.id)
+    return s + (hasNewRefunds ? 0 : (p.kitty_paid_back || 0))
+  }, 0)
+  const kittyRefundsTotal = kittyRefundsFromTable + kittyRefundsLegacy
   const cashBalance = totalCollected - cashSpent - kittyRefundsTotal
   const pct = totalCollected > 0 ? cashBalance / totalCollected : 1
 

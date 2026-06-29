@@ -12,7 +12,11 @@ export default function Report() {
   const balances = calculateBalances(expenses, participants)
 
   const getRefunds = (pid) => kittyRefunds.filter(r => r.participant_id === pid)
-  const getKittyPaidBack = (pid) => getRefunds(pid).reduce((s, r) => s + r.amount, 0)
+  const getKittyPaidBack = (pid) => {
+    const fromTable = getRefunds(pid).reduce((s, r) => s + r.amount, 0)
+    const p = participants.find(x => x.id === pid)
+    return fromTable > 0 ? fromTable : (p?.kitty_paid_back || 0)
+  }
 
   const runningExpenses = expenses.filter(e => !e.is_yacht_cost)
   const totalExpenses = runningExpenses.reduce((s, e) => s + e.amount, 0)
