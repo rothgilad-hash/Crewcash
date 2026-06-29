@@ -120,11 +120,6 @@ export default function Participants() {
                     ) : (
                       <p className="text-sm font-semibold text-red-500 mt-0.5">
                         {isHe ? 'נשאר לשלם' : 'Remaining'} {formatCurrency(remaining, 'EUR')}
-                        {paid > 0 && (
-                          <span className="text-gray-400 font-normal text-xs ms-1.5">
-                            ({isHe ? `שילם ${formatCurrency(paid, 'EUR')}` : `paid ${formatCurrency(paid, 'EUR')}`})
-                          </span>
-                        )}
                       </p>
                     )}
                   </div>
