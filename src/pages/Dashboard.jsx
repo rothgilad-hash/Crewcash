@@ -126,9 +126,14 @@ export default function Dashboard() {
           <h3 className="font-bold text-gray-900 mb-4 text-base">{isHe ? 'יתרה לאדם' : 'Balance per person'}</h3>
           <div className="space-y-3.5">
             {participants.map((p, i) => {
-              const b = balances[p.id] || { paid: 0, owes: 0, net: 0 }
-              const isPos = b.net >= 0
-              const maxAbs = Math.max(...participants.map(x => Math.abs((balances[x.id] || {}).net || 0)), 1)
+              const b = balances[p.id] || { paid: 0, owes: 0 }
+              const cashPaid = (p.amount_paid || 0) + (b.paid || 0)
+              const remaining = Math.round((b.owes - cashPaid + (p.kitty_paid_back || 0)) * 100) / 100
+              const isNeg = remaining > 0.5
+              const maxAbs = Math.max(...participants.map(x => {
+                const bx = balances[x.id] || { paid: 0, owes: 0 }
+                return Math.abs(Math.round((bx.owes - (x.amount_paid || 0) - (bx.paid || 0) + (x.kitty_paid_back || 0)) * 100) / 100)
+              }), 1)
               return (
                 <div key={p.id} className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
@@ -140,14 +145,14 @@ export default function Dashboard() {
                       <span className="font-semibold text-gray-900 text-sm">
                         {p.name} {p.is_gil ? '⭐' : ''}
                       </span>
-                      <span className={`text-sm font-bold ${isPos ? 'text-emerald-600' : 'text-red-500'}`}>
-                        {isPos ? '+' : ''}{formatCurrency(b.net, 'EUR')}
+                      <span className={`text-sm font-bold ${Math.abs(remaining) <= 0.5 ? 'text-gray-400' : isNeg ? 'text-red-500' : 'text-emerald-600'}`}>
+                        {Math.abs(remaining) <= 0.5 ? '✓' : isNeg ? formatCurrency(remaining, 'EUR') : `+${formatCurrency(Math.abs(remaining), 'EUR')}`}
                       </span>
                     </div>
                     <div className="w-full bg-gray-100 rounded-full h-2">
                       <div
-                        className={`h-2 rounded-full transition-all ${isPos ? 'bg-emerald-400' : 'bg-red-400'}`}
-                        style={{ width: `${(Math.abs(b.net) / maxAbs) * 100}%` }}
+                        className={`h-2 rounded-full transition-all ${Math.abs(remaining) <= 0.5 ? 'bg-gray-300' : isNeg ? 'bg-red-400' : 'bg-emerald-400'}`}
+                        style={{ width: `${(Math.abs(remaining) / maxAbs) * 100}%` }}
                       />
                     </div>
                   </div>
