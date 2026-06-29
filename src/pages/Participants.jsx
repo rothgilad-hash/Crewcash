@@ -21,6 +21,7 @@ export default function Participants() {
   const [saving, setSaving] = useState(false)
   const [sigOpen, setSigOpen] = useState(false)
   const [sigTarget, setSigTarget] = useState(null)
+  const [viewSig, setViewSig] = useState(null)
   const isHe = lang === 'he'
 
   const balances = calculateBalances(expenses, participants)
@@ -120,6 +121,14 @@ export default function Participants() {
                       {p.joined_late && <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">⏰</span>}
                     </div>
 
+                    {p.kitty_signature && (
+                      <button
+                        onClick={() => setViewSig(p)}
+                        className="text-xs text-blue-500 font-medium mt-0.5 flex items-center gap-1"
+                      >
+                        ✍️ {isHe ? 'חתימה קיימת' : 'Signed'}
+                      </button>
+                    )}
                     {kittyOwes ? (
                       <p className="text-sm font-semibold text-emerald-500 mt-0.5">
                         {isHe ? 'הקופה חייבת לך' : 'Kitty owes you'} {formatCurrency(Math.abs(remaining), 'EUR')}
@@ -223,6 +232,24 @@ export default function Participants() {
               {saving ? '...' : t('save')}
             </button>
           </div>
+        </div>
+      </Modal>
+
+      {/* View signature modal */}
+      <Modal open={!!viewSig} onClose={() => setViewSig(null)} title={isHe ? `חתימת ${viewSig?.name}` : `${viewSig?.name}'s Signature`}>
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500 text-center">
+            {isHe ? `אישור קבלת כסף מהקופה` : 'Confirmation of cash receipt from kitty'}
+          </p>
+          {viewSig?.kitty_signature && (
+            <div className="border-2 border-gray-100 rounded-2xl overflow-hidden bg-white">
+              <img src={viewSig.kitty_signature} alt="signature" className="w-full" />
+            </div>
+          )}
+          <button onClick={() => setViewSig(null)}
+            className="w-full py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold active:bg-gray-50">
+            {isHe ? 'סגור' : 'Close'}
+          </button>
         </div>
       </Modal>
 

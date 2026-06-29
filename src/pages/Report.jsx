@@ -164,6 +164,14 @@ export default function Report() {
                     {remaining > 0.5 ? formatCurrency(remaining, 'EUR') : remaining < -0.5 ? `−${formatCurrency(Math.abs(remaining), 'EUR')}` : (isHe ? 'מסולק ✓' : 'Settled ✓')}
                   </span>
                 </div>
+                {p.kitty_signature && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <p className="text-xs font-semibold text-gray-400 mb-2">✍️ {isHe ? 'חתימה על קבלת כסף' : 'Signed for cash receipt'}</p>
+                    <div className="border border-gray-100 rounded-xl overflow-hidden bg-white">
+                      <img src={p.kitty_signature} alt="signature" className="w-full max-h-24 object-contain" />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </motion.div>
