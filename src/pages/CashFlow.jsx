@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabase'
 import { formatCurrency } from '../lib/calculations'
@@ -6,6 +7,7 @@ import { CheckCircle2, Circle, AlertTriangle, TrendingDown, ChevronDown, Chevron
 import { motion } from 'framer-motion'
 
 export default function CashFlow() {
+  const { t } = useTranslation()
   const { participants, expenses, isAdmin, lang } = useApp()
   const [showPaid, setShowPaid] = useState(false)
   const isHe = lang === 'he'
@@ -171,7 +173,13 @@ export default function CashFlow() {
                 <div key={exp.id} className="px-4 py-3 flex items-center gap-3 border-b border-gray-50 last:border-0">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 truncate">{exp.description}</p>
-                    {exp.notes && <p className="text-xs text-gray-400 truncate">{exp.notes}</p>}
+                    {(exp.sub_category || exp.notes) && (
+                      <p className="text-xs text-gray-400 truncate">
+                        {exp.sub_category && <span>{t('subcat_' + exp.sub_category)}</span>}
+                        {exp.sub_category && exp.notes && ' · '}
+                        {exp.notes}
+                      </p>
+                    )}
                   </div>
                   <span className="text-sm font-bold text-gray-800 flex-shrink-0">{formatCurrency(exp.amount, exp.currency)}</span>
                   {isAdmin && (
@@ -219,7 +227,13 @@ export default function CashFlow() {
             <div key={exp.id} className="px-4 py-3 flex items-center gap-3 border-t border-gray-50">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-500 truncate">{exp.description}</p>
-                {exp.notes && <p className="text-xs text-gray-400 truncate">{exp.notes}</p>}
+                {(exp.sub_category || exp.notes) && (
+                  <p className="text-xs text-gray-400 truncate">
+                    {exp.sub_category && t('subcat_' + exp.sub_category)}
+                    {exp.sub_category && exp.notes && ' · '}
+                    {exp.notes}
+                  </p>
+                )}
               </div>
               <span className="text-sm font-bold text-gray-400 flex-shrink-0">{formatCurrency(exp.amount, exp.currency)}</span>
               {isAdmin && (
