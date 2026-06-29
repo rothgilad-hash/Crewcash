@@ -7,9 +7,12 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'
 
 export default function Report() {
   const { t } = useTranslation()
-  const { participants, expenses, lang } = useApp()
+  const { participants, expenses, kittyRefunds, lang } = useApp()
   const isHe = lang === 'he'
   const balances = calculateBalances(expenses, participants)
+
+  const getRefunds = (pid) => kittyRefunds.filter(r => r.participant_id === pid)
+  const getKittyPaidBack = (pid) => getRefunds(pid).reduce((s, r) => s + r.amount, 0)
 
   const runningExpenses = expenses.filter(e => !e.is_yacht_cost)
   const totalExpenses = runningExpenses.reduce((s, e) => s + e.amount, 0)
@@ -35,7 +38,8 @@ export default function Report() {
         const b = balances[p.id] || { owes: 0, paid: 0 }
         const cashPaid = p.amount_paid || 0
         const personalPaid = b.paid || 0
-        const kittyPaidBack = p.kitty_paid_back || 0
+        const kittyPaidBack = getKittyPaidBack(p.id)
+        const refunds = getRefunds(p.id)
         const remaining = Math.round((b.owes - cashPaid - personalPaid + kittyPaidBack) * 100) / 100
 
         const personalExpenses = expenses.filter(e => e.paid_by === p.id && !e.is_yacht_cost)
@@ -146,32 +150,36 @@ export default function Report() {
               </div>
             )}
 
-            {/* Kitty payback */}
-            {kittyPaidBack > 0 && (
-              <div className="border-t border-gray-100 px-4 py-3 space-y-1.5">
-                <p className="text-xs font-semibold text-gray-400 mb-2">{isHe ? 'חשבון עם הקופה' : 'Kitty settlement'}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">{isHe ? 'הקופה הייתה חייבת לו' : 'Kitty owed them'}</span>
-                  <span className="text-sm font-semibold text-emerald-600">{formatCurrency(Math.abs(b.owes - cashPaid - personalPaid), 'EUR')}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">{isHe ? 'הקופה החזירה' : 'Kitty returned'}</span>
-                  <span className="text-sm font-semibold text-blue-600">−{formatCurrency(kittyPaidBack, 'EUR')}</span>
-                </div>
-                <div className="flex items-center justify-between border-t border-gray-100 pt-1.5">
+            {/* Kitty refunds */}
+            {refunds.length > 0 && (
+              <div className="border-t border-gray-100 px-4 py-3 space-y-3">
+                <p className="text-xs font-semibold text-gray-400">{isHe ? 'החזרים מהקופה' : 'Kitty refunds'}</p>
+                {refunds.map((r, ri) => (
+                  <div key={r.id} className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">
+                        {isHe ? `החזר ${ri + 1}` : `Refund ${ri + 1}`}
+                        {r.created_at && (
+                          <span className="text-gray-400 text-xs ms-2">
+                            {new Date(r.created_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-sm font-semibold text-emerald-600">{formatCurrency(r.amount, 'EUR')}</span>
+                    </div>
+                    {r.signature && (
+                      <div className="border border-gray-100 rounded-xl overflow-hidden bg-white">
+                        <img src={r.signature} alt="signature" className="w-full max-h-20 object-contain" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <div className="flex items-center justify-between border-t border-gray-100 pt-2">
                   <span className="text-sm font-bold text-gray-700">{isHe ? 'יתרה סופית' : 'Final balance'}</span>
                   <span className={`text-sm font-black ${remaining > 0.5 ? 'text-red-500' : remaining < -0.5 ? 'text-emerald-500' : 'text-gray-400'}`}>
                     {remaining > 0.5 ? formatCurrency(remaining, 'EUR') : remaining < -0.5 ? `−${formatCurrency(Math.abs(remaining), 'EUR')}` : (isHe ? 'מסולק ✓' : 'Settled ✓')}
                   </span>
                 </div>
-                {p.kitty_signature && (
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <p className="text-xs font-semibold text-gray-400 mb-2">✍️ {isHe ? 'חתימה על קבלת כסף' : 'Signed for cash receipt'}</p>
-                    <div className="border border-gray-100 rounded-xl overflow-hidden bg-white">
-                      <img src={p.kitty_signature} alt="signature" className="w-full max-h-24 object-contain" />
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </motion.div>

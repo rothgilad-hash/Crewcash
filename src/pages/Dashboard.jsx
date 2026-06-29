@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom'
 
 export default function Dashboard() {
   const { t } = useTranslation()
-  const { trip, participants, expenses, isAdmin, lang } = useApp()
+  const { trip, participants, expenses, kittyRefunds, isAdmin, lang } = useApp()
   const [copied, setCopied] = useState(false)
   const isHe = lang === 'he'
 
@@ -34,8 +34,8 @@ export default function Dashboard() {
 
   const totalCollected = participants.reduce((s, p) => s + (p.amount_paid || 0), 0)
   const cashSpent = expenses.filter(e => e.is_cash && e.is_paid).reduce((s, e) => s + e.amount, 0)
-  const kittyRefunds = participants.reduce((s, p) => s + (p.kitty_paid_back || 0), 0)
-  const cashBalance = totalCollected - cashSpent - kittyRefunds
+  const kittyRefundsTotal = kittyRefunds.reduce((s, r) => s + r.amount, 0)
+  const cashBalance = totalCollected - cashSpent - kittyRefundsTotal
   const cashPct = totalCollected > 0 ? cashBalance / totalCollected : null
   const cashAlert = cashPct !== null && cashPct <= 0.25 ? 'critical' : cashPct !== null && cashPct <= 0.5 ? 'warning' : null
 
@@ -169,11 +169,13 @@ export default function Dashboard() {
             {participants.map((p, i) => {
               const b = balances[p.id] || { paid: 0, owes: 0 }
               const cashPaid = (p.amount_paid || 0) + (b.paid || 0)
-              const remaining = Math.round((b.owes - cashPaid + (p.kitty_paid_back || 0)) * 100) / 100
+              const kpb = kittyRefunds.filter(r => r.participant_id === p.id).reduce((s, r) => s + r.amount, 0)
+              const remaining = Math.round((b.owes - cashPaid + kpb) * 100) / 100
               const isNeg = remaining > 0.5
               const maxAbs = Math.max(...participants.map(x => {
                 const bx = balances[x.id] || { paid: 0, owes: 0 }
-                return Math.abs(Math.round((bx.owes - (x.amount_paid || 0) - (bx.paid || 0) + (x.kitty_paid_back || 0)) * 100) / 100)
+                const kpb = kittyRefunds.filter(r => r.participant_id === x.id).reduce((s, r) => s + r.amount, 0)
+                return Math.abs(Math.round((bx.owes - (x.amount_paid || 0) - (bx.paid || 0) + kpb) * 100) / 100)
               }), 1)
               return (
                 <div key={p.id} className="flex items-center gap-3">

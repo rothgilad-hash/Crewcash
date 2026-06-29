@@ -7,15 +7,17 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'
 
 export default function Debts() {
   const { t } = useTranslation()
-  const { participants, expenses, lang } = useApp()
+  const { participants, expenses, kittyRefunds, lang } = useApp()
   const isHe = lang === 'he'
 
   const balances = calculateBalances(expenses, participants)
 
+  const getKittyPaidBack = (pid) => kittyRefunds.filter(r => r.participant_id === pid).reduce((s, r) => s + r.amount, 0)
+
   const getRemaining = (p) => {
     const b = balances[p.id] || { owes: 0, paid: 0 }
     const paid = (p.amount_paid || 0) + (b.paid || 0)
-    return Math.round((b.owes - paid + (p.kitty_paid_back || 0)) * 100) / 100
+    return Math.round((b.owes - paid + getKittyPaidBack(p.id)) * 100) / 100
   }
 
   const owesKitty = participants.filter(p => getRemaining(p) > 0.5)

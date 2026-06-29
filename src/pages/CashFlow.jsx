@@ -8,14 +8,14 @@ import { motion } from 'framer-motion'
 
 export default function CashFlow() {
   const { t } = useTranslation()
-  const { participants, expenses, isAdmin, lang } = useApp()
+  const { participants, expenses, kittyRefunds, isAdmin, lang } = useApp()
   const [showPaid, setShowPaid] = useState(false)
   const isHe = lang === 'he'
 
   const totalCollected = participants.reduce((s, p) => s + (p.amount_paid || 0), 0)
   const cashSpent = expenses.filter(e => e.is_cash && e.is_paid).reduce((s, e) => s + e.amount, 0)
-  const kittyRefunds = participants.reduce((s, p) => s + (p.kitty_paid_back || 0), 0)
-  const cashBalance = totalCollected - cashSpent - kittyRefunds
+  const kittyRefundsTotal = kittyRefunds.reduce((s, r) => s + r.amount, 0)
+  const cashBalance = totalCollected - cashSpent - kittyRefundsTotal
   const pct = totalCollected > 0 ? cashBalance / totalCollected : 1
 
   const paidCash = expenses.filter(e => e.is_cash && e.is_paid)
@@ -124,7 +124,7 @@ export default function CashFlow() {
           </div>
           <div>
             <p className="text-xs text-gray-400 mb-0.5">{isHe ? 'הוחזר' : 'Refunded'}</p>
-            <p className="text-sm font-bold text-blue-500">−{formatCurrency(kittyRefunds, 'EUR')}</p>
+            <p className="text-sm font-bold text-blue-500">−{formatCurrency(kittyRefundsTotal, 'EUR')}</p>
           </div>
         </div>
       </motion.div>
