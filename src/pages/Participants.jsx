@@ -48,8 +48,8 @@ export default function Participants() {
 
   const openPay = (p) => {
     const b = balances[p.id] || { owes: 0, paid: 0 }
-    const netOwes = b.owes - (b.paid || 0)
-    if (netOwes < 0) {
+    const remaining = Math.round((b.owes - (p.amount_paid || 0) - (b.paid || 0) + (p.kitty_paid_back || 0)) * 100) / 100
+    if (remaining < -0.5) {
       setPayMode('return')
       setPayAmount((p.kitty_paid_back || 0).toString())
     } else {
