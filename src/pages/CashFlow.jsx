@@ -1,11 +1,13 @@
+import { useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabase'
 import { formatCurrency } from '../lib/calculations'
-import { CheckCircle2, Circle, AlertTriangle, TrendingDown } from 'lucide-react'
+import { CheckCircle2, Circle, AlertTriangle, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 export default function CashFlow() {
   const { participants, expenses, isAdmin, lang } = useApp()
+  const [showPaid, setShowPaid] = useState(false)
   const isHe = lang === 'he'
 
   const totalCollected = participants.reduce((s, p) => s + (p.amount_paid || 0), 0)
@@ -13,6 +15,8 @@ export default function CashFlow() {
   const kittyRefunds = participants.reduce((s, p) => s + (p.kitty_paid_back || 0), 0)
   const cashBalance = totalCollected - cashSpent - kittyRefunds
   const pct = totalCollected > 0 ? cashBalance / totalCollected : 1
+
+  const paidCash = expenses.filter(e => e.is_cash && e.is_paid)
 
   const unpaidCash = expenses
     .filter(e => e.is_cash && !e.is_paid)
@@ -187,6 +191,45 @@ export default function CashFlow() {
             {isHe ? 'כל הוצאות המזומן שולמו' : 'All cash expenses paid'}
           </p>
         </div>
+      )}
+      {/* Paid cash expenses (with undo) */}
+      {paidCash.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+          className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden"
+        >
+          <button
+            onClick={() => setShowPaid(v => !v)}
+            className="w-full p-4 flex justify-between items-center active:bg-gray-50 transition-colors"
+          >
+            <span className="font-bold text-gray-900 text-base">
+              {isHe ? `שולמו (${paidCash.length})` : `Paid (${paidCash.length})`}
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-emerald-600">
+                {formatCurrency(paidCash.reduce((s, e) => s + e.amount, 0), 'EUR')}
+              </span>
+              {showPaid ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+            </div>
+          </button>
+
+          {showPaid && paidCash.map(exp => (
+            <div key={exp.id} className="px-4 py-3 flex items-center gap-3 border-t border-gray-50">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-500 truncate">{exp.description}</p>
+                {exp.notes && <p className="text-xs text-gray-400 truncate">{exp.notes}</p>}
+              </div>
+              <span className="text-sm font-bold text-gray-400 flex-shrink-0">{formatCurrency(exp.amount, exp.currency)}</span>
+              {isAdmin && (
+                <button onClick={() => togglePaid(exp)} className="w-8 h-8 flex items-center justify-center rounded-xl active:bg-gray-100 flex-shrink-0">
+                  <CheckCircle2 size={20} className="text-emerald-500" />
+                </button>
+              )}
+            </div>
+          ))}
+        </motion.div>
       )}
     </div>
   )
