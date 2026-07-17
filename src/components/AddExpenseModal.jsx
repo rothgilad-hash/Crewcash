@@ -74,9 +74,10 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
   // Fetch EUR rate when currency changes
   useEffect(() => {
     if (form.currency === 'EUR') { setEurRate(1); return }
-    fetch(`https://api.frankfurter.app/latest?from=${form.currency}&to=EUR`)
+    const cur = form.currency.toLowerCase()
+    fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${cur}.json`)
       .then(r => r.json())
-      .then(d => setEurRate(d.rates?.EUR || null))
+      .then(d => setEurRate(d[cur]?.eur || null))
       .catch(() => setEurRate(null))
   }, [form.currency])
 
@@ -138,15 +139,14 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
     let finalEurRate = 1
     if (form.currency !== 'EUR') {
       try {
-        const resp = await fetch(`https://api.frankfurter.app/latest?from=${form.currency}&to=EUR`)
+        const cur = form.currency.toLowerCase()
+        const resp = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${cur}.json`)
         const data = await resp.json()
-        console.log('EUR rate API response:', data)
-        finalEurRate = data.rates?.EUR || eurRate || 1
+        finalEurRate = data[cur]?.eur || eurRate || 1
       } catch (err) {
         console.error('EUR rate fetch failed:', err)
         finalEurRate = eurRate || 1
       }
-      console.log('finalEurRate:', finalEurRate)
     }
 
     const payload = {
