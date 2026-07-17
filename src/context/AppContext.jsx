@@ -49,6 +49,11 @@ export function AppProvider({ children }) {
     }
   }, [loadTrip])
 
+  const reloadExpenses = useCallback((tripId) => {
+    supabase.from('expenses').select('*').eq('trip_id', tripId).order('created_at', { ascending: false })
+      .then(({ data }) => setExpenses(data || []))
+  }, [])
+
   const reloadRefunds = useCallback((participantIds) => {
     if (!participantIds?.length) return
     supabase.from('kitty_refunds').select('*').in('participant_id', participantIds).order('created_at')
@@ -118,7 +123,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       trip, setTrip, participants, expenses, shoppingItems, kittyRefunds,
       isAdmin, loading, lang,
-      loadTrip, joinTrip, createTrip, leaveTrip, changeLang, reloadRefunds,
+      loadTrip, joinTrip, createTrip, leaveTrip, changeLang, reloadRefunds, reloadExpenses,
       setParticipants, setExpenses, setShoppingItems
     }}>
       {children}

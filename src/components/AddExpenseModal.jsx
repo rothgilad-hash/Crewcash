@@ -24,7 +24,7 @@ const defaultForm = {
 
 export default function AddExpenseModal({ open, onClose, expense = null }) {
   const { t, i18n } = useTranslation()
-  const { trip, participants, lang } = useApp()
+  const { trip, participants, lang, reloadExpenses } = useApp()
   const isHe = lang === 'he'
   const [form, setForm] = useState(defaultForm)
   const [saving, setSaving] = useState(false)
@@ -80,6 +80,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
       alert('שגיאה: ' + error.message)
       return
     }
+    reloadExpenses(trip.id)
     onClose()
   }
 
