@@ -140,10 +140,13 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
       try {
         const resp = await fetch(`https://api.frankfurter.app/latest?from=${form.currency}&to=EUR`)
         const data = await resp.json()
+        console.log('EUR rate API response:', data)
         finalEurRate = data.rates?.EUR || eurRate || 1
-      } catch {
+      } catch (err) {
+        console.error('EUR rate fetch failed:', err)
         finalEurRate = eurRate || 1
       }
+      console.log('finalEurRate:', finalEurRate)
     }
 
     const payload = {
