@@ -3,12 +3,13 @@ import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
-import { Plus, Trash2, CheckSquare2, Square, FileSpreadsheet, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Trash2, CheckSquare2, Square, FileSpreadsheet, ExternalLink, ChevronDown, ChevronUp, ShoppingCart } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import * as XLSX from 'xlsx'
 
 const CATS = [
   { key: 'drinks',   he: '🥤 שתייה',    en: '🥤 Drinks' },
+  { key: 'alcohol',  he: '🍷 אלכוהול',  en: '🍷 Alcohol' },
   { key: 'food',     he: '🥗 אוכל',     en: '🥗 Food' },
   { key: 'dairy',    he: '🧀 חלבי',     en: '🧀 Dairy' },
   { key: 'deli',     he: '🥩 דלי',      en: '🥩 Deli' },
@@ -20,6 +21,7 @@ const CATS = [
 
 const CAT_MAP = {
   'שתייה': 'drinks', 'drinks': 'drinks',
+  'אלכוהול': 'alcohol', 'alcohol': 'alcohol',
   'אוכל': 'food', 'food': 'food',
   'חלבי': 'dairy', 'dairy': 'dairy',
   'דלי': 'deli', 'deli': 'deli',
@@ -29,17 +31,46 @@ const CAT_MAP = {
   'אחר': 'other', 'other': 'other',
 }
 
+// Keyword-based auto-categorization for Excel imports without category column
+const KEYWORD_CATS = {
+  drinks:   ['מים','שתייה','זירו','סודה','מיץ','קולה','ספרייט','אייסטי','רד בול','אנרגי'],
+  alcohol:  ['בירה','רדלר','יין','אפרול','פרוסקו','אוזו','ויסקי','וודקה','טקילה','ספריץ','קמפרי','ג\'ין','רום','בייליס','לימונצ\'לו'],
+  food:     ['לחם','טונה','עלי גפן','מיונז','גרנולה','מלפפון','זיתים','מוטי','אגס','לימון','אבטיח','מלון','תפוח','בננ','בצל','עגבני','אננס','ענב','פלפל','אורז','פסטה','שוקולד','ממרח','דייסה','קמח','מלח','פלפל שחור','סוכר','שמן','דבש','רוטב','גריסים','קוסקוס','חומוס','טחינה','סרדינים','פלאפל'],
+  dairy:    ['יוגרט','גאודה','גבינ','חלב','ביצ','חמאה','נס קפה','פילדפליה','ציזיקי','שמנת','קוטג','לבנה'],
+  deli:     ['סלמי','סלמון','נקניק','שניצל','גיקה','פסטרמה','חזה עוף','קבב','המבורגר','נקניקי'],
+  cleaning: ['נייר טואלט','סקווצ','שקית זבל','סבון כלים','סמרטוט','אטבי','כביסה','ספוג','אקונומיקה'],
+  hygiene:  ['שמפו','סבון','משחת שיניים','קרם הגנה','דאודורנט','גילוח','קרם','טמפון','פד'],
+  snacks:   ['תפוצ','קפריס','עוגי','בייגל','פצפוצ','אגוז','בוטנ','שוקולד','חטיף','ביסלי','במבה','אפר'],
+}
+
+function autoDetectCat(name) {
+  const n = name.toLowerCase()
+  for (const [cat, kws] of Object.entries(KEYWORD_CATS)) {
+    if (kws.some(kw => n.includes(kw.toLowerCase()))) return cat
+  }
+  return 'other'
+}
+
 export default function Shopping() {
   const { t } = useTranslation()
-  const { trip, shoppingItems, isAdmin, lang, reloadShoppingItems } = useApp()
+  const { trip, participants, shoppingItems, isAdmin, lang, reloadShoppingItems, reloadExpenses } = useApp()
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState({ name: '', quantity: '', category: 'other' })
   const [saving, setSaving] = useState(false)
   const [importing, setImporting] = useState(false)
   const [showYachtness, setShowYachtness] = useState(false)
   const [previewItems, setPreviewItems] = useState(null)
+  const [collapsedCats, setCollapsedCats] = useState(new Set())
+  const [costModal, setCostModal] = useState({ open: false, source: 'shopping', amount: '', is_cash: true })
+  const [savingCost, setSavingCost] = useState(false)
   const fileRef = useRef(null)
   const isHe = lang === 'he'
+
+  const toggleCat = (key) => setCollapsedCats(prev => {
+    const next = new Set(prev)
+    next.has(key) ? next.delete(key) : next.add(key)
+    return next
+  })
 
   const toggleItem = async (item) => {
     await supabase.from('shopping_items').update({ checked: !item.checked }).eq('id', item.id)
@@ -77,7 +108,6 @@ export default function Shopping() {
       const ws = wb.Sheets[wb.SheetNames[0]]
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }).filter(r => r.some(c => c))
 
-      // detect header row — first row is header if any cell looks like a label
       const first = rows[0]?.map(c => String(c || '').trim())
       const firstLower = first?.map(c => c.toLowerCase())
       const NAME_HEADERS = ['name','שם','פריט','item','מוצר','product']
@@ -98,11 +128,16 @@ export default function Shopping() {
 
       const parsed = dataRows
         .filter(r => r[nameIdx] && String(r[nameIdx]).trim())
-        .map(r => ({
-          name: String(r[nameIdx] || '').trim(),
-          quantity: String(r[qtyIdx] ?? '').trim(),
-          category: CAT_MAP[String(r[catIdx >= 0 ? catIdx : -1] || '').trim()] || 'other',
-        }))
+        .map(r => {
+          const name = String(r[nameIdx] || '').trim()
+          const rawCat = catIdx >= 0 ? String(r[catIdx] || '').trim() : ''
+          const category = CAT_MAP[rawCat] || autoDetectCat(name)
+          return {
+            name,
+            quantity: String(r[qtyIdx] ?? '').trim(),
+            category,
+          }
+        })
 
       setPreviewItems(parsed)
     }
@@ -119,6 +154,41 @@ export default function Shopping() {
     reloadShoppingItems(trip.id)
     setPreviewItems(null)
     setImporting(false)
+  }
+
+  const openCostModal = (source) => {
+    setCostModal({ open: true, source, amount: '', is_cash: true })
+  }
+
+  const saveCostExpense = async () => {
+    const amt = parseFloat(costModal.amount)
+    if (!amt || amt <= 0) return
+    setSavingCost(true)
+
+    const isYachtness = costModal.source === 'yachtness'
+    const gilPart = participants.find(p => p.is_gil)
+
+    const { error } = await supabase.from('expenses').insert({
+      trip_id: trip.id,
+      description: isYachtness
+        ? (isHe ? 'הזמנת Yachtness' : 'Yachtness Order')
+        : (isHe ? 'קניות ראשוניות' : 'Initial Shopping'),
+      amount: amt,
+      currency: 'EUR',
+      category: isYachtness ? 'yacht_services' : 'supermarket',
+      is_cash: costModal.is_cash,
+      is_paid: true,
+      is_yacht_cost: false,
+      paid_by: gilPart?.id || null,
+    })
+
+    if (!error) {
+      reloadExpenses(trip.id)
+      setCostModal({ open: false, source: 'shopping', amount: '', is_cash: true })
+    } else {
+      alert(error.message)
+    }
+    setSavingCost(false)
   }
 
   const unchecked = shoppingItems.filter(i => !i.checked)
@@ -150,6 +220,17 @@ export default function Shopping() {
         </div>
       )}
 
+      {/* Enter shopping cost button */}
+      {isAdmin && shoppingItems.length > 0 && (
+        <button
+          onClick={() => openCostModal('shopping')}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-emerald-600 text-white font-semibold text-sm active:bg-emerald-700 shadow-sm"
+        >
+          <ShoppingCart size={16} />
+          {isHe ? 'הזן עלות קניות' : 'Enter Shopping Cost'}
+        </button>
+      )}
+
       {/* Yachtness panel */}
       <AnimatePresence>
         {showYachtness && (
@@ -178,13 +259,15 @@ export default function Shopping() {
                 <ExternalLink size={15} />
                 {isHe ? 'פתח חנות' : 'Open Store'}
               </a>
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                <p className="text-xs text-amber-700 font-medium">
-                  {isHe
-                    ? 'אחרי ביצוע ההזמנה — קדימה לכרטיסיית ההוצאות והוסף את עלות ההזמנה כהוצאה בקטגוריה "שירותי יאכטה"'
-                    : 'After ordering — go to Expenses and add the order total as a "Yacht Services" expense'}
-                </p>
-              </div>
+              {isAdmin && (
+                <button
+                  onClick={() => openCostModal('yachtness')}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 text-white font-semibold text-sm active:bg-emerald-700"
+                >
+                  <ShoppingCart size={15} />
+                  {isHe ? 'הזן עלות הזמנה' : 'Enter Order Cost'}
+                </button>
+              )}
             </div>
           </motion.div>
         )}
@@ -198,9 +281,12 @@ export default function Shopping() {
           </p>
           <div className="max-h-60 overflow-y-auto space-y-1 border border-gray-100 rounded-xl p-2">
             {previewItems?.map((item, i) => (
-              <div key={i} className="flex justify-between text-sm py-1 px-2 rounded-lg hover:bg-gray-50">
+              <div key={i} className="flex justify-between items-center text-sm py-1 px-2 rounded-lg hover:bg-gray-50">
                 <span className="text-gray-800 font-medium">{item.name}</span>
-                <span className="text-gray-400">{item.quantity}</span>
+                <div className="flex items-center gap-2">
+                  {item.quantity && <span className="text-gray-400">{item.quantity}</span>}
+                  <span className="text-xs text-gray-300">{CATS.find(c => c.key === item.category)?.[isHe ? 'he' : 'en'] || item.category}</span>
+                </div>
               </div>
             ))}
           </div>
@@ -212,6 +298,56 @@ export default function Shopping() {
             <button onClick={confirmImport} disabled={importing}
               className="flex-1 py-4 rounded-2xl bg-blue-600 text-white font-bold active:bg-blue-700 disabled:opacity-40">
               {importing ? '...' : (isHe ? 'ייבא' : 'Import')}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Cost expense modal */}
+      <Modal
+        open={costModal.open}
+        onClose={() => setCostModal(m => ({ ...m, open: false }))}
+        title={costModal.source === 'yachtness'
+          ? (isHe ? 'עלות הזמנת Yachtness' : 'Yachtness Order Cost')
+          : (isHe ? 'עלות קניות' : 'Shopping Cost')}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500">
+            {costModal.source === 'yachtness'
+              ? (isHe ? 'הזן את סכום ההזמנה. יירשם כהוצאה בקטגוריה "שירותי יאכטה".' : 'Enter the order total. Will be recorded as a "Yacht Services" expense.')
+              : (isHe ? 'הזן את הסכום הסופי ששולם. יירשם כהוצאה בקטגוריה "סופרמרקט".' : 'Enter the total paid. Will be recorded as a "Supermarket" expense.')}
+          </p>
+          <div className="relative">
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">€</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder="0.00"
+              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 pr-10 focus:outline-none focus:border-blue-500 text-gray-900 bg-white text-lg font-bold"
+              value={costModal.amount}
+              onChange={e => setCostModal(m => ({ ...m, amount: e.target.value }))}
+              autoFocus
+            />
+          </div>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <div
+              onClick={() => setCostModal(m => ({ ...m, is_cash: !m.is_cash }))}
+              className={`w-12 h-6 rounded-full transition-colors flex items-center px-1 ${costModal.is_cash ? 'bg-blue-500' : 'bg-gray-200'}`}
+            >
+              <div className={`w-4 h-4 rounded-full bg-white transition-transform ${costModal.is_cash ? 'translate-x-6' : 'translate-x-0'}`} />
+            </div>
+            <span className="text-sm font-medium text-gray-700">
+              {isHe ? 'שולם במזומן מהקופה' : 'Paid in cash from kitty'}
+            </span>
+          </label>
+          <div className="flex gap-3 pt-1">
+            <button onClick={() => setCostModal(m => ({ ...m, open: false }))}
+              className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold active:bg-gray-50">
+              {t('cancel')}
+            </button>
+            <button onClick={saveCostExpense} disabled={savingCost || !costModal.amount}
+              className="flex-1 py-4 rounded-2xl bg-emerald-600 text-white font-bold active:bg-emerald-700 disabled:opacity-40">
+              {savingCost ? '...' : (isHe ? 'שמור הוצאה' : 'Save Expense')}
             </button>
           </div>
         </div>
@@ -242,41 +378,63 @@ export default function Shopping() {
         </div>
       )}
 
-      {/* Grouped unchecked */}
+      {/* Grouped unchecked — collapsible categories */}
       {grouped.map(group => (
         <div key={group.key} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+          <button
+            onClick={() => toggleCat(group.key)}
+            className="w-full px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between active:bg-gray-100"
+          >
             <p className="font-bold text-gray-700 text-sm">{isHe ? group.he : group.en}</p>
-          </div>
-          <div className="divide-y divide-gray-50">
-            <AnimatePresence>
-              {group.items.map(item => (
-                <motion.div key={item.id} layout exit={{ opacity: 0, height: 0 }}
-                  className="flex items-center gap-3 px-4 py-3.5">
-                  <button onClick={() => toggleItem(item)}
-                    className="text-gray-300 active:text-blue-500 transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center">
-                    <Square size={24} />
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900">{item.name}</p>
-                    {item.quantity && <p className="text-sm text-gray-400 mt-0.5">{item.quantity}</p>}
-                  </div>
-                  {isAdmin && (
-                    <button onClick={() => deleteItem(item.id)}
-                      className="text-gray-200 active:text-red-400 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0">
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400">{group.items.length}</span>
+              {collapsedCats.has(group.key) ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronUp size={14} className="text-gray-400" />}
+            </div>
+          </button>
+          <AnimatePresence>
+            {!collapsedCats.has(group.key) && (
+              <motion.div
+                initial={{ height: 0 }}
+                animate={{ height: 'auto' }}
+                exit={{ height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="divide-y divide-gray-50">
+                  <AnimatePresence>
+                    {group.items.map(item => (
+                      <motion.div key={item.id} layout exit={{ opacity: 0, height: 0 }}
+                        className="flex items-center gap-3 px-4 py-3.5">
+                        <button onClick={() => toggleItem(item)}
+                          className="text-gray-300 active:text-blue-500 transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center">
+                          <Square size={24} />
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900">{item.name}</p>
+                          {item.quantity && <p className="text-sm text-gray-400 mt-0.5">{item.quantity}</p>}
+                        </div>
+                        {isAdmin && (
+                          <button onClick={() => deleteItem(item.id)}
+                            className="text-gray-200 active:text-red-400 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0">
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       ))}
 
       {/* Uncategorized */}
       {uncat.length > 0 && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+            <p className="font-bold text-gray-700 text-sm">📦 {isHe ? 'אחר' : 'Other'}</p>
+            <span className="text-xs text-gray-400">{uncat.length}</span>
+          </div>
           <div className="divide-y divide-gray-50">
             {uncat.map(item => (
               <div key={item.id} className="flex items-center gap-3 px-4 py-3.5">
