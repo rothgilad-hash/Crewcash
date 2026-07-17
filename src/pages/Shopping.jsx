@@ -239,8 +239,13 @@ export default function Shopping() {
   const buildCopyText = (pid) => {
     const p = participants.find(x => x.id === pid)
     const cats = catAssignments[pid] || []
-    const lines = cats.map(key => CATS.find(c => c.key === key)?.he || key)
-    return `${p?.name}, הקטגוריות שלך בקניות 🛒\n${lines.join('\n')}`
+    const sections = cats.map(key => {
+      const cat = CATS.find(c => c.key === key)
+      const items = unchecked.filter(i => i.category === key)
+      const itemLines = items.map(i => `  • ${i.name}${i.quantity ? ' (' + i.quantity + ')' : ''}`).join('\n')
+      return `${cat?.he || key}:\n${itemLines}`
+    })
+    return `${p?.name}, הקטגוריות שלך בקניות 🛒\n\n${sections.join('\n\n')}`
   }
 
   const copyAssignment = (pid) => {
