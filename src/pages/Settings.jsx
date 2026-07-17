@@ -2,14 +2,14 @@ import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { LogOut, Trash2, Globe, Copy, Check, Pencil } from 'lucide-react'
+import { LogOut, Trash2, Globe, Copy, Check, Pencil, RotateCcw } from 'lucide-react'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Modal from '../components/Modal'
 
 export default function Settings() {
   const { t, i18n } = useTranslation()
-  const { trip, setTrip, isAdmin, lang, changeLang, leaveTrip } = useApp()
+  const { trip, setTrip, isAdmin, lang, changeLang, leaveTrip, setParticipants, setExpenses, setShoppingItems } = useApp()
   const navigate = useNavigate()
   const [copied, setCopied] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -26,6 +26,25 @@ export default function Settings() {
   const handleLeave = () => {
     leaveTrip()
     navigate('/landing')
+  }
+
+  const handleReset = async () => {
+    const confirmMsg = isHe
+      ? 'איפוס יימחק את כל ההוצאות, המשתתפים וההחזרים. פרטי השיוט יישמרו. להמשיך?'
+      : 'Reset will delete all expenses, participants and refunds. Trip details will be kept. Continue?'
+    if (!window.confirm(confirmMsg)) return
+    const secondConfirm = isHe ? 'אתה בטוח לגמרי? אי אפשר לשחזר!' : 'Are you absolutely sure? This cannot be undone!'
+    if (!window.confirm(secondConfirm)) return
+
+    await Promise.all([
+      supabase.from('expenses').delete().eq('trip_id', trip.id),
+      supabase.from('participants').delete().eq('trip_id', trip.id),
+      supabase.from('shopping_items').delete().eq('trip_id', trip.id),
+    ])
+    setExpenses([])
+    setParticipants([])
+    setShoppingItems([])
+    navigate('/')
   }
 
   const handleDelete = async () => {
@@ -146,6 +165,13 @@ export default function Settings() {
             <LogOut size={18} className="text-gray-500" />
             <span className="font-medium">{t('leaveTrip')}</span>
           </button>
+          {isAdmin && (
+            <button onClick={handleReset}
+              className="w-full flex items-center gap-3 py-3 px-4 rounded-2xl border border-orange-200 text-orange-600 hover:bg-orange-50 transition-colors">
+              <RotateCcw size={18} />
+              <span className="font-medium">{isHe ? 'איפוס נתונים' : 'Reset Data'}</span>
+            </button>
+          )}
           {isAdmin && (
             <button onClick={handleDelete}
               className="w-full flex items-center gap-3 py-3 px-4 rounded-2xl border border-red-200 text-red-600 hover:bg-red-50 transition-colors">
