@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
-import { calculateBalances, formatCurrency, getCategoryIcon } from '../lib/calculations'
+import { calculateBalances, formatCurrency, getCategoryIcon, getEurAmount } from '../lib/calculations'
 import { motion } from 'framer-motion'
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316']
@@ -19,8 +19,8 @@ export default function Report() {
   }
 
   const runningExpenses = expenses.filter(e => !e.is_yacht_cost)
-  const totalExpenses = runningExpenses.reduce((s, e) => s + e.amount, 0)
-  const yachtTotal = expenses.filter(e => e.is_yacht_cost).reduce((s, e) => s + e.amount, 0)
+  const totalExpenses = runningExpenses.reduce((s, e) => s + getEurAmount(e), 0)
+  const yachtTotal = expenses.filter(e => e.is_yacht_cost).reduce((s, e) => s + getEurAmount(e), 0)
 
   const lateJoiners = participants.filter(p => p.joined_late)
   const hasLateJoiners = lateJoiners.length > 0
@@ -61,7 +61,7 @@ export default function Report() {
           : 0
 
         const categoryBreakdown = runningExpenses.reduce((acc, e) => {
-          const share = e.amount / participants.length
+          const share = getEurAmount(e) / participants.length
           acc[e.category] = (acc[e.category] || 0) + share
           return acc
         }, {})
@@ -136,12 +136,17 @@ export default function Report() {
                     <span className="text-sm text-gray-600 flex-1 min-w-0 truncate">
                       {getCategoryIcon(e.category)} {e.notes || e.description}
                     </span>
-                    <span className="text-sm font-semibold text-emerald-600 flex-shrink-0">{formatCurrency(e.amount, 'EUR')}</span>
+                    <span className="text-sm font-semibold text-emerald-600 flex-shrink-0">
+                      {formatCurrency(e.amount, e.currency)}
+                      {e.currency !== 'EUR' && e.eur_rate && (
+                        <span className="text-xs text-blue-400 block">≈ {formatCurrency(getEurAmount(e), 'EUR')}</span>
+                      )}
+                    </span>
                   </div>
                 ))}
                 <div className="flex items-center justify-between border-t border-gray-100 pt-2 mt-1">
                   <span className="text-sm text-gray-500">{isHe ? 'סה״כ מכיסו' : 'Total personal'}</span>
-                  <span className="text-sm font-bold text-emerald-600">{formatCurrency(personalPaid, 'EUR')}</span>
+                  <span className="text-sm font-bold text-emerald-600">{formatCurrency(personalExpenses.reduce((s,e) => s + getEurAmount(e), 0), 'EUR')}</span>
                 </div>
               </div>
             )}
