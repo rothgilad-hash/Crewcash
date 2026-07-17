@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
-import { Plus, Trash2, CheckSquare2, Square, FileSpreadsheet, ExternalLink, ChevronDown, ChevronUp, ShoppingCart } from 'lucide-react'
+import { Plus, Trash2, CheckSquare2, Square, FileSpreadsheet, ExternalLink, ChevronDown, ChevronUp, ShoppingCart, Users, Copy, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import * as XLSX from 'xlsx'
 
@@ -72,6 +72,13 @@ export default function Shopping() {
   const [collapsedCats, setCollapsedCats] = useState(() => new Set(CATS.map(c => c.key)))
   const [costModal, setCostModal] = useState({ open: false, source: 'shopping', amount: '', is_cash: true })
   const [savingCost, setSavingCost] = useState(false)
+  const [supermarketTeam, setSupermarketTeam] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(`crewcash_superteam_${trip?.id}`) || '[]')) }
+    catch { return new Set() }
+  })
+  const [showTeamPanel, setShowTeamPanel] = useState(false)
+  const [copiedPid, setCopiedPid] = useState(null)
+  const [showRemaining, setShowRemaining] = useState(false)
   const fileRef = useRef(null)
   const isHe = lang === 'he'
 
@@ -200,10 +207,47 @@ export default function Shopping() {
     setSavingCost(false)
   }
 
+  const toggleTeamMember = (pid) => {
+    setSupermarketTeam(prev => {
+      const next = new Set(prev)
+      next.has(pid) ? next.delete(pid) : next.add(pid)
+      localStorage.setItem(`crewcash_superteam_${trip.id}`, JSON.stringify([...next]))
+      return next
+    })
+  }
+
   const unchecked = shoppingItems.filter(i => !i.checked)
   const checked = shoppingItems.filter(i => i.checked)
   const grouped = CATS.map(cat => ({ ...cat, items: unchecked.filter(i => i.category === cat.key) })).filter(g => g.items.length > 0)
   const uncat = unchecked.filter(i => !CATS.find(c => c.key === i.category))
+
+  // Supermarket team assignments
+  const gilId = participants.find(p => p.is_gil)?.id
+  const teamList = [...supermarketTeam]
+  const sortedTeam = gilId && teamList.includes(gilId)
+    ? [gilId, ...teamList.filter(id => id !== gilId)]
+    : teamList
+  const activeCatKeys = CATS.filter(c => unchecked.some(i => i.category === c.key)).map(c => c.key)
+  const catAssignments = {}
+  if (sortedTeam.length > 0) {
+    sortedTeam.forEach(id => { catAssignments[id] = [] })
+    activeCatKeys.forEach((cat, i) => {
+      catAssignments[sortedTeam[i % sortedTeam.length]].push(cat)
+    })
+  }
+
+  const buildCopyText = (pid) => {
+    const p = participants.find(x => x.id === pid)
+    const cats = catAssignments[pid] || []
+    const lines = cats.map(key => CATS.find(c => c.key === key)?.he || key)
+    return `${p?.name}, הקטגוריות שלך בקניות 🛒\n${lines.join('\n')}`
+  }
+
+  const copyAssignment = (pid) => {
+    navigator.clipboard.writeText(buildCopyText(pid))
+    setCopiedPid(pid)
+    setTimeout(() => setCopiedPid(null), 2000)
+  }
 
   return (
     <div className="p-4 space-y-4">
@@ -228,6 +272,70 @@ export default function Shopping() {
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleExcelFile} />
         </div>
       )}
+
+      {/* Supermarket team button */}
+      {isAdmin && participants.length > 0 && (
+        <button
+          onClick={() => setShowTeamPanel(v => !v)}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-white border border-gray-200 text-gray-700 font-semibold text-sm active:bg-gray-50 shadow-sm"
+        >
+          <Users size={16} className="text-purple-500" />
+          {isHe ? 'צוות סופר' : 'Shopping Team'}
+          {supermarketTeam.size > 0 && (
+            <span className="bg-purple-100 text-purple-600 text-xs font-bold px-2 py-0.5 rounded-full">{supermarketTeam.size}</span>
+          )}
+          {showTeamPanel ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </button>
+      )}
+
+      {/* Team panel */}
+      <AnimatePresence>
+        {showTeamPanel && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4">
+              <p className="text-xs font-semibold text-gray-500">{isHe ? 'סמן מי יוצא לקנות:' : 'Mark who is shopping:'}</p>
+              <div className="flex flex-wrap gap-2">
+                {participants.map(p => (
+                  <button key={p.id} onClick={() => toggleTeamMember(p.id)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
+                      supermarketTeam.has(p.id)
+                        ? 'bg-purple-600 text-white border-purple-600'
+                        : 'bg-white text-gray-600 border-gray-200'
+                    }`}>
+                    {p.name}{p.is_gil ? ' ⭐' : ''}
+                  </button>
+                ))}
+              </div>
+              {sortedTeam.length > 0 && activeCatKeys.length > 0 && (
+                <div className="space-y-2 pt-2 border-t border-gray-100">
+                  <p className="text-xs font-semibold text-gray-500">{isHe ? 'חלוקת קטגוריות:' : 'Category assignments:'}</p>
+                  {sortedTeam.map(pid => {
+                    const p = participants.find(x => x.id === pid)
+                    const cats = catAssignments[pid] || []
+                    return (
+                      <div key={pid} className="flex items-start gap-2 bg-gray-50 rounded-xl p-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-gray-800 mb-1">{p?.name}{p?.is_gil ? ' ⭐' : ''}</p>
+                          <p className="text-xs text-gray-500 leading-relaxed">
+                            {cats.map(key => CATS.find(c => c.key === key)?.he || key).join(' · ')}
+                          </p>
+                        </div>
+                        <button onClick={() => copyAssignment(pid)}
+                          className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors flex-shrink-0 ${
+                            copiedPid === pid ? 'bg-emerald-100 text-emerald-600' : 'bg-purple-100 text-purple-600 active:bg-purple-200'
+                          }`}>
+                          {copiedPid === pid ? <Check size={12} /> : <Copy size={12} />}
+                          {copiedPid === pid ? (isHe ? 'הועתק' : 'Copied') : (isHe ? 'העתק' : 'Copy')}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Enter shopping cost button */}
       {isAdmin && shoppingItems.length > 0 && (
@@ -464,6 +572,41 @@ export default function Shopping() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* נותר לרכישה — flat view of all unchecked */}
+      {unchecked.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-orange-200 overflow-hidden">
+          <button
+            onClick={() => setShowRemaining(v => !v)}
+            className="w-full px-4 py-3 bg-orange-50 flex items-center justify-between active:bg-orange-100"
+          >
+            <p className="font-bold text-orange-700 text-sm">📋 {isHe ? 'נותר לרכישה' : 'Remaining'}</p>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-orange-500">{unchecked.length}</span>
+              {showRemaining ? <ChevronUp size={14} className="text-orange-400" /> : <ChevronDown size={14} className="text-orange-400" />}
+            </div>
+          </button>
+          <AnimatePresence>
+            {showRemaining && (
+              <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+                <div className="divide-y divide-gray-50">
+                  {unchecked.map(item => (
+                    <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800">{item.name}</p>
+                        {item.quantity && <p className="text-xs text-gray-400">{item.quantity}</p>}
+                      </div>
+                      <span className="text-xs text-gray-300">
+                        {CATS.find(c => c.key === item.category)?.[isHe ? 'he' : 'en'] || ''}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 

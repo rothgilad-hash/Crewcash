@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom'
 
 export default function Dashboard() {
   const { t } = useTranslation()
-  const { trip, participants, expenses, kittyRefunds, isAdmin, lang } = useApp()
+  const { trip, participants, expenses, kittyRefunds, shoppingItems, isAdmin, lang } = useApp()
   const [copied, setCopied] = useState(false)
   const isHe = lang === 'he'
 
@@ -31,6 +31,7 @@ export default function Dashboard() {
 
   const navigate = useNavigate()
   const [showBreakdown, setShowBreakdown] = useState(false)
+  const uncheckedItems = shoppingItems.filter(i => !i.checked)
 
   const totalCollected = participants.reduce((s, p) => s + (p.amount_paid || 0), 0)
   const cashSpent = expenses.filter(e => e.is_cash && e.is_paid).reduce((s, e) => s + e.amount, 0)
@@ -157,6 +158,26 @@ export default function Dashboard() {
               <p className="text-xs text-gray-400 mt-1">{Math.round(cashPct * 100)}% {isHe ? 'נשאר' : 'remaining'}</p>
             </>
           )}
+        </motion.div>
+      )}
+
+      {/* Shopping remaining indicator */}
+      {uncheckedItems.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+          onClick={() => navigate('/shopping')}
+          className="rounded-3xl p-4 shadow-sm border border-orange-200 bg-orange-50 cursor-pointer active:opacity-80 transition-opacity"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🛒</span>
+              <div>
+                <p className="text-xs font-semibold text-orange-400">{isHe ? 'נותר לרכישה' : 'Items remaining'}</p>
+                <p className="text-lg font-black text-orange-700">{uncheckedItems.length} {isHe ? 'פריטים' : 'items'}</p>
+              </div>
+            </div>
+            <span className="text-orange-300 text-lg">›</span>
+          </div>
         </motion.div>
       )}
 
