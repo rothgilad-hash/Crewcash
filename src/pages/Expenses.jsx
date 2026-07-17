@@ -125,7 +125,10 @@ export default function Expenses() {
                   <div className="text-right">
                     <p className="font-bold text-gray-900 text-sm">{formatCurrency(exp.amount, exp.currency)}</p>
                     {exp.currency !== 'EUR' && exp.eur_rate && (
-                      <p className="text-[10px] text-blue-400 font-semibold">≈ {formatCurrency(getEurAmount(exp), 'EUR')}</p>
+                      <p className="text-[10px] text-blue-400 font-semibold">
+                        ≈ {formatCurrency(getEurAmount(exp), 'EUR')}
+                        <span className="text-gray-300 font-normal"> · {new Date(exp.created_at).toLocaleDateString('he-IL', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
+                      </p>
                     )}
                     {exp.currency !== 'EUR' && !exp.eur_rate && (
                       <p className="text-[10px] text-gray-400">{exp.currency}</p>

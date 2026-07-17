@@ -139,7 +139,10 @@ export default function Report() {
                     <span className="text-sm font-semibold text-emerald-600 flex-shrink-0">
                       {formatCurrency(e.amount, e.currency)}
                       {e.currency !== 'EUR' && e.eur_rate && (
-                        <span className="text-xs text-blue-400 block">≈ {formatCurrency(getEurAmount(e), 'EUR')}</span>
+                        <span className="text-xs text-blue-400 block">
+                          ≈ {formatCurrency(getEurAmount(e), 'EUR')}
+                          <span className="text-gray-300 font-normal"> · {new Date(e.created_at).toLocaleDateString('he-IL', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
+                        </span>
                       )}
                     </span>
                   </div>
