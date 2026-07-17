@@ -31,7 +31,7 @@ const CAT_MAP = {
 
 export default function Shopping() {
   const { t } = useTranslation()
-  const { trip, shoppingItems, isAdmin, lang } = useApp()
+  const { trip, shoppingItems, isAdmin, lang, reloadShoppingItems } = useApp()
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState({ name: '', quantity: '', category: 'other' })
   const [saving, setSaving] = useState(false)
@@ -41,13 +41,20 @@ export default function Shopping() {
   const fileRef = useRef(null)
   const isHe = lang === 'he'
 
-  const toggleItem = (item) => supabase.from('shopping_items').update({ checked: !item.checked }).eq('id', item.id)
-  const deleteItem = (id) => supabase.from('shopping_items').delete().eq('id', id)
+  const toggleItem = async (item) => {
+    await supabase.from('shopping_items').update({ checked: !item.checked }).eq('id', item.id)
+    reloadShoppingItems(trip.id)
+  }
+  const deleteItem = async (id) => {
+    await supabase.from('shopping_items').delete().eq('id', id)
+    reloadShoppingItems(trip.id)
+  }
 
   const handleAdd = async () => {
     if (!form.name.trim()) return
     setSaving(true)
     await supabase.from('shopping_items').insert({ trip_id: trip.id, ...form })
+    reloadShoppingItems(trip.id)
     setForm({ name: '', quantity: '', category: 'other' })
     setModalOpen(false)
     setSaving(false)
@@ -55,7 +62,10 @@ export default function Shopping() {
 
   const clearChecked = async () => {
     const ids = shoppingItems.filter(i => i.checked).map(i => i.id)
-    if (ids.length) await supabase.from('shopping_items').delete().in('id', ids)
+    if (ids.length) {
+      await supabase.from('shopping_items').delete().in('id', ids)
+      reloadShoppingItems(trip.id)
+    }
   }
 
   const handleExcelFile = (e) => {
@@ -96,6 +106,7 @@ export default function Shopping() {
     await supabase.from('shopping_items').insert(
       previewItems.map(item => ({ trip_id: trip.id, ...item, checked: false }))
     )
+    reloadShoppingItems(trip.id)
     setPreviewItems(null)
     setImporting(false)
   }
