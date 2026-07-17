@@ -221,18 +221,29 @@ export default function Shopping() {
   const grouped = CATS.map(cat => ({ ...cat, items: unchecked.filter(i => i.category === cat.key) })).filter(g => g.items.length > 0)
   const uncat = unchecked.filter(i => !CATS.find(c => c.key === i.category))
 
-  // Supermarket team assignments
+  // Supermarket team assignments — greedy by item count for fairness
   const gilId = participants.find(p => p.is_gil)?.id
   const teamList = [...supermarketTeam]
   const sortedTeam = gilId && teamList.includes(gilId)
     ? [gilId, ...teamList.filter(id => id !== gilId)]
     : teamList
-  const activeCatKeys = CATS.filter(c => unchecked.some(i => i.category === c.key)).map(c => c.key)
+  // Sort categories largest-first so greedy works well
+  const activeCatsWithCount = CATS
+    .filter(c => unchecked.some(i => i.category === c.key))
+    .map(c => ({ key: c.key, count: unchecked.filter(i => i.category === c.key).length }))
+    .sort((a, b) => b.count - a.count)
+  const activeCatKeys = activeCatsWithCount.map(c => c.key)
   const catAssignments = {}
+  const teamLoad = {} // pid -> total item count assigned
   if (sortedTeam.length > 0) {
-    sortedTeam.forEach(id => { catAssignments[id] = [] })
-    activeCatKeys.forEach((cat, i) => {
-      catAssignments[sortedTeam[i % sortedTeam.length]].push(cat)
+    sortedTeam.forEach(id => { catAssignments[id] = []; teamLoad[id] = 0 })
+    activeCatsWithCount.forEach(({ key, count }) => {
+      // Give this category to whoever has fewest items so far
+      const minPid = sortedTeam.reduce((best, pid) =>
+        teamLoad[pid] < teamLoad[best] ? pid : best
+      , sortedTeam[0])
+      catAssignments[minPid].push(key)
+      teamLoad[minPid] += count
     })
   }
 
