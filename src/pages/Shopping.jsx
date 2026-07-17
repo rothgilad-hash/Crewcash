@@ -60,7 +60,7 @@ export default function Shopping() {
   const [importing, setImporting] = useState(false)
   const [showYachtness, setShowYachtness] = useState(false)
   const [previewItems, setPreviewItems] = useState(null)
-  const [collapsedCats, setCollapsedCats] = useState(new Set())
+  const [collapsedCats, setCollapsedCats] = useState(() => new Set(CATS.map(c => c.key)))
   const [costModal, setCostModal] = useState({ open: false, source: 'shopping', amount: '', is_cash: true })
   const [savingCost, setSavingCost] = useState(false)
   const fileRef = useRef(null)
