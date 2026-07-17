@@ -77,21 +77,31 @@ export default function Shopping() {
       const ws = wb.Sheets[wb.SheetNames[0]]
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }).filter(r => r.some(c => c))
 
-      // detect header row
-      const first = rows[0]?.map(c => String(c || '').toLowerCase().trim())
-      const hasHeader = first?.some(c => ['name', 'שם', 'פריט', 'item', 'quantity', 'כמות', 'category', 'קטגוריה'].includes(c))
+      // detect header row — first row is header if any cell looks like a label
+      const first = rows[0]?.map(c => String(c || '').trim())
+      const firstLower = first?.map(c => c.toLowerCase())
+      const NAME_HEADERS = ['name','שם','פריט','item','מוצר','product']
+      const QTY_HEADERS  = ['quantity','כמות','qty','amount']
+      const CAT_HEADERS  = ['category','קטגוריה','cat','קט']
 
+      const hasHeader = firstLower?.some(c => [...NAME_HEADERS,...QTY_HEADERS].includes(c))
       const dataRows = hasHeader ? rows.slice(1) : rows
-      const nameIdx = hasHeader ? (first.findIndex(c => ['name','שם','פריט','item'].includes(c)) || 0) : 0
-      const qtyIdx  = hasHeader ? (first.findIndex(c => ['quantity','כמות','qty'].includes(c)))       : 1
-      const catIdx  = hasHeader ? (first.findIndex(c => ['category','קטגוריה','cat'].includes(c)))    : 2
+
+      const findIdx = (headers) => {
+        if (!hasHeader) return -1
+        const i = firstLower.findIndex(c => headers.includes(c))
+        return i
+      }
+      const nameIdx = findIdx(NAME_HEADERS) !== -1 ? findIdx(NAME_HEADERS) : 0
+      const qtyIdx  = findIdx(QTY_HEADERS)  !== -1 ? findIdx(QTY_HEADERS)  : 1
+      const catIdx  = findIdx(CAT_HEADERS)
 
       const parsed = dataRows
-        .filter(r => r[nameIdx])
+        .filter(r => r[nameIdx] && String(r[nameIdx]).trim())
         .map(r => ({
           name: String(r[nameIdx] || '').trim(),
-          quantity: String(r[qtyIdx >= 0 ? qtyIdx : 1] || '').trim(),
-          category: CAT_MAP[String(r[catIdx >= 0 ? catIdx : 2] || '').trim()] || 'other',
+          quantity: String(r[qtyIdx] ?? '').trim(),
+          category: CAT_MAP[String(r[catIdx >= 0 ? catIdx : -1] || '').trim()] || 'other',
         }))
 
       setPreviewItems(parsed)
