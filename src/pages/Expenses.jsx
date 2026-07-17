@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabase'
-import { formatCurrency, getCategoryIcon } from '../lib/calculations'
+import { formatCurrency, getCategoryIcon, getEurAmount } from '../lib/calculations'
 import AddExpenseModal from '../components/AddExpenseModal'
 import { Plus, Banknote, CheckCircle2, Circle } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -18,7 +18,7 @@ export default function Expenses() {
   const isHe = lang === 'he'
 
   const filtered = filter === 'all' ? expenses : expenses.filter(e => e.category === filter)
-  const total = filtered.reduce((s, e) => s + e.amount, 0)
+  const total = filtered.reduce((s, e) => s + getEurAmount(e), 0)
 
   const openEdit = (exp) => {
     if (!isAdmin) return
@@ -124,7 +124,12 @@ export default function Expenses() {
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <div className="text-right">
                     <p className="font-bold text-gray-900 text-sm">{formatCurrency(exp.amount, exp.currency)}</p>
-                    <p className="text-[10px] text-gray-400">{exp.currency}</p>
+                    {exp.currency !== 'EUR' && exp.eur_rate && (
+                      <p className="text-[10px] text-blue-400 font-semibold">≈ {formatCurrency(getEurAmount(exp), 'EUR')}</p>
+                    )}
+                    {exp.currency !== 'EUR' && !exp.eur_rate && (
+                      <p className="text-[10px] text-gray-400">{exp.currency}</p>
+                    )}
                   </div>
                   {isAdmin && exp.is_cash && (
                     <button

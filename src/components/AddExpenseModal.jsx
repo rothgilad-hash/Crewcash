@@ -67,8 +67,18 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
   const isHe = lang === 'he'
   const [form, setForm] = useState(defaultForm)
   const [saving, setSaving] = useState(false)
-  const [cartItems, setCartItems] = useState({}) // {itemName: qty}
+  const [cartItems, setCartItems] = useState({})
+  const [eurRate, setEurRate] = useState(null) // EUR per 1 unit of selected currency
   const autoFilledDesc = useRef(false)
+
+  // Fetch EUR rate when currency changes
+  useEffect(() => {
+    if (form.currency === 'EUR') { setEurRate(1); return }
+    fetch(`https://api.frankfurter.app/latest?from=${form.currency}&to=EUR`)
+      .then(r => r.json())
+      .then(d => setEurRate(d.rates?.EUR || null))
+      .catch(() => setEurRate(null))
+  }, [form.currency])
 
   useEffect(() => {
     if (expense) {
@@ -128,6 +138,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
       description: desc,
       amount: parseFloat(form.amount),
       currency: form.currency,
+      eur_rate: eurRate || 1,
       category: form.category,
       sub_category: form.sub_category || null,
       paid_by: form.paid_by || null,
@@ -284,6 +295,17 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
             </select>
           </div>
         </div>
+
+        {/* EUR conversion preview */}
+        {form.currency !== 'EUR' && form.amount && eurRate && (
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-2.5 flex items-center justify-between">
+            <span className="text-sm text-blue-500">{isHe ? 'שווה ערך ביורו' : 'EUR equivalent'}</span>
+            <span className="text-sm font-bold text-blue-700">
+              ≈ €{(parseFloat(form.amount) * eurRate).toFixed(2)}
+              <span className="text-xs font-normal text-blue-400 mr-1"> (1 {form.currency} = €{eurRate.toFixed(4)})</span>
+            </span>
+          </div>
+        )}
 
         {/* 4. Toggles */}
         <div className="space-y-1">

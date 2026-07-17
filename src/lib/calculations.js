@@ -1,3 +1,9 @@
+// Returns the EUR-equivalent of an expense (uses stored eur_rate if available)
+export function getEurAmount(expense) {
+  if (!expense.eur_rate || expense.currency === 'EUR') return expense.amount
+  return expense.amount * expense.eur_rate
+}
+
 export function getTotalParts(participants, isYachtCost) {
   if (!isYachtCost) return participants.length
   return participants.reduce((sum, p) => sum + (p.is_gil ? 2 : 1), 0)
@@ -12,17 +18,18 @@ export function calculateBalances(expenses, participants) {
   const totalParts = participants.length
   if (totalParts > 0) {
     runningExpenses.forEach(exp => {
-      const partValue = exp.amount / totalParts
+      const eurAmt = getEurAmount(exp)
+      const partValue = eurAmt / totalParts
       participants.forEach(p => { balances[p.id].owes += partValue })
       // Credit personal payer — they fronted this expense from their own pocket
       if (exp.paid_by && balances[exp.paid_by]) {
-        balances[exp.paid_by].paid += exp.amount
+        balances[exp.paid_by].paid += eurAmt
       }
     })
   }
 
   // Yacht adjustments for late joiners
-  const yachtTotal = expenses.filter(e => e.is_yacht_cost).reduce((s, e) => s + e.amount, 0)
+  const yachtTotal = expenses.filter(e => e.is_yacht_cost).reduce((s, e) => s + getEurAmount(e), 0)
   if (yachtTotal > 0) {
     const existing = participants.filter(p => !p.joined_late)
     const late = participants.filter(p => p.joined_late)
