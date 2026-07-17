@@ -133,12 +133,25 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
     if (!form.category || !form.amount) return
     const desc = form.description || t('cat_' + form.category)
     setSaving(true)
+
+    // Always fetch fresh rate on save to avoid race conditions
+    let finalEurRate = 1
+    if (form.currency !== 'EUR') {
+      try {
+        const resp = await fetch(`https://api.frankfurter.app/latest?from=${form.currency}&to=EUR`)
+        const data = await resp.json()
+        finalEurRate = data.rates?.EUR || eurRate || 1
+      } catch {
+        finalEurRate = eurRate || 1
+      }
+    }
+
     const payload = {
       trip_id: trip.id,
       description: desc,
       amount: parseFloat(form.amount),
       currency: form.currency,
-      eur_rate: eurRate || 1,
+      eur_rate: finalEurRate,
       category: form.category,
       sub_category: form.sub_category || null,
       paid_by: form.paid_by || null,
