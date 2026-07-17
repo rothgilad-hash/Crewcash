@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
-import { Plus, Trash2, CheckSquare2, Square, FileSpreadsheet, ExternalLink, ChevronDown, ChevronUp, ShoppingCart, Users, Copy, Check } from 'lucide-react'
+import { Plus, Trash2, CheckSquare2, Square, FileSpreadsheet, ExternalLink, ChevronDown, ChevronUp, ShoppingCart, Users, Copy, Check, Mail } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import * as XLSX from 'xlsx'
 
@@ -21,6 +21,44 @@ const CATS = [
   { key: 'snacks',      he: '🍿 חטיפים',      en: '🍿 Snacks' },
   { key: 'other',       he: '📦 אחר',         en: '📦 Other' },
 ]
+
+const GOOGLE_CLIENT_ID = '619385297140-pmlghch5hvil5lr20udes6893u33as32.apps.googleusercontent.com'
+
+const loadGoogleScript = () => new Promise(resolve => {
+  if (window.google?.accounts) { resolve(); return }
+  const script = document.createElement('script')
+  script.src = 'https://accounts.google.com/gsi/client'
+  script.onload = resolve
+  document.head.appendChild(script)
+})
+
+function findHtmlBody(part) {
+  if (part.mimeType === 'text/html') return part.body?.data
+  if (part.parts) {
+    for (const p of part.parts) {
+      const found = findHtmlBody(p)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+function parseYachtnessEmail(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  const rows = [...doc.querySelectorAll('table tr')]
+  const items = []
+  for (const row of rows) {
+    const cells = [...row.querySelectorAll('td')]
+    if (cells.length < 2) continue
+    const name = cells[0]?.textContent?.trim()
+    if (!name || name.length < 2) continue
+    // find qty cell — first cell that looks like a number
+    const qtyCell = cells.slice(1).find(c => /^\d+$/.test(c.textContent?.trim()))
+    const qty = qtyCell?.textContent?.trim() || ''
+    items.push({ name, quantity: qty, category: autoDetectCat(name) })
+  }
+  return items
+}
 
 const CAT_MAP = {
   'שתייה': 'drinks', 'שתיה': 'drinks', 'drinks': 'drinks',
@@ -170,6 +208,42 @@ export default function Shopping() {
     reloadShoppingItems(trip.id)
     setPreviewItems(null)
     setImporting(false)
+  }
+
+  const importFromGmail = async () => {
+    await loadGoogleScript()
+    const tokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: 'https://www.googleapis.com/auth/gmail.readonly',
+      callback: async (tokenResponse) => {
+        if (tokenResponse.error) { alert('שגיאת התחברות: ' + tokenResponse.error); return }
+        const token = tokenResponse.access_token
+        try {
+          // Find latest Yachtness order email
+          const searchResp = await fetch(
+            `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=from:yachtness&maxResults=1`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          )
+          const searchData = await searchResp.json()
+          if (!searchData.messages?.length) { alert(isHe ? 'לא נמצאו מיילים מ-Yachtness' : 'No Yachtness emails found'); return }
+
+          const msgResp = await fetch(
+            `https://gmail.googleapis.com/gmail/v1/users/me/messages/${searchData.messages[0].id}?format=full`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          )
+          const msgData = await msgResp.json()
+          const b64 = findHtmlBody(msgData.payload)
+          if (!b64) { alert(isHe ? 'לא ניתן לקרוא את המייל' : 'Could not read email'); return }
+          const html = atob(b64.replace(/-/g, '+').replace(/_/g, '/'))
+          const items = parseYachtnessEmail(html)
+          if (items.length) setPreviewItems(items)
+          else alert(isHe ? 'לא נמצאו פריטים במייל' : 'No items found in email')
+        } catch (err) {
+          alert('שגיאה: ' + err.message)
+        }
+      }
+    })
+    tokenClient.requestAccessToken()
   }
 
   const openCostModal = (source) => {
@@ -393,13 +467,22 @@ export default function Shopping() {
                 {isHe ? 'פתח חנות' : 'Open Store'}
               </a>
               {isAdmin && (
-                <button
-                  onClick={() => openCostModal('yachtness')}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 text-white font-semibold text-sm active:bg-emerald-700"
-                >
-                  <ShoppingCart size={15} />
-                  {isHe ? 'הזן עלות הזמנה' : 'Enter Order Cost'}
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={importFromGmail}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm active:bg-blue-700"
+                  >
+                    <Mail size={15} />
+                    {isHe ? 'ייבא מ-Gmail' : 'Import from Gmail'}
+                  </button>
+                  <button
+                    onClick={() => openCostModal('yachtness')}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 text-white font-semibold text-sm active:bg-emerald-700"
+                  >
+                    <ShoppingCart size={15} />
+                    {isHe ? 'הזן עלות הזמנה' : 'Enter Order Cost'}
+                  </button>
+                </div>
               )}
             </div>
           </motion.div>
