@@ -2,17 +2,17 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabase'
-import { formatCurrency } from '../lib/calculations'
+import { formatCurrency, getCollectedAmount } from '../lib/calculations'
 import { CheckCircle2, Circle, AlertTriangle, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 export default function CashFlow() {
   const { t } = useTranslation()
-  const { participants, expenses, kittyRefunds, isAdmin, lang } = useApp()
+  const { participants, expenses, kittyRefunds, kittyCollections, isAdmin, lang } = useApp()
   const [showPaid, setShowPaid] = useState(false)
   const isHe = lang === 'he'
 
-  const totalCollected = participants.reduce((s, p) => s + (p.amount_paid || 0), 0)
+  const totalCollected = participants.reduce((s, p) => s + getCollectedAmount(kittyCollections, p.id, p), 0)
   const cashSpent = expenses.filter(e => e.is_cash && e.is_paid).reduce((s, e) => s + e.amount, 0)
   const kittyRefundsFromTable = kittyRefunds.reduce((s, r) => s + r.amount, 0)
   const kittyRefundsLegacy = participants.reduce((s, p) => {

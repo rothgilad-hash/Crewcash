@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
-import { calculateBalances, formatCurrency, getCategoryIcon } from '../lib/calculations'
+import { calculateBalances, formatCurrency, getCategoryIcon, getCollectedAmount } from '../lib/calculations'
 import { Copy, Check, AlertCircle, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 
 export default function Dashboard() {
   const { t } = useTranslation()
-  const { trip, participants, expenses, kittyRefunds, shoppingItems, isAdmin, lang } = useApp()
+  const { trip, participants, expenses, kittyRefunds, kittyCollections, shoppingItems, isAdmin, lang } = useApp()
   const [copied, setCopied] = useState(false)
   const isHe = lang === 'he'
 
@@ -33,7 +33,7 @@ export default function Dashboard() {
   const [showBreakdown, setShowBreakdown] = useState(false)
   const uncheckedItems = shoppingItems.filter(i => !i.checked)
 
-  const totalCollected = participants.reduce((s, p) => s + (p.amount_paid || 0), 0)
+  const totalCollected = participants.reduce((s, p) => s + getCollectedAmount(kittyCollections, p.id, p), 0)
   const cashSpent = expenses.filter(e => e.is_cash && e.is_paid).reduce((s, e) => s + e.amount, 0)
   const kittyRefundsTotal = kittyRefunds.reduce((s, r) => s + r.amount, 0)
   const cashBalance = totalCollected - cashSpent - kittyRefundsTotal
@@ -189,16 +189,17 @@ export default function Dashboard() {
           <div className="space-y-3.5">
             {participants.map((p, i) => {
               const b = balances[p.id] || { paid: 0, owes: 0 }
-              const cashPaid = (p.amount_paid || 0) + (b.paid || 0)
+              const collected = getCollectedAmount(kittyCollections, p.id, p)
               const kpbFromTable = kittyRefunds.filter(r => r.participant_id === p.id).reduce((s, r) => s + r.amount, 0)
               const kpb = kpbFromTable > 0 ? kpbFromTable : (p.kitty_paid_back || 0)
-              const remaining = Math.round((b.owes - cashPaid + kpb) * 100) / 100
+              const remaining = Math.round((b.owes - collected - b.paid + kpb) * 100) / 100
               const isNeg = remaining > 0.5
               const maxAbs = Math.max(...participants.map(x => {
                 const bx = balances[x.id] || { paid: 0, owes: 0 }
+                const col = getCollectedAmount(kittyCollections, x.id, x)
                 const kpbT = kittyRefunds.filter(r => r.participant_id === x.id).reduce((s, r) => s + r.amount, 0)
-                const kpb = kpbT > 0 ? kpbT : (x.kitty_paid_back || 0)
-                return Math.abs(Math.round((bx.owes - (x.amount_paid || 0) - (bx.paid || 0) + kpb) * 100) / 100)
+                const kpbx = kpbT > 0 ? kpbT : (x.kitty_paid_back || 0)
+                return Math.abs(Math.round((bx.owes - col - bx.paid + kpbx) * 100) / 100)
               }), 1)
               return (
                 <div key={p.id} className="flex items-center gap-3">

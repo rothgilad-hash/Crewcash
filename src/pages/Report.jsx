@@ -1,13 +1,13 @@
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
-import { calculateBalances, formatCurrency, getCategoryIcon, getEurAmount } from '../lib/calculations'
+import { calculateBalances, formatCurrency, getCategoryIcon, getEurAmount, getCollectedAmount } from '../lib/calculations'
 import { motion } from 'framer-motion'
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316']
 
 export default function Report() {
   const { t } = useTranslation()
-  const { participants, expenses, kittyRefunds, lang } = useApp()
+  const { participants, expenses, kittyRefunds, kittyCollections, lang } = useApp()
   const isHe = lang === 'he'
   const balances = calculateBalances(expenses, participants)
 
@@ -40,11 +40,14 @@ export default function Report() {
       {/* Per-person breakdown */}
       {participants.map((p, i) => {
         const b = balances[p.id] || { owes: 0, paid: 0 }
-        const cashPaid = p.amount_paid || 0
+        const collected = getCollectedAmount(kittyCollections, p.id, p)
+        const myCollections = kittyCollections.filter(c => c.participant_id === p.id)
         const personalPaid = b.paid || 0
         const kittyPaidBack = getKittyPaidBack(p.id)
         const refunds = getRefunds(p.id)
-        const remaining = Math.round((b.owes - cashPaid - personalPaid + kittyPaidBack) * 100) / 100
+        const remaining = Math.round((b.owes - collected - personalPaid + kittyPaidBack) * 100) / 100
+        // Only show "kitty owes" when person has personal expenses
+        const kittyOwes = remaining < -0.5 && personalPaid > 0
 
         const personalExpenses = expenses.filter(e => e.paid_by === p.id && !e.is_yacht_cost)
 
@@ -84,10 +87,10 @@ export default function Report() {
               </div>
               <div className="flex-1">
                 <p className="font-bold text-gray-900">{p.name}{p.is_gil ? ' ⭐' : ''}{p.joined_late ? ' ⏰' : ''}</p>
-                <p className={`text-sm font-semibold ${remaining > 0.5 ? 'text-red-500' : remaining < -0.5 ? 'text-emerald-500' : 'text-gray-400'}`}>
+                <p className={`text-sm font-semibold ${remaining > 0.5 ? 'text-red-500' : kittyOwes ? 'text-emerald-500' : 'text-gray-400'}`}>
                   {remaining > 0.5
                     ? `${isHe ? 'חייב לקופה' : 'Owes kitty'} ${formatCurrency(remaining, 'EUR')}`
-                    : remaining < -0.5
+                    : kittyOwes
                     ? `${isHe ? 'הקופה חייבת לו' : 'Kitty owes'} ${formatCurrency(Math.abs(remaining), 'EUR')}`
                     : (isHe ? 'מסולק ✓' : 'Settled ✓')}
                 </p>
@@ -154,11 +157,22 @@ export default function Report() {
               </div>
             )}
 
-            {/* Cash paid to economist */}
-            {cashPaid > 0 && (
-              <div className="border-t border-gray-100 px-4 py-3 flex justify-between items-center">
-                <span className="text-sm text-gray-500">{isHe ? 'שילם לקופה במזומן' : 'Paid to kitty (cash)'}</span>
-                <span className="text-sm font-semibold text-blue-600">{formatCurrency(cashPaid, 'EUR')}</span>
+            {/* Collections per round */}
+            {myCollections.length > 0 && (
+              <div className="border-t border-gray-100 px-4 py-3 space-y-1.5">
+                <p className="text-xs font-semibold text-gray-400 mb-2">{isHe ? 'גיוסים לקופה' : 'Collections'}</p>
+                {myCollections.map(c => (
+                  <div key={c.id} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">💰 {c.round_name}</span>
+                    <span className="text-sm font-semibold text-blue-600">{formatCurrency(c.amount, 'EUR')}</span>
+                  </div>
+                ))}
+                {myCollections.length > 1 && (
+                  <div className="flex items-center justify-between border-t border-gray-100 pt-1.5">
+                    <span className="text-sm text-gray-400">{isHe ? 'סה״כ גויס' : 'Total collected'}</span>
+                    <span className="text-sm font-bold text-blue-600">{formatCurrency(collected, 'EUR')}</span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -188,8 +202,8 @@ export default function Report() {
                 ))}
                 <div className="flex items-center justify-between border-t border-gray-100 pt-2">
                   <span className="text-sm font-bold text-gray-700">{isHe ? 'יתרה סופית' : 'Final balance'}</span>
-                  <span className={`text-sm font-black ${remaining > 0.5 ? 'text-red-500' : remaining < -0.5 ? 'text-emerald-500' : 'text-gray-400'}`}>
-                    {remaining > 0.5 ? formatCurrency(remaining, 'EUR') : remaining < -0.5 ? `−${formatCurrency(Math.abs(remaining), 'EUR')}` : (isHe ? 'מסולק ✓' : 'Settled ✓')}
+                  <span className={`text-sm font-black ${remaining > 0.5 ? 'text-red-500' : kittyOwes ? 'text-emerald-500' : 'text-gray-400'}`}>
+                    {remaining > 0.5 ? formatCurrency(remaining, 'EUR') : kittyOwes ? `−${formatCurrency(Math.abs(remaining), 'EUR')}` : (isHe ? 'מסולק ✓' : 'Settled ✓')}
                   </span>
                 </div>
               </div>

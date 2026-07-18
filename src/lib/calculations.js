@@ -1,3 +1,10 @@
+export function getCollectedAmount(kittyCollections, participantId, participant) {
+  const fromCollections = (kittyCollections || [])
+    .filter(c => c.participant_id === participantId)
+    .reduce((s, c) => s + c.amount, 0)
+  return fromCollections > 0 ? fromCollections : (participant?.amount_paid || 0)
+}
+
 // Returns the EUR-equivalent of an expense (uses stored eur_rate if available)
 export function getEurAmount(expense) {
   if (!expense.eur_rate || expense.currency === 'EUR') return expense.amount

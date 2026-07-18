@@ -9,6 +9,7 @@ export function AppProvider({ children }) {
   const [expenses, setExpenses] = useState([])
   const [shoppingItems, setShoppingItems] = useState([])
   const [kittyRefunds, setKittyRefunds] = useState([])
+  const [kittyCollections, setKittyCollections] = useState([])
   const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
   const [lang, setLang] = useState(localStorage.getItem('crewcash_lang') || 'he')
@@ -30,8 +31,12 @@ export function AppProvider({ children }) {
 
     const partIds = (parts || []).map(p => p.id)
     if (partIds.length > 0) {
-      const { data: refunds } = await supabase.from('kitty_refunds').select('*').in('participant_id', partIds).order('created_at')
+      const [{ data: refunds }, { data: collections }] = await Promise.all([
+        supabase.from('kitty_refunds').select('*').in('participant_id', partIds).order('created_at'),
+        supabase.from('kitty_collections').select('*').in('participant_id', partIds).order('created_at')
+      ])
       setKittyRefunds(refunds || [])
+      setKittyCollections(collections || [])
     }
 
     const storedAdmin = localStorage.getItem('crewcash_admin_' + tripId)
@@ -65,10 +70,17 @@ export function AppProvider({ children }) {
       .then(({ data }) => setKittyRefunds(data || []))
   }, [])
 
+  const reloadCollections = useCallback((participantIds) => {
+    if (!participantIds?.length) return
+    supabase.from('kitty_collections').select('*').in('participant_id', participantIds).order('created_at')
+      .then(({ data }) => setKittyCollections(data || []))
+  }, [])
+
   useEffect(() => {
     if (!trip) return
     const tripId = trip.id
     const channel = supabase.channel('trip-' + tripId)
+
       .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: `trip_id=eq.${tripId}` },
         () => supabase.from('expenses').select('*').eq('trip_id', tripId).order('created_at', { ascending: false }).then(({ data }) => setExpenses(data || [])))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `trip_id=eq.${tripId}` },
@@ -81,10 +93,13 @@ export function AppProvider({ children }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'kitty_refunds' },
         () => supabase.from('participants').select('id').eq('trip_id', tripId)
             .then(({ data }) => reloadRefunds((data || []).map(p => p.id))))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kitty_collections' },
+        () => supabase.from('participants').select('id').eq('trip_id', tripId)
+            .then(({ data }) => reloadCollections((data || []).map(p => p.id))))
       .subscribe()
 
     return () => supabase.removeChannel(channel)
-  }, [trip, reloadRefunds])
+  }, [trip, reloadRefunds, reloadCollections])
 
   const joinTrip = async (inviteCode) => {
     const { data } = await supabase.from('trips').select('*').eq('invite_token', inviteCode.toLowerCase()).single()
@@ -105,6 +120,7 @@ export function AppProvider({ children }) {
     setExpenses([])
     setShoppingItems([])
     setKittyRefunds([])
+    setKittyCollections([])
     return data
   }
 
@@ -116,6 +132,7 @@ export function AppProvider({ children }) {
     setExpenses([])
     setShoppingItems([])
     setKittyRefunds([])
+    setKittyCollections([])
     setIsAdmin(false)
   }
 
@@ -126,9 +143,9 @@ export function AppProvider({ children }) {
 
   return (
     <AppContext.Provider value={{
-      trip, setTrip, participants, expenses, shoppingItems, kittyRefunds,
+      trip, setTrip, participants, expenses, shoppingItems, kittyRefunds, kittyCollections,
       isAdmin, loading, lang,
-      loadTrip, joinTrip, createTrip, leaveTrip, changeLang, reloadRefunds, reloadExpenses, reloadShoppingItems,
+      loadTrip, joinTrip, createTrip, leaveTrip, changeLang, reloadRefunds, reloadCollections, reloadExpenses, reloadShoppingItems,
       setParticipants, setExpenses, setShoppingItems
     }}>
       {children}
