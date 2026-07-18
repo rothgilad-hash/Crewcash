@@ -1,13 +1,13 @@
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
-import { calculateBalances, formatCurrency } from '../lib/calculations'
+import { calculateBalances, formatCurrency, getCollectedAmount } from '../lib/calculations'
 import { motion } from 'framer-motion'
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316']
 
 export default function Debts() {
   const { t } = useTranslation()
-  const { participants, expenses, kittyRefunds, lang } = useApp()
+  const { participants, expenses, kittyRefunds, kittyCollections, lang } = useApp()
   const isHe = lang === 'he'
 
   const balances = calculateBalances(expenses, participants)
@@ -20,12 +20,16 @@ export default function Debts() {
 
   const getRemaining = (p) => {
     const b = balances[p.id] || { owes: 0, paid: 0 }
-    const paid = (p.amount_paid || 0) + (b.paid || 0)
-    return Math.round((b.owes - paid + getKittyPaidBack(p.id)) * 100) / 100
+    const collected = getCollectedAmount(kittyCollections, p.id, p)
+    return Math.round((b.owes - collected - b.paid + getKittyPaidBack(p.id)) * 100) / 100
   }
 
   const owesKitty = participants.filter(p => getRemaining(p) > 0.5)
-  const kittyOwes = participants.filter(p => getRemaining(p) < -0.5)
+  // Kitty only owes when person has personal expenses (b.paid > 0)
+  const kittyOwes = participants.filter(p => {
+    const b = balances[p.id] || { owes: 0, paid: 0 }
+    return getRemaining(p) < -0.5 && b.paid > 0
+  })
 
   const allSettled = owesKitty.length === 0 && kittyOwes.length === 0
 
