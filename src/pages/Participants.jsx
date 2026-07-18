@@ -66,11 +66,16 @@ export default function Participants() {
     const amt = parseFloat(collectAmount)
     if (!amt || !collectOpen) return
     setSaving(true)
-    await supabase.from('kitty_collections').insert({
+    const { error } = await supabase.from('kitty_collections').insert({
       participant_id: collectOpen,
       amount: amt,
       round_name: collectRound.trim() || (isHe ? 'גיוס' : 'Round')
     })
+    if (error) {
+      alert('שגיאה: ' + error.message)
+      setSaving(false)
+      return
+    }
     reloadCollections(participants.map(x => x.id))
     setCollectOpen(null)
     setCollectAmount('')
