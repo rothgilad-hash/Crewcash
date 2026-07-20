@@ -371,8 +371,10 @@ export default function Shopping() {
         >
           <Users size={16} className="text-purple-500" />
           {isHe ? 'צוות סופר' : 'Shopping Team'}
-          {supermarketTeam.size > 0 && (
-            <span className="bg-purple-100 text-purple-600 text-xs font-bold px-2 py-0.5 rounded-full">{supermarketTeam.size}</span>
+          {participants.filter(p => supermarketTeam.has(p.id)).length > 0 && (
+            <span className="bg-purple-100 text-purple-600 text-xs font-bold px-2 py-0.5 rounded-full">
+              {participants.filter(p => supermarketTeam.has(p.id)).length}
+            </span>
           )}
           {showTeamPanel ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </button>
