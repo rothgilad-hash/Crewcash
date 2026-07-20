@@ -16,6 +16,10 @@ export default function Participants() {
   const { trip, participants, expenses, kittyRefunds, kittyCollections, isAdmin, lang, reloadCollections } = useApp()
   const [addOpen, setAddOpen] = useState(false)
   const [collectOpen, setCollectOpen] = useState(null)
+  const [groupCollectOpen, setGroupCollectOpen] = useState(false)
+  const [groupTarget, setGroupTarget] = useState('')
+  const [groupRound, setGroupRound] = useState('')
+  const [groupAmounts, setGroupAmounts] = useState({})
   const [form, setForm] = useState({ name: '', is_gil: false, joined_late: false })
   const [collectAmount, setCollectAmount] = useState('')
   const [collectRound, setCollectRound] = useState('')
@@ -55,6 +59,44 @@ export default function Participants() {
   const handleDelete = async (id, name) => {
     if (!window.confirm(isHe ? `למחוק את ${name}?` : `Delete ${name}?`)) return
     await supabase.from('participants').delete().eq('id', id)
+  }
+
+  const openGroupCollect = () => {
+    const maxRounds = Math.max(0, ...participants.map(p => kittyCollections.filter(c => c.participant_id === p.id).length))
+    const names = isHe ? ROUND_NAMES_HE : ROUND_NAMES_EN
+    const nextName = names[maxRounds] || (isHe ? `גיוס ${maxRounds + 1}` : `Round ${maxRounds + 1}`)
+    setGroupRound(nextName)
+    setGroupTarget('')
+    setGroupAmounts({})
+    setGroupCollectOpen(true)
+  }
+
+  const applyGroupTarget = (targetStr) => {
+    const target = parseFloat(targetStr) || 0
+    setGroupTarget(targetStr)
+    const amounts = {}
+    participants.forEach(p => {
+      const b = balances[p.id] || { owes: 0, paid: 0 }
+      const collected = getCollectedAmount(kittyCollections, p.id, p)
+      const refunded = getKittyPaidBack(p.id)
+      const remaining = b.owes - collected - b.paid + refunded
+      const suggested = Math.max(0, remaining < 0 ? target + remaining : target)
+      amounts[p.id] = String(Math.round(suggested * 100) / 100)
+    })
+    setGroupAmounts(amounts)
+  }
+
+  const handleSaveGroupCollection = async () => {
+    if (!groupRound.trim()) return
+    setSaving(true)
+    const rows = participants
+      .map(p => ({ participant_id: p.id, amount: parseFloat(groupAmounts[p.id]) || 0, round_name: groupRound.trim() }))
+      .filter(r => r.amount > 0)
+    const { error } = await supabase.from('kitty_collections').insert(rows)
+    if (error) { alert('שגיאה: ' + error.message); setSaving(false); return }
+    reloadCollections(participants.map(x => x.id))
+    setGroupCollectOpen(false)
+    setSaving(false)
   }
 
   const handleSaveCollection = async () => {
@@ -173,7 +215,13 @@ export default function Participants() {
       )}
 
       {isAdmin && (
-        <div className="pb-2">
+        <div className="pb-2 space-y-2">
+          {participants.length > 0 && (
+            <button onClick={openGroupCollect}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-purple-600 text-white font-semibold text-sm active:bg-purple-700">
+              💰 {isHe ? 'גיוס קבוצתי' : 'Group Collection'}
+            </button>
+          )}
           <button onClick={() => setAddOpen(true)}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-blue-200 text-blue-600 font-semibold text-sm bg-blue-50 active:bg-blue-100">
             <Plus size={18} />{isHe ? 'הוסף משתתף' : 'Add Participant'}
@@ -235,6 +283,64 @@ export default function Participants() {
           <div className="flex gap-3">
             <button onClick={() => setCollectOpen(null)} className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold active:bg-gray-50">{t('cancel')}</button>
             <button onClick={handleSaveCollection} disabled={saving || !collectAmount} className="flex-1 py-4 rounded-2xl bg-blue-600 text-white font-bold active:bg-blue-700 disabled:opacity-40">{saving ? '...' : t('save')}</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Group collection modal */}
+      <Modal open={groupCollectOpen} onClose={() => setGroupCollectOpen(false)}
+        title={isHe ? 'גיוס קבוצתי' : 'Group Collection'}>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{isHe ? 'שם הגיוס' : 'Round name'}</label>
+            <input className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:outline-none focus:border-purple-500 text-gray-900 bg-white"
+              value={groupRound} onChange={e => setGroupRound(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{isHe ? 'יעד לאדם (EUR)' : 'Target per person (EUR)'}</label>
+            <input type="number" inputMode="decimal"
+              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:outline-none focus:border-purple-500 text-gray-900 bg-white"
+              placeholder="0" value={groupTarget}
+              onChange={e => applyGroupTarget(e.target.value)} />
+            <p className="text-xs text-gray-400 mt-1.5">{isHe ? 'הסכום מחושב אוטומטית בניכוי הוצאות קיימות' : 'Amount auto-adjusted for existing expenses'}</p>
+          </div>
+
+          {groupTarget && (
+            <div className="border border-gray-100 rounded-2xl overflow-hidden">
+              {participants.map((p, i) => {
+                const b = balances[p.id] || { owes: 0, paid: 0 }
+                const collected = getCollectedAmount(kittyCollections, p.id, p)
+                const refunded = getKittyPaidBack(p.id)
+                const remaining = b.owes - collected - b.paid + refunded
+                const isReduced = remaining < -0.5
+                return (
+                  <div key={p.id} className={`flex items-center gap-3 px-3 py-2.5 ${i > 0 ? 'border-t border-gray-50' : ''}`}>
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                      style={{ backgroundColor: COLORS[i % COLORS.length] }}>
+                      {p.name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800">{p.name}</p>
+                      {isReduced && (
+                        <p className="text-xs text-emerald-500">{isHe ? `מקוזז ${formatCurrency(Math.abs(remaining), 'EUR')}` : `offset ${formatCurrency(Math.abs(remaining), 'EUR')}`}</p>
+                      )}
+                    </div>
+                    <input type="number" inputMode="decimal"
+                      className="w-24 border-2 border-gray-200 rounded-xl px-2 py-1.5 text-sm font-semibold text-gray-900 bg-white focus:outline-none focus:border-purple-500 text-center"
+                      value={groupAmounts[p.id] || ''}
+                      onChange={e => setGroupAmounts(a => ({ ...a, [p.id]: e.target.value }))} />
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button onClick={() => setGroupCollectOpen(false)} className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold active:bg-gray-50">{t('cancel')}</button>
+            <button onClick={handleSaveGroupCollection} disabled={saving || !groupTarget}
+              className="flex-1 py-4 rounded-2xl bg-purple-600 text-white font-bold active:bg-purple-700 disabled:opacity-40">
+              {saving ? '...' : (isHe ? 'שמור הכל' : 'Save All')}
+            </button>
           </div>
         </div>
       </Modal>
