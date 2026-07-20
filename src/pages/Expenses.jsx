@@ -11,7 +11,7 @@ const CATEGORIES = ['all', 'yacht', 'fuel', 'food', 'supermarket', 'alcohol', 't
 
 export default function Expenses() {
   const { t } = useTranslation()
-  const { expenses, participants, isAdmin, lang } = useApp()
+  const { expenses, participants, isAdmin, lang, reloadExpenses, trip } = useApp()
   const [modalOpen, setModalOpen] = useState(false)
   const [selected, setSelected] = useState(null)
   const [filter, setFilter] = useState('all')
@@ -31,6 +31,7 @@ export default function Expenses() {
   const togglePaid = async (e, exp) => {
     e.stopPropagation()
     await supabase.from('expenses').update({ is_paid: !exp.is_paid }).eq('id', exp.id)
+    reloadExpenses(trip.id)
   }
 
   return (

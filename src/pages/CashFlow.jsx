@@ -8,7 +8,7 @@ import { motion } from 'framer-motion'
 
 export default function CashFlow() {
   const { t } = useTranslation()
-  const { participants, expenses, kittyRefunds, kittyCollections, isAdmin, lang } = useApp()
+  const { participants, expenses, kittyRefunds, kittyCollections, isAdmin, lang, reloadExpenses, trip } = useApp()
   const [showPaid, setShowPaid] = useState(false)
   const isHe = lang === 'he'
 
@@ -50,6 +50,7 @@ export default function CashFlow() {
 
   const togglePaid = async (exp) => {
     await supabase.from('expenses').update({ is_paid: !exp.is_paid }).eq('id', exp.id)
+    reloadExpenses(trip.id)
   }
 
   const alertLevel = pct <= 0.25 ? 'critical' : pct <= 0.5 ? 'warning' : null
