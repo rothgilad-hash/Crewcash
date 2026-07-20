@@ -4,7 +4,6 @@ import { useApp } from '../context/AppContext'
 import { calculateBalances, formatCurrency, getCollectedAmount } from '../lib/calculations'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
-import SignaturePad from '../components/SignaturePad'
 import { Plus, Star, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -14,17 +13,13 @@ const ROUND_NAMES_EN = ['Round 1', 'Round 2', 'Round 3', 'Round 4', 'Round 5']
 
 export default function Participants() {
   const { t } = useTranslation()
-  const { trip, participants, expenses, kittyRefunds, kittyCollections, isAdmin, lang, reloadRefunds, reloadCollections } = useApp()
+  const { trip, participants, expenses, kittyRefunds, kittyCollections, isAdmin, lang, reloadCollections } = useApp()
   const [addOpen, setAddOpen] = useState(false)
-  const [collectOpen, setCollectOpen] = useState(null) // participant id
-  const [payOpen, setPayOpen] = useState(null) // for refund
+  const [collectOpen, setCollectOpen] = useState(null)
   const [form, setForm] = useState({ name: '', is_gil: false, joined_late: false })
   const [collectAmount, setCollectAmount] = useState('')
   const [collectRound, setCollectRound] = useState('')
-  const [refundAmount, setRefundAmount] = useState('')
   const [saving, setSaving] = useState(false)
-  const [sigOpen, setSigOpen] = useState(false)
-  const [sigTarget, setSigTarget] = useState(null)
   const [expandedPid, setExpandedPid] = useState(null)
   const isHe = lang === 'he'
 
@@ -82,28 +77,6 @@ export default function Participants() {
     setSaving(false)
   }
 
-  const handleSaveRefund = async () => {
-    if (!payOpen) return
-    const amt = parseFloat(refundAmount) || 0
-    setSaving(true)
-    const { data: refund } = await supabase.from('kitty_refunds')
-      .insert({ participant_id: payOpen, amount: amt })
-      .select().single()
-    reloadRefunds(participants.map(x => x.id))
-    setRefundAmount('')
-    setPayOpen(null)
-    setSaving(false)
-    const p = participants.find(x => x.id === payOpen)
-    setSigTarget({ refundId: refund?.id, name: p?.name, amount: amt })
-    setSigOpen(true)
-  }
-
-  const handleSaveSignature = async (dataUrl) => {
-    if (!sigTarget?.refundId) return
-    await supabase.from('kitty_refunds').update({ signature: dataUrl }).eq('id', sigTarget.refundId)
-    reloadRefunds(participants.map(x => x.id))
-    setSigOpen(false)
-    setSigTarget(null)
   }
 
   return (
@@ -162,12 +135,6 @@ export default function Participants() {
                       <button onClick={() => openCollect(p)}
                         className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-semibold bg-blue-50 border border-blue-200 text-blue-600 active:bg-blue-100">
                         💰 {isHe ? 'גיוס' : 'Collect'}
-                      </button>
-                    )}
-                    {isAdmin && (
-                      <button onClick={() => { setRefundAmount(''); setPayOpen(p.id) }}
-                        className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-semibold bg-emerald-50 border border-emerald-200 text-emerald-600 active:bg-emerald-100">
-                        ↩ {isHe ? 'החזר' : 'Refund'}
                       </button>
                     )}
                     {isAdmin && (
@@ -274,27 +241,6 @@ export default function Participants() {
         </div>
       </Modal>
 
-      {/* Refund modal */}
-      <Modal open={!!payOpen} onClose={() => setPayOpen(null)}
-        title={isHe ? 'החזר מהקופה' : 'Kitty Refund'}>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              {isHe ? 'סכום ההחזר (EUR)' : 'Amount returned (EUR)'}
-            </label>
-            <input type="number" inputMode="decimal"
-              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 focus:outline-none focus:border-blue-500 text-gray-900 bg-white"
-              placeholder="0" value={refundAmount} onChange={e => setRefundAmount(e.target.value)} autoFocus />
-          </div>
-          <div className="flex gap-3">
-            <button onClick={() => setPayOpen(null)} className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold active:bg-gray-50">{t('cancel')}</button>
-            <button onClick={handleSaveRefund} disabled={saving} className="flex-1 py-4 rounded-2xl bg-blue-600 text-white font-bold active:bg-blue-700 disabled:opacity-40">{saving ? '...' : t('save')}</button>
-          </div>
-        </div>
-      </Modal>
-
-      <SignaturePad open={sigOpen} onClose={() => { setSigOpen(false); setSigTarget(null) }}
-        onSave={handleSaveSignature} personName={sigTarget?.name || ''} amount={sigTarget?.amount || 0} lang={lang} />
     </div>
   )
 }

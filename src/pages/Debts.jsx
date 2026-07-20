@@ -1,14 +1,24 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { calculateBalances, formatCurrency, getCollectedAmount } from '../lib/calculations'
+import { supabase } from '../lib/supabase'
+import Modal from '../components/Modal'
+import SignaturePad from '../components/SignaturePad'
 import { motion } from 'framer-motion'
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316']
 
 export default function Debts() {
   const { t } = useTranslation()
-  const { participants, expenses, kittyRefunds, kittyCollections, lang } = useApp()
+  const { participants, expenses, kittyRefunds, kittyCollections, isAdmin, lang, reloadRefunds } = useApp()
   const isHe = lang === 'he'
+
+  const [refundOpen, setRefundOpen] = useState(null)
+  const [refundAmount, setRefundAmount] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [sigOpen, setSigOpen] = useState(false)
+  const [sigTarget, setSigTarget] = useState(null)
 
   const balances = calculateBalances(expenses, participants)
 
@@ -25,13 +35,40 @@ export default function Debts() {
   }
 
   const owesKitty = participants.filter(p => getRemaining(p) > 0.5)
-  // Kitty only owes when person has personal expenses (b.paid > 0)
   const kittyOwes = participants.filter(p => {
     const b = balances[p.id] || { owes: 0, paid: 0 }
     return getRemaining(p) < -0.5 && b.paid > 0
   })
 
   const allSettled = owesKitty.length === 0 && kittyOwes.length === 0
+
+  const openRefund = (p) => {
+    setRefundAmount(String(Math.abs(getRemaining(p))))
+    setRefundOpen(p)
+  }
+
+  const handleSaveRefund = async () => {
+    if (!refundOpen) return
+    const amt = parseFloat(refundAmount) || 0
+    setSaving(true)
+    const { data: refund } = await supabase.from('kitty_refunds')
+      .insert({ participant_id: refundOpen.id, amount: amt })
+      .select().single()
+    reloadRefunds(participants.map(x => x.id))
+    setRefundAmount('')
+    setRefundOpen(null)
+    setSaving(false)
+    setSigTarget({ refundId: refund?.id, name: refundOpen.name, amount: amt })
+    setSigOpen(true)
+  }
+
+  const handleSaveSignature = async (dataUrl) => {
+    if (!sigTarget?.refundId) return
+    await supabase.from('kitty_refunds').update({ signature: dataUrl }).eq('id', sigTarget.refundId)
+    reloadRefunds(participants.map(x => x.id))
+    setSigOpen(false)
+    setSigTarget(null)
+  }
 
   return (
     <div className="p-4 space-y-4">
@@ -104,6 +141,14 @@ export default function Debts() {
                         <p className="text-xs text-gray-400">{isHe ? 'הקופה חייבת לו' : 'kitty owes them'}</p>
                       </div>
                       <p className="font-black text-emerald-500 text-lg">{formatCurrency(Math.abs(remaining), 'EUR')}</p>
+                      {isAdmin && (
+                        <button
+                          onClick={() => openRefund(p)}
+                          className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-semibold bg-white border border-emerald-300 text-emerald-600 active:bg-emerald-50 flex-shrink-0"
+                        >
+                          ↩ {isHe ? 'החזר' : 'Refund'}
+                        </button>
+                      )}
                     </motion.div>
                   )
                 })}
@@ -112,6 +157,27 @@ export default function Debts() {
           )}
         </>
       )}
+
+      <Modal open={!!refundOpen} onClose={() => setRefundOpen(null)}
+        title={isHe ? 'החזר מהקופה' : 'Kitty Refund'}>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              {isHe ? `סכום ההחזר ל${refundOpen?.name} (EUR)` : `Amount to return to ${refundOpen?.name} (EUR)`}
+            </label>
+            <input type="number" inputMode="decimal"
+              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 focus:outline-none focus:border-blue-500 text-gray-900 bg-white"
+              placeholder="0" value={refundAmount} onChange={e => setRefundAmount(e.target.value)} autoFocus />
+          </div>
+          <div className="flex gap-3">
+            <button onClick={() => setRefundOpen(null)} className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold active:bg-gray-50">{t('cancel')}</button>
+            <button onClick={handleSaveRefund} disabled={saving || !refundAmount} className="flex-1 py-4 rounded-2xl bg-blue-600 text-white font-bold active:bg-blue-700 disabled:opacity-40">{saving ? '...' : t('save')}</button>
+          </div>
+        </div>
+      </Modal>
+
+      <SignaturePad open={sigOpen} onClose={() => { setSigOpen(false); setSigTarget(null) }}
+        onSave={handleSaveSignature} personName={sigTarget?.name || ''} amount={sigTarget?.amount || 0} lang={lang} />
     </div>
   )
 }
