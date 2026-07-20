@@ -134,8 +134,8 @@ export default function Participants() {
             const totalCollected = getCollectedAmount(kittyCollections, p.id, p)
             const kittyPaidBack = getKittyPaidBack(p.id)
             const remaining = Math.round((b.owes - totalCollected - b.paid + kittyPaidBack) * 100) / 100
-            // Kitty only owes if person paid personal expenses
-            const kittyOwes = remaining < -0.5 && b.paid > 0
+            // Kitty owes only if no collection yet (collection already absorbs personal credit)
+            const kittyOwes = remaining < -0.5 && b.paid > 0 && totalCollected === 0
             const settled = !kittyOwes && remaining <= 0.5
             const color = COLORS[i % COLORS.length]
             const myCollections = kittyCollections.filter(c => c.participant_id === p.id)

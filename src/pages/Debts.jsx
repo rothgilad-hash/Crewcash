@@ -37,7 +37,8 @@ export default function Debts() {
   const owesKitty = participants.filter(p => getRemaining(p) > 0.5)
   const kittyOwes = participants.filter(p => {
     const b = balances[p.id] || { owes: 0, paid: 0 }
-    return getRemaining(p) < -0.5 && b.paid > 0
+    const collected = getCollectedAmount(kittyCollections, p.id, p)
+    return getRemaining(p) < -0.5 && b.paid > 0 && collected === 0
   })
 
   const allSettled = owesKitty.length === 0 && kittyOwes.length === 0

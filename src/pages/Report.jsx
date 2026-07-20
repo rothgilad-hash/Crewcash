@@ -46,8 +46,8 @@ export default function Report() {
         const kittyPaidBack = getKittyPaidBack(p.id)
         const refunds = getRefunds(p.id)
         const remaining = Math.round((b.owes - collected - personalPaid + kittyPaidBack) * 100) / 100
-        // Only show "kitty owes" when person has personal expenses
-        const kittyOwes = remaining < -0.5 && personalPaid > 0
+        // Kitty owes only if no collection yet (collection already absorbs personal credit)
+        const kittyOwes = remaining < -0.5 && personalPaid > 0 && collected === 0
 
         const personalExpenses = expenses.filter(e => e.paid_by === p.id && !e.is_yacht_cost)
 
