@@ -77,8 +77,6 @@ export default function Participants() {
     setSaving(false)
   }
 
-  }
-
   return (
     <div className="p-4 space-y-3">
       {participants.length === 0 ? (
