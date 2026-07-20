@@ -185,7 +185,25 @@ export default function Dashboard() {
       {participants.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}
           className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
-          <h3 className="font-bold text-gray-900 mb-4 text-base">{isHe ? 'יתרה לאדם' : 'Balance per person'}</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-gray-900 text-base">{isHe ? 'יתרה לאדם' : 'Balance per person'}</h3>
+            {(() => {
+              const total = participants.reduce((s, p) => {
+                const b = balances[p.id] || { owes: 0 }
+                const col = getCollectedAmount(kittyCollections, p.id, p)
+                const newParts = participants.reduce((sum, x) => sum + (x.is_gil ? 2 : 1), 0)
+                const myParts = p.is_gil ? 2 : 1
+                const ya = (p.joined_late && yachtTotal > 0) ? (myParts / newParts) * yachtTotal : 0
+                return s + Math.round((b.owes - ya - col) * 100) / 100
+              }, 0)
+              const rounded = Math.round(total * 100) / 100
+              return (
+                <span className={`text-sm font-bold ${Math.abs(rounded) <= 0.5 ? 'text-gray-400' : rounded > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                  {Math.abs(rounded) <= 0.5 ? '✓' : rounded > 0 ? `סה״כ חוב ${formatCurrency(rounded, 'EUR')}` : `סה״כ +${formatCurrency(Math.abs(rounded), 'EUR')}`}
+                </span>
+              )
+            })()}
+          </div>
           <div className="space-y-3.5">
             {participants.map((p, i) => {
               const b = balances[p.id] || { paid: 0, owes: 0 }
