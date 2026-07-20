@@ -199,9 +199,18 @@ export default function Participants() {
                     {isExpanded && (
                       <div className="px-4 pb-3 pt-1 space-y-1 border-t border-gray-100">
                         {myCollections.map(c => (
-                          <div key={c.id} className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500">{c.round_name}</span>
+                          <div key={c.id} className="flex justify-between items-center text-sm gap-2">
+                            <span className="text-gray-500 flex-1">{c.round_name}</span>
                             <span className="font-semibold text-gray-800">{formatCurrency(c.amount, 'EUR')}</span>
+                            {isAdmin && (
+                              <button onClick={async () => {
+                                if (!window.confirm(isHe ? 'למחוק גיוס זה?' : 'Delete this collection?')) return
+                                await supabase.from('kitty_collections').delete().eq('id', c.id)
+                                reloadCollections(participants.map(x => x.id))
+                              }} className="text-gray-300 active:text-red-400 p-1">
+                                <Trash2 size={13} />
+                              </button>
+                            )}
                           </div>
                         ))}
                       </div>
