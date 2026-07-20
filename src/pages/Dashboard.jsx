@@ -190,16 +190,13 @@ export default function Dashboard() {
             {participants.map((p, i) => {
               const b = balances[p.id] || { paid: 0, owes: 0 }
               const collected = getCollectedAmount(kittyCollections, p.id, p)
-              const kpbFromTable = kittyRefunds.filter(r => r.participant_id === p.id).reduce((s, r) => s + r.amount, 0)
-              const kpb = kpbFromTable > 0 ? kpbFromTable : (p.kitty_paid_back || 0)
-              const remaining = Math.round((b.owes - collected - b.paid + kpb) * 100) / 100
+              // remaining = what they still owe kitty (personal expenses handled via refund flow)
+              const remaining = Math.round((b.owes - collected) * 100) / 100
               const isNeg = remaining > 0.5
               const maxAbs = Math.max(...participants.map(x => {
                 const bx = balances[x.id] || { paid: 0, owes: 0 }
                 const col = getCollectedAmount(kittyCollections, x.id, x)
-                const kpbT = kittyRefunds.filter(r => r.participant_id === x.id).reduce((s, r) => s + r.amount, 0)
-                const kpbx = kpbT > 0 ? kpbT : (x.kitty_paid_back || 0)
-                return Math.abs(Math.round((bx.owes - col - bx.paid + kpbx) * 100) / 100)
+                return Math.abs(Math.round((bx.owes - col) * 100) / 100)
               }), 1)
               return (
                 <div key={p.id} className="flex items-center gap-3">
