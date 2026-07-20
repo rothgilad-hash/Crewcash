@@ -190,8 +190,12 @@ export default function Dashboard() {
             {participants.map((p, i) => {
               const b = balances[p.id] || { paid: 0, owes: 0 }
               const collected = getCollectedAmount(kittyCollections, p.id, p)
-              // remaining = what they still owe kitty (personal expenses handled via refund flow)
-              const remaining = Math.round((b.owes - collected) * 100) / 100
+              // For late joiners: subtract their yacht addition so we display net kitty contribution
+              const newParts = participants.reduce((sum, x) => sum + (x.is_gil ? 2 : 1), 0)
+              const myParts = p.is_gil ? 2 : 1
+              const yachtAddition = (p.joined_late && yachtTotal > 0)
+                ? (myParts / newParts) * yachtTotal : 0
+              const remaining = Math.round((b.owes - yachtAddition - collected) * 100) / 100
               const isNeg = remaining > 0.5
               const maxAbs = Math.max(...participants.map(x => {
                 const bx = balances[x.id] || { paid: 0, owes: 0 }
