@@ -1,10 +1,11 @@
+import React from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { motion } from 'framer-motion'
 import {
   LayoutDashboard, Receipt, Users, ArrowLeftRight,
-  ShoppingCart, Wallet, FileText, Settings
+  ShoppingCart, Wallet, FileText, Settings, Moon, Sun
 } from 'lucide-react'
 
 const NAV = [
@@ -21,6 +22,19 @@ export default function Layout({ children }) {
   const { t, i18n } = useTranslation()
   const { trip, isAdmin, lang, changeLang } = useApp()
   const isRTL = lang === 'he'
+  const [darkMode, setDarkMode] = React.useState(() => {
+    const saved = localStorage.getItem('crewcash_dark')
+    return saved === '1'
+  })
+
+  React.useEffect(() => {
+    if (darkMode) {
+      document.documentElement.setAttribute('data-dark', '')
+    } else {
+      document.documentElement.removeAttribute('data-dark')
+    }
+    localStorage.setItem('crewcash_dark', darkMode ? '1' : '0')
+  }, [darkMode])
 
   const toggleLang = () => {
     const next = lang === 'he' ? 'en' : 'he'
@@ -47,6 +61,12 @@ export default function Layout({ children }) {
             {isAdmin && (
               <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium hidden sm:inline">Admin</span>
             )}
+            <button
+              onClick={() => setDarkMode(v => !v)}
+              className="p-2.5 rounded-xl transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 hover:bg-gray-100"
+            >
+              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
             <button
               onClick={toggleLang}
               className="text-sm font-semibold text-gray-600 px-3 py-2 rounded-xl hover:bg-gray-100 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"

@@ -63,6 +63,96 @@ html {
   scroll-behavior: smooth;
 }
 
+/* ── Dark mode ── */
+[data-dark] body {
+  background-color: #0E0E16;
+}
+
+/* Backgrounds */
+[data-dark] .bg-white        { background-color: #1A1A2A !important; }
+[data-dark] .bg-gray-50      { background-color: #13131E !important; }
+[data-dark] .bg-gray-100     { background-color: #22223A !important; }
+[data-dark] .min-h-screen    { background-color: #0E0E16; }
+
+/* Text */
+[data-dark] .text-gray-900   { color: #E2E2F0 !important; }
+[data-dark] .text-gray-800   { color: #D0D0E8 !important; }
+[data-dark] .text-gray-700   { color: #BCBCD8 !important; }
+[data-dark] .text-gray-600   { color: #9898BA !important; }
+[data-dark] .text-gray-500   { color: #8080A0 !important; }
+[data-dark] .text-gray-400   { color: #6060808 !important; }
+[data-dark] .text-gray-300   { color: #4A4A70 !important; }
+
+/* Borders */
+[data-dark] .border-gray-100 { border-color: #25253A !important; }
+[data-dark] .border-gray-200 { border-color: #30304A !important; }
+[data-dark] .border-gray-50  { border-color: #1E1E30 !important; }
+
+/* Blue accents */
+[data-dark] .bg-blue-50      { background-color: #141C35 !important; }
+[data-dark] .bg-blue-100     { background-color: #1A2545 !important; }
+[data-dark] .text-blue-600   { color: #7EB5F5 !important; }
+[data-dark] .text-blue-700   { color: #90C0F8 !important; }
+[data-dark] .text-blue-400   { color: #6AA0E8 !important; }
+[data-dark] .text-blue-200   { color: #4A7AC0 !important; }
+[data-dark] .border-blue-200 { border-color: #2A3D6A !important; }
+[data-dark] .border-blue-500 { border-color: #4A7AC0 !important; }
+
+/* Emerald / Green */
+[data-dark] .bg-emerald-50   { background-color: #0E2018 !important; }
+[data-dark] .text-emerald-500{ color: #7DD9A8 !important; }
+[data-dark] .text-emerald-600{ color: #7DD9A8 !important; }
+[data-dark] .border-emerald-200{ border-color: #1E4030 !important; }
+[data-dark] .border-emerald-300{ border-color: #255040 !important; }
+
+/* Red / Coral */
+[data-dark] .bg-red-50       { background-color: #220E0E !important; }
+[data-dark] .text-red-500    { color: #F08585 !important; }
+[data-dark] .text-red-600    { color: #F08585 !important; }
+[data-dark] .border-red-200  { border-color: #4A1818 !important; }
+
+/* Amber / Gold */
+[data-dark] .bg-amber-50     { background-color: #1E1800 !important; }
+[data-dark] .text-amber-500  { color: #F5C97A !important; }
+[data-dark] .text-amber-600  { color: #F5C97A !important; }
+[data-dark] .border-amber-200{ border-color: #40340A !important; }
+[data-dark] .fill-amber-400  { fill: #F5C97A !important; }
+
+/* Orange */
+[data-dark] .bg-orange-50    { background-color: #1E1200 !important; }
+[data-dark] .text-orange-600 { color: #F0A070 !important; }
+[data-dark] .border-orange-200{ border-color: #402010 !important; }
+
+/* Purple */
+[data-dark] .bg-purple-600   { background-color: #5A3D8A !important; }
+[data-dark] .bg-purple-50    { background-color: #160E25 !important; }
+[data-dark] .text-purple-600 { color: #C4A8E8 !important; }
+[data-dark] .border-purple-600{ border-color: #5A3D8A !important; }
+
+/* Inputs */
+[data-dark] input, [data-dark] textarea, [data-dark] select {
+  background-color: #22223A !important;
+  color: #E2E2F0 !important;
+  border-color: #30304A !important;
+}
+[data-dark] input::placeholder { color: #4A4A70 !important; }
+
+/* Shadows */
+[data-dark] .shadow-sm { box-shadow: 0 1px 3px rgba(0,0,0,0.5) !important; }
+[data-dark] .shadow-lg { box-shadow: 0 8px 24px rgba(0,0,0,0.6) !important; }
+
+/* Hero gradient override */
+[data-dark] .from-blue-600   { --tw-gradient-from: #1A2545 !important; }
+[data-dark] .to-blue-700     { --tw-gradient-to: #0D1428 !important; }
+[data-dark] .shadow-blue-200 { box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important; }
+
+/* White/10 opacity overlays (hero card) — these use bg-white/15 inline, not class based */
+
+/* Active states */
+[data-dark] .active\:bg-gray-50:active  { background-color: #22223A !important; }
+[data-dark] .active\:bg-gray-100:active { background-color: #2A2A40 !important; }
+[data-dark] .hover\:bg-gray-100:hover   { background-color: #22223A !important; }
+
 /* Selection color */
 ::selection {
   background-color: #DBEAFE;
