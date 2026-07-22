@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabase'
 import { formatCurrency, getCategoryIcon, getEurAmount } from '../lib/calculations'
 import AddExpenseModal from '../components/AddExpenseModal'
-import { Plus, Banknote, CheckCircle2, Circle } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { Plus, Banknote, CheckCircle2, Circle, Camera, Receipt } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const CATEGORIES = ['all', 'yacht', 'fuel', 'food', 'supermarket', 'alcohol', 'transport', 'activities', 'gear', 'insurance', 'yacht_services', 'other']
 
@@ -15,6 +15,9 @@ export default function Expenses() {
   const [modalOpen, setModalOpen] = useState(false)
   const [selected, setSelected] = useState(null)
   const [filter, setFilter] = useState('all')
+  const [receiptExp, setReceiptExp] = useState(null)
+  const [uploading, setUploading] = useState(null)
+  const fileInputRef = useRef(null)
   const isHe = lang === 'he'
 
   const filtered = filter === 'all' ? expenses : expenses.filter(e => e.category === filter)
@@ -26,6 +29,29 @@ export default function Expenses() {
   }
   const openAdd = () => {
     setSelected(null); setModalOpen(true)
+  }
+
+  const openReceiptPicker = (e, exp) => {
+    e.stopPropagation()
+    setReceiptExp(exp)
+    if (exp.receipt_url) return // show viewer
+    fileInputRef.current.click()
+  }
+
+  const handleReceiptUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file || !receiptExp) return
+    setUploading(receiptExp.id)
+    const ext = file.name.split('.').pop()
+    const path = `${receiptExp.id}.${ext}`
+    const { error: upErr } = await supabase.storage.from('receipts').upload(path, file, { upsert: true })
+    if (upErr) { alert('שגיאת העלאה: ' + upErr.message); setUploading(null); return }
+    const { data } = supabase.storage.from('receipts').getPublicUrl(path)
+    await supabase.from('expenses').update({ receipt_url: data.publicUrl }).eq('id', receiptExp.id)
+    reloadExpenses(trip.id)
+    setUploading(null)
+    setReceiptExp(null)
+    e.target.value = ''
   }
 
   const togglePaid = async (e, exp) => {
@@ -135,6 +161,19 @@ export default function Expenses() {
                       <p className="text-[10px] text-gray-400">{exp.currency}</p>
                     )}
                   </div>
+                  {isAdmin && (
+                    <button
+                      onClick={(e) => openReceiptPicker(e, exp)}
+                      className="w-8 h-8 flex items-center justify-center rounded-xl active:bg-gray-100 transition-colors flex-shrink-0"
+                    >
+                      {uploading === exp.id
+                        ? <span className="text-xs text-gray-400">...</span>
+                        : exp.receipt_url
+                        ? <Receipt size={18} className="text-blue-400" />
+                        : <Camera size={18} className="text-gray-300" />
+                      }
+                    </button>
+                  )}
                   {isAdmin && exp.is_cash && (
                     <button
                       onClick={(e) => togglePaid(e, exp)}
@@ -162,6 +201,34 @@ export default function Expenses() {
       </div>
 
       <AddExpenseModal open={modalOpen} onClose={() => setModalOpen(false)} expense={selected} />
+
+      {/* Hidden file input for receipt upload */}
+      <input ref={fileInputRef} type="file" accept="image/*" capture="environment"
+        className="hidden" onChange={handleReceiptUpload} />
+
+      {/* Receipt viewer */}
+      <AnimatePresence>
+        {receiptExp?.receipt_url && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4"
+            onClick={() => setReceiptExp(null)}
+          >
+            <img src={receiptExp.receipt_url} alt="receipt"
+              className="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl" />
+            <div className="flex gap-3 mt-4">
+              <button onClick={(e) => { e.stopPropagation(); fileInputRef.current.click() }}
+                className="px-4 py-2 bg-white/20 text-white rounded-xl text-sm font-semibold">
+                {isHe ? '📷 החלף' : '📷 Replace'}
+              </button>
+              <button onClick={() => setReceiptExp(null)}
+                className="px-4 py-2 bg-white/20 text-white rounded-xl text-sm font-semibold">
+                {isHe ? 'סגור' : 'Close'}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
