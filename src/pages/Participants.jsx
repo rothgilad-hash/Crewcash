@@ -96,7 +96,8 @@ export default function Participants() {
         participant_id: p.id,
         amount: parseFloat(groupAmounts[p.id]) || 0,
         target_amount: parseFloat(groupSuggestedAmounts[p.id]) || parseFloat(groupAmounts[p.id]) || 0,
-        round_name: groupRound.trim()
+        round_name: groupRound.trim(),
+        collected_at: new Date().toISOString().slice(0, 10)
       }))
       .filter(r => r.amount > 0 || r.target_amount > 0)
     const { error } = await supabase.from('kitty_collections').insert(rows)
@@ -113,7 +114,9 @@ export default function Participants() {
     const { error } = await supabase.from('kitty_collections').insert({
       participant_id: collectOpen,
       amount: amt,
-      round_name: collectRound.trim() || (isHe ? 'גיוס' : 'Round')
+      target_amount: amt,
+      round_name: collectRound.trim() || (isHe ? 'גיוס' : 'Round'),
+      collected_at: new Date().toISOString().slice(0, 10)
     })
     if (error) {
       alert('שגיאה: ' + error.message)

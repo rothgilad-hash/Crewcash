@@ -1,3 +1,21 @@
+export function getLastCollectionDate(kittyCollections, participantId) {
+  const dates = (kittyCollections || [])
+    .filter(c => c.participant_id === participantId && c.collected_at)
+    .map(c => c.collected_at)
+  return dates.length > 0 ? dates.sort().at(-1) : null
+}
+
+export function getPostCollectionPaid(expenses, participantId, lastCollectionDate) {
+  if (!lastCollectionDate) return 0
+  return expenses
+    .filter(e => e.paid_by === participantId && !e.is_yacht_cost)
+    .filter(e => {
+      const expDate = (e.created_at || '').slice(0, 10)
+      return expDate > lastCollectionDate
+    })
+    .reduce((s, e) => s + (e.eur_rate && e.currency !== 'EUR' ? e.amount * e.eur_rate : e.amount), 0)
+}
+
 export function getCollectionDebt(kittyCollections, participantId) {
   return (kittyCollections || [])
     .filter(c => c.participant_id === participantId && c.target_amount > c.amount)
