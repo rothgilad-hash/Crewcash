@@ -64,6 +64,7 @@ export default function Settings() {
     setForm({
       name: trip.name || '',
       year: trip.year || '',
+      destination: trip.destination || '',
       country: trip.country || '',
       region_name: trip.region_name || '',
       departure_area: trip.departure_area || '',
@@ -106,6 +107,7 @@ export default function Settings() {
           <div className="space-y-0">
             <Field label={isHe ? 'שם הסירה' : 'Boat Name'} value={trip.name} />
             <Field label={isHe ? 'שנה' : 'Year'} value={trip.year} />
+            <Field label={isHe ? 'יעד' : 'Destination'} value={trip.destination} />
             <Field label={isHe ? 'מדינה' : 'Country'} value={trip.country} />
             <Field label={isHe ? 'שם האזור' : 'Region'} value={trip.region_name} />
             <Field label={isHe ? 'אזור יציאה' : 'Departure Area'} value={trip.departure_area} />
@@ -188,6 +190,7 @@ export default function Settings() {
           {[
             { key: 'name', label: isHe ? 'שם הסירה' : 'Boat Name' },
             { key: 'year', label: isHe ? 'שנה' : 'Year', type: 'number' },
+            { key: 'destination', label: isHe ? 'יעד' : 'Destination' },
             { key: 'country', label: isHe ? 'מדינה' : 'Country' },
             { key: 'region_name', label: isHe ? 'שם האזור' : 'Region' },
             { key: 'departure_area', label: isHe ? 'אזור יציאה' : 'Departure Area' },
