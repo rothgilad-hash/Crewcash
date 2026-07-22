@@ -136,16 +136,19 @@ export default function Expenses() {
                       <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">×2</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                    {exp.sub_category && <span className="flex-shrink-0">{t('subcat_' + exp.sub_category)}</span>}
-                    {exp.sub_category && exp.notes && <span className="text-gray-300">·</span>}
-                    {exp.notes && <span className="truncate">{exp.notes}</span>}
-                    {exp.is_cash && !exp.sub_category && !exp.notes && <Banknote size={11} className="text-gray-300 flex-shrink-0" />}
-                    {exp.planned_date && !exp.is_paid && (
-                      <span className="flex-shrink-0 text-blue-400">
-                        {exp.sub_category || exp.notes ? '·' : ''} {new Date(exp.planned_date).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}
-                      </span>
+                  <div className="text-xs text-gray-400 space-y-0.5">
+                    {exp.sub_category && (
+                      <p className="truncate">{t('subcat_' + exp.sub_category)}</p>
                     )}
+                    <div className="flex items-center gap-1.5">
+                      {exp.notes && <span className="truncate">{exp.notes}</span>}
+                      {exp.is_cash && !exp.notes && <Banknote size={11} className="text-gray-300 flex-shrink-0" />}
+                      {exp.planned_date && !exp.is_paid && (
+                        <span className="flex-shrink-0 text-blue-400">
+                          {exp.notes ? '·' : ''} {new Date(exp.planned_date).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
