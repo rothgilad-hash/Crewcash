@@ -218,7 +218,9 @@ export default function Dashboard() {
               const maxAbs = Math.max(...participants.map(x => {
                 const bx = balances[x.id] || { paid: 0, owes: 0 }
                 const col = getCollectedAmount(kittyCollections, x.id, x)
-                return Math.abs(Math.round((bx.owes - col) * 100) / 100)
+                const xParts = x.is_gil ? 2 : 1
+                const xYacht = (x.joined_late && yachtTotal > 0) ? (xParts / newParts) * yachtTotal : 0
+                return Math.abs(Math.round((bx.owes - xYacht - col) * 100) / 100)
               }), 1)
               return (
                 <div key={p.id} className="flex items-center gap-3">
