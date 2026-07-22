@@ -144,12 +144,7 @@ export default function Participants() {
             const totalCollected = getCollectedAmount(kittyCollections, p.id, p)
             const kittyPaidBack = getKittyPaidBack(p.id)
             const collDebt = Math.round(getCollectionDebt(kittyCollections, p.id) * 100) / 100
-            // For late joiners subtract yacht addition (same as Dashboard)
-            const newParts = participants.reduce((sum, x) => sum + (x.is_gil ? 2 : 1), 0)
-            const myParts = p.is_gil ? 2 : 1
-            const yachtTotal = expenses.filter(e => e.is_yacht_cost).reduce((s, e) => s + e.amount, 0)
-            const yachtAddition = (p.joined_late && yachtTotal > 0) ? (myParts / newParts) * yachtTotal : 0
-            const remaining = Math.round((b.owes - yachtAddition - totalCollected - b.paid + kittyPaidBack) * 100) / 100
+            const remaining = Math.round((b.owes - totalCollected - b.paid + kittyPaidBack) * 100) / 100
             const kittyOwes = remaining < -0.5 && b.paid > 0 && totalCollected === 0
             const settled = !kittyOwes && remaining <= 0.5 && collDebt <= 0.5
             const color = COLORS[i % COLORS.length]
