@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { calculateBalances, formatCurrency, getCategoryIcon, getEurAmount, getCollectedAmount } from '../lib/calculations'
 import { motion } from 'framer-motion'
+import { FileText } from 'lucide-react'
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316']
 
@@ -25,8 +26,123 @@ export default function Report() {
   const lateJoiners = participants.filter(p => p.joined_late)
   const hasLateJoiners = lateJoiners.length > 0
 
+  const generatePDF = () => {
+    const totalCollected = participants.reduce((s, p) => s + getCollectedAmount(kittyCollections, p.id, p), 0)
+
+    // Category breakdown
+    const catBreakdown = runningExpenses.reduce((acc, e) => {
+      acc[e.category] = (acc[e.category] || 0) + getEurAmount(e)
+      return acc
+    }, {})
+
+    // Daily breakdown
+    const byDay = expenses.reduce((acc, e) => {
+      const day = (e.created_at || '').slice(0, 10)
+      if (day) acc[day] = (acc[day] || 0) + getEurAmount(e)
+      return acc
+    }, {})
+
+    const fmt = (n) => `€${Math.round(n).toLocaleString('he-IL')}`
+
+    const html = `<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="utf-8"/>
+<title>דוח כספי — ${isHe ? 'טיול' : 'Trip'}</title>
+<style>
+  body { font-family: Arial, sans-serif; color: #1a1a2e; margin: 0; padding: 24px; font-size: 13px; }
+  h1 { font-size: 26px; margin-bottom: 4px; color: #1e3a8a; }
+  h2 { font-size: 15px; color: #3b82f6; border-bottom: 2px solid #dbeafe; padding-bottom: 4px; margin-top: 28px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th { background: #eff6ff; color: #1e40af; font-size: 11px; padding: 6px 10px; text-align: right; }
+  td { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; }
+  .total { font-weight: bold; background: #f8fafc; }
+  .green { color: #059669; } .red { color: #dc2626; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
+  .card { background: #f8fafc; border-radius: 8px; padding: 12px 16px; }
+  .card-label { font-size: 11px; color: #94a3b8; margin-bottom: 2px; }
+  .card-value { font-size: 20px; font-weight: 900; color: #1e293b; }
+  @media print { body { padding: 10px; } }
+</style>
+</head>
+<body>
+<h1>⛵ CrewCash — דוח כספי</h1>
+<p style="color:#64748b; margin:0">${new Date().toLocaleDateString('he-IL', { day:'numeric', month:'long', year:'numeric' })}</p>
+
+<div class="grid2">
+  <div class="card"><div class="card-label">סך הוצאות</div><div class="card-value">${fmt(totalExpenses + yachtTotal)}</div></div>
+  <div class="card"><div class="card-label">סך גיוסים</div><div class="card-value">${fmt(totalCollected)}</div></div>
+  <div class="card"><div class="card-label">יאכטה</div><div class="card-value">${fmt(yachtTotal)}</div></div>
+  <div class="card"><div class="card-label">הוצאות שוטפות</div><div class="card-value">${fmt(totalExpenses)}</div></div>
+</div>
+
+<h2>📊 פירוט לפי קטגוריה</h2>
+<table>
+  <tr><th>קטגוריה</th><th>סכום</th><th>אחוז</th></tr>
+  ${Object.entries(catBreakdown).sort((a,b)=>b[1]-a[1]).map(([cat,amt]) =>
+    `<tr><td>${getCategoryIcon(cat)} ${cat}</td><td>${fmt(amt)}</td><td>${Math.round(amt/totalExpenses*100)}%</td></tr>`
+  ).join('')}
+  <tr class="total"><td>סה"כ</td><td>${fmt(totalExpenses)}</td><td>100%</td></tr>
+</table>
+
+<h2>📅 פירוט יומי (כרונולוגי)</h2>
+<table>
+  <tr><th>תאריך</th><th>סכום</th></tr>
+  ${Object.entries(byDay).sort((a,b)=>a[0].localeCompare(b[0])).map(([day,amt]) =>
+    `<tr><td>${new Date(day).toLocaleDateString('he-IL',{weekday:'short',day:'numeric',month:'short'})}</td><td>${fmt(amt)}</td></tr>`
+  ).join('')}
+</table>
+
+<h2>💸 הוצאות מגדולה לקטנה</h2>
+<table>
+  <tr><th>הוצאה</th><th>קטגוריה</th><th>תאריך</th><th>סכום</th></tr>
+  ${[...expenses].sort((a,b)=>getEurAmount(b)-getEurAmount(a)).map(e =>
+    `<tr><td>${e.description}</td><td>${e.category}</td><td>${(e.created_at||'').slice(0,10)}</td><td>${fmt(getEurAmount(e))}</td></tr>`
+  ).join('')}
+</table>
+
+<h2>👥 יתרה לאדם</h2>
+<table>
+  <tr><th>שם</th><th>חייב לקופה</th><th>גויס</th><th>יתרה</th></tr>
+  ${participants.map(p => {
+    const b = balances[p.id] || { owes:0 }
+    const col = getCollectedAmount(kittyCollections, p.id, p)
+    const rem = Math.round((b.owes - col)*100)/100
+    return `<tr>
+      <td>${p.name}${p.is_gil?' ⭐':''}${p.joined_late?' ⏰':''}</td>
+      <td>${fmt(b.owes)}</td>
+      <td>${fmt(col)}</td>
+      <td class="${rem>0.5?'red':rem<-0.5?'green':''}">${Math.abs(rem)<=0.5?'✓':rem>0?fmt(rem):`+${fmt(Math.abs(rem))}`}</td>
+    </tr>`
+  }).join('')}
+</table>
+
+<h2>💡 הצעות ייעול</h2>
+<ul>
+  ${totalExpenses/participants.length > 150 ? '<li>עלות לאדם גבוהה — שקול להפחית הוצאות אלכוהול/פעילויות</li>' : ''}
+  <li>ממוצע יומי: ${fmt(totalExpenses / Math.max(Object.keys(byDay).length, 1))} ליום</li>
+  <li>עלות לאדם: ${fmt((totalExpenses+yachtTotal)/participants.length)}</li>
+</ul>
+
+<script>window.onload = () => window.print()</script>
+</body></html>`
+
+    const w = window.open('', '_blank')
+    w.document.write(html)
+    w.document.close()
+  }
+
   return (
     <div className="p-4 space-y-4">
+
+      {/* PDF export button */}
+      <button
+        onClick={generatePDF}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-blue-600 text-white font-semibold text-sm active:bg-blue-700"
+      >
+        <FileText size={18} />
+        {isHe ? 'הורד דוח PDF' : 'Export PDF Report'}
+      </button>
 
       {/* Summary header */}
       <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
