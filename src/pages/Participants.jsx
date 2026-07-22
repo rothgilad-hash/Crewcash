@@ -20,6 +20,7 @@ export default function Participants() {
   const [groupTarget, setGroupTarget] = useState('')
   const [groupRound, setGroupRound] = useState('')
   const [groupAmounts, setGroupAmounts] = useState({})
+  const [groupSuggestedAmounts, setGroupSuggestedAmounts] = useState({})
   const [form, setForm] = useState({ name: '', is_gil: false, joined_late: false })
   const [collectAmount, setCollectAmount] = useState('')
   const [collectRound, setCollectRound] = useState('')
@@ -84,14 +85,20 @@ export default function Participants() {
       amounts[p.id] = String(Math.round(suggested * 100) / 100)
     })
     setGroupAmounts(amounts)
+    setGroupSuggestedAmounts({ ...amounts })
   }
 
   const handleSaveGroupCollection = async () => {
     if (!groupRound.trim()) return
     setSaving(true)
     const rows = participants
-      .map(p => ({ participant_id: p.id, amount: parseFloat(groupAmounts[p.id]) || 0, round_name: groupRound.trim() }))
-      .filter(r => r.amount > 0)
+      .map(p => ({
+        participant_id: p.id,
+        amount: parseFloat(groupAmounts[p.id]) || 0,
+        target_amount: parseFloat(groupSuggestedAmounts[p.id]) || parseFloat(groupAmounts[p.id]) || 0,
+        round_name: groupRound.trim()
+      }))
+      .filter(r => r.amount > 0 || r.target_amount > 0)
     const { error } = await supabase.from('kitty_collections').insert(rows)
     if (error) { alert('שגיאה: ' + error.message); setSaving(false); return }
     reloadCollections(participants.map(x => x.id))

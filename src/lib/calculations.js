@@ -1,3 +1,9 @@
+export function getCollectionDebt(kittyCollections, participantId) {
+  return (kittyCollections || [])
+    .filter(c => c.participant_id === participantId && c.target_amount > c.amount)
+    .reduce((s, c) => s + (c.target_amount - c.amount), 0)
+}
+
 export function getCollectedAmount(kittyCollections, participantId, participant) {
   const fromCollections = (kittyCollections || [])
     .filter(c => c.participant_id === participantId)

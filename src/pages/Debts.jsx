@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
-import { calculateBalances, formatCurrency, getCollectedAmount } from '../lib/calculations'
+import { calculateBalances, formatCurrency, getCollectedAmount, getCollectionDebt } from '../lib/calculations'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
 import SignaturePad from '../components/SignaturePad'
@@ -34,7 +34,9 @@ export default function Debts() {
     return Math.round((b.owes - collected - b.paid + getKittyPaidBack(p.id)) * 100) / 100
   }
 
-  const owesKitty = participants.filter(p => getRemaining(p) > 0.5)
+  const getCollDebt = (p) => Math.round(getCollectionDebt(kittyCollections, p.id) * 100) / 100
+
+  const owesKitty = participants.filter(p => getRemaining(p) > 0.5 || getCollDebt(p) > 0.5)
   const kittyOwes = participants.filter(p => {
     const b = balances[p.id] || { owes: 0, paid: 0 }
     const collected = getCollectedAmount(kittyCollections, p.id, p)
@@ -90,7 +92,9 @@ export default function Debts() {
               <div className="space-y-3">
                 {owesKitty.map((p, i) => {
                   const remaining = getRemaining(p)
+                  const collDebt = getCollDebt(p)
                   const idx = participants.indexOf(p)
+                  const totalDebt = Math.round((Math.max(remaining, 0) + collDebt) * 100) / 100
                   return (
                     <motion.div
                       key={p.id}
@@ -105,9 +109,14 @@ export default function Debts() {
                       </div>
                       <div className="flex-1">
                         <p className="font-semibold text-gray-900 text-sm">{p.name}</p>
-                        <p className="text-xs text-gray-400">{isHe ? 'חייב לקופה' : 'owes the kitty'}</p>
+                        {collDebt > 0.5 && (
+                          <p className="text-xs text-red-400">💰 {isHe ? `יתרת גיוס: ${formatCurrency(collDebt, 'EUR')}` : `Collection debt: ${formatCurrency(collDebt, 'EUR')}`}</p>
+                        )}
+                        {remaining > 0.5 && (
+                          <p className="text-xs text-gray-400">{isHe ? 'חייב לקופה' : 'owes the kitty'}</p>
+                        )}
                       </div>
-                      <p className="font-black text-red-500 text-lg">{formatCurrency(remaining, 'EUR')}</p>
+                      <p className="font-black text-red-500 text-lg">{formatCurrency(totalDebt, 'EUR')}</p>
                     </motion.div>
                   )
                 })}
