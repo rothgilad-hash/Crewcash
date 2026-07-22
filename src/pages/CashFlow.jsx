@@ -10,6 +10,7 @@ export default function CashFlow() {
   const { t } = useTranslation()
   const { participants, expenses, kittyRefunds, kittyCollections, isAdmin, lang, reloadExpenses, trip } = useApp()
   const [showPaid, setShowPaid] = useState(false)
+  const [showUnpaid, setShowUnpaid] = useState(true)
   const isHe = lang === 'he'
 
   const totalCollected = participants.reduce((s, p) => s + getCollectedAmount(kittyCollections, p.id, p), 0)
@@ -153,59 +154,67 @@ export default function CashFlow() {
       )}
 
       {/* Upcoming cash expenses */}
-      {unpaidCash.length > 0 ? (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08 }}
-          className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden"
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.08 }}
+        className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden"
+      >
+        <button
+          onClick={() => setShowUnpaid(v => !v)}
+          className="w-full p-4 flex justify-between items-center active:bg-gray-50 transition-colors"
         >
-          <div className="p-4 flex justify-between items-center border-b border-gray-100">
-            <h3 className="font-bold text-gray-900 text-base">
-              {isHe ? 'הוצאות מזומן לא שולמו' : 'Unpaid cash expenses'}
-            </h3>
-            <span className="text-sm font-bold text-gray-500">{formatCurrency(totalUpcoming, 'EUR')}</span>
+          <span className="font-bold text-gray-900 text-base">
+            {isHe ? `לא שולמו (${unpaidCash.length})` : `Unpaid (${unpaidCash.length})`}
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-gray-500">{formatCurrency(totalUpcoming, 'EUR')}</span>
+            {showUnpaid ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
           </div>
+        </button>
 
-          {Object.entries(byDate).map(([dateKey, exps]) => (
-            <div key={dateKey}>
-              <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
-                <span className="text-xs font-semibold text-gray-500">{formatDateLabel(dateKey)}</span>
-                <span className="text-xs font-semibold text-gray-500">
-                  {formatCurrency(exps.reduce((s, e) => s + e.amount, 0), 'EUR')}
-                </span>
-              </div>
-              {exps.map(exp => (
-                <div key={exp.id} className="px-4 py-3 flex items-center gap-3 border-b border-gray-50 last:border-0">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{exp.description}</p>
-                    {(exp.sub_category || exp.notes) && (
-                      <p className="text-xs text-gray-400 truncate">
-                        {exp.sub_category && <span>{t('subcat_' + exp.sub_category)}</span>}
-                        {exp.sub_category && exp.notes && ' · '}
-                        {exp.notes}
-                      </p>
+        {showUnpaid && (unpaidCash.length === 0 ? (
+          <div className="px-4 pb-5 pt-1 text-center">
+            <span className="text-3xl">✅</span>
+            <p className="font-semibold text-gray-500 mt-2 text-sm">
+              {isHe ? 'כל הוצאות המזומן שולמו' : 'All cash expenses paid'}
+            </p>
+          </div>
+        ) : (
+          <div className="border-t border-gray-100">
+            {Object.entries(byDate).map(([dateKey, exps]) => (
+              <div key={dateKey}>
+                <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
+                  <span className="text-xs font-semibold text-gray-500">{formatDateLabel(dateKey)}</span>
+                  <span className="text-xs font-semibold text-gray-500">
+                    {formatCurrency(exps.reduce((s, e) => s + e.amount, 0), 'EUR')}
+                  </span>
+                </div>
+                {exps.map(exp => (
+                  <div key={exp.id} className="px-4 py-3 flex items-center gap-3 border-b border-gray-50 last:border-0">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{exp.description}</p>
+                      {(exp.sub_category || exp.notes) && (
+                        <p className="text-xs text-gray-400 truncate">
+                          {exp.sub_category && <span>{t('subcat_' + exp.sub_category)}</span>}
+                          {exp.sub_category && exp.notes && ' · '}
+                          {exp.notes}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-sm font-bold text-gray-800 flex-shrink-0">{formatCurrency(exp.amount, exp.currency)}</span>
+                    {isAdmin && (
+                      <button onClick={() => togglePaid(exp)} className="w-8 h-8 flex items-center justify-center rounded-xl active:bg-gray-100 flex-shrink-0">
+                        <Circle size={20} className="text-gray-300" />
+                      </button>
                     )}
                   </div>
-                  <span className="text-sm font-bold text-gray-800 flex-shrink-0">{formatCurrency(exp.amount, exp.currency)}</span>
-                  {isAdmin && (
-                    <button onClick={() => togglePaid(exp)} className="w-8 h-8 flex items-center justify-center rounded-xl active:bg-gray-100 flex-shrink-0">
-                      <Circle size={20} className="text-gray-300" />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          ))}
-        </motion.div>
-      ) : (
-        <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 text-center">
-          <span className="text-4xl">✅</span>
-          <p className="font-semibold text-gray-600 mt-3">
-            {isHe ? 'כל הוצאות המזומן שולמו' : 'All cash expenses paid'}
-          </p>
-        </div>
-      )}
+                ))}
+              </div>
+            ))}
+          </div>
+        ))}
+      </motion.div>
       {/* Paid cash expenses (with undo) */}
       {paidCash.length > 0 && (
         <motion.div
