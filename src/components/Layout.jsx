@@ -54,7 +54,7 @@ export default function Layout({ children }) {
             <span className="text-xl">⛵</span>
             <div>
               <p className="font-bold text-gray-900 text-sm leading-tight">CrewCash</p>
-              {trip && <p className="text-xs text-gray-400 leading-tight truncate max-w-[140px]">{trip.name} {trip.year}</p>}
+              {trip && <p className="text-xs text-gray-400 leading-tight truncate max-w-[140px]">{trip.name} {trip.year}{trip.destination ? ` · ${trip.destination}` : ''}</p>}
             </div>
           </div>
           <div className="flex items-center gap-1">
