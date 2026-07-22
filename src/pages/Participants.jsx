@@ -210,7 +210,17 @@ export default function Participants() {
                       <div className="px-4 pb-3 pt-1 space-y-1 border-t border-gray-100">
                         {myCollections.map(c => (
                           <div key={c.id} className="flex justify-between items-center text-sm gap-2">
-                            <span className="text-gray-500 flex-1">{c.round_name}</span>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-gray-500">{c.round_name}</span>
+                              {c.collected_at && (
+                                <span className="text-gray-300 text-xs ms-1.5">
+                                  {new Date(c.collected_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}
+                                </span>
+                              )}
+                              {c.target_amount > c.amount && (
+                                <span className="text-red-400 text-xs ms-1.5">({isHe ? `חסר ${formatCurrency(c.target_amount - c.amount, 'EUR')}` : `missing ${formatCurrency(c.target_amount - c.amount, 'EUR')}`})</span>
+                              )}
+                            </div>
                             <span className="font-semibold text-gray-800">{formatCurrency(c.amount, 'EUR')}</span>
                             {isAdmin && (
                               <button onClick={async () => {
