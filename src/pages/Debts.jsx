@@ -41,12 +41,7 @@ export default function Debts() {
   }
 
   const owesKitty = participants.filter(p => getRemaining(p) > 0.5 || getCollDebt(p) > 0.5)
-  const kittyOwes = participants.filter(p => {
-    const b = balances[p.id] || { owes: 0, paid: 0 }
-    const collected = getCollectedAmount(kittyCollections, p.id, p)
-    const postPaid = getPostPaid(p)
-    return (getRemaining(p) < -0.5 && b.paid > 0 && collected === 0) || postPaid > 0.5
-  })
+  const kittyOwes = participants.filter(p => getRemaining(p) < -0.5 || getPostPaid(p) > 0.5)
 
   const allSettled = owesKitty.length === 0 && kittyOwes.length === 0
 
@@ -140,7 +135,8 @@ export default function Debts() {
                   const remaining = getRemaining(p)
                   const postPaid = getPostPaid(p)
                   const idx = participants.indexOf(p)
-                  const owedByKitty = postPaid > 0.5 ? postPaid : Math.abs(remaining)
+                  const overpayment = remaining < -0.5 ? Math.abs(remaining) : 0
+                  const owedByKitty = Math.round((overpayment + postPaid) * 100) / 100
                   return (
                     <motion.div
                       key={p.id}
@@ -155,11 +151,12 @@ export default function Debts() {
                       </div>
                       <div className="flex-1">
                         <p className="font-semibold text-gray-900 text-sm">{p.name}</p>
-                        <p className="text-xs text-gray-400">
-                          {postPaid > 0.5
-                            ? (isHe ? '🧾 הוציא אחרי הגיוס' : '🧾 Spent after collection')
-                            : (isHe ? 'הקופה חייבת לו' : 'kitty owes them')}
-                        </p>
+                        {overpayment > 0.5 && (
+                          <p className="text-xs text-gray-400">{isHe ? '💰 שילם יותר מהיעד' : '💰 Overpaid target'}</p>
+                        )}
+                        {postPaid > 0.5 && (
+                          <p className="text-xs text-gray-400">{isHe ? '🧾 הוציא אחרי הגיוס' : '🧾 Spent after collection'}</p>
+                        )}
                       </div>
                       <p className="font-black text-emerald-500 text-lg">{formatCurrency(owedByKitty, 'EUR')}</p>
                       {isAdmin && (
