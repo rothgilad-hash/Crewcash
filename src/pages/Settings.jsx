@@ -15,6 +15,9 @@ export default function Settings() {
   const [editOpen, setEditOpen] = useState(false)
   const [form, setForm] = useState({})
   const [saving, setSaving] = useState(false)
+  const [adminOpen, setAdminOpen] = useState(false)
+  const [adminToken, setAdminToken] = useState('')
+  const [adminError, setAdminError] = useState('')
 
   const toggleLang = (l) => {
     i18n.changeLanguage(l)
@@ -52,6 +55,17 @@ export default function Settings() {
     await supabase.from('trips').delete().eq('id', trip.id)
     leaveTrip()
     navigate('/landing')
+  }
+
+  const handleAdminLogin = async () => {
+    setAdminError('')
+    const { data } = await supabase.from('trips').select('admin_token').eq('id', trip.id).single()
+    if (data?.admin_token === adminToken.trim()) {
+      localStorage.setItem('crewcash_admin_' + trip.id, adminToken.trim())
+      window.location.reload()
+    } else {
+      setAdminError(isHe ? 'קוד שגוי' : 'Wrong code')
+    }
   }
 
   const forceUpdate = async () => {
@@ -179,6 +193,13 @@ export default function Settings() {
             <RefreshCw size={18} />
             <span className="font-medium">{isHe ? 'עדכן אפליקציה' : 'Update App'}</span>
           </button>
+          {!isAdmin && (
+            <button onClick={() => setAdminOpen(true)}
+              className="w-full flex items-center gap-3 py-3 px-4 rounded-2xl border border-purple-200 text-purple-600 hover:bg-purple-50 transition-colors">
+              <LogOut size={18} className="rotate-180" />
+              <span className="font-medium">{isHe ? 'כניסה כמנהל' : 'Admin login'}</span>
+            </button>
+          )}
           <button onClick={handleLeave}
             className="w-full flex items-center gap-3 py-3 px-4 rounded-2xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors">
             <LogOut size={18} className="text-gray-500" />
@@ -231,6 +252,32 @@ export default function Settings() {
             <button onClick={handleSave} disabled={saving}
               className="flex-1 py-3.5 rounded-2xl bg-blue-600 text-white font-bold disabled:opacity-40">
               {saving ? '...' : t('save')}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={adminOpen} onClose={() => { setAdminOpen(false); setAdminToken(''); setAdminError('') }}
+        title={isHe ? 'כניסה כמנהל' : 'Admin Login'}>
+        <div className="space-y-4">
+          <input
+            type="text"
+            className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 text-gray-900 bg-white focus:outline-none focus:border-purple-500 font-mono text-sm"
+            placeholder={isHe ? 'קוד מנהל' : 'Admin token'}
+            value={adminToken}
+            onChange={e => setAdminToken(e.target.value)}
+            autoCapitalize="none"
+            autoCorrect="off"
+          />
+          {adminError && <p className="text-red-500 text-sm text-center">{adminError}</p>}
+          <div className="flex gap-3">
+            <button onClick={() => { setAdminOpen(false); setAdminToken(''); setAdminError('') }}
+              className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold">
+              {t('cancel')}
+            </button>
+            <button onClick={handleAdminLogin} disabled={!adminToken.trim()}
+              className="flex-1 py-4 rounded-2xl bg-purple-600 text-white font-bold disabled:opacity-40">
+              {isHe ? 'כנס' : 'Login'}
             </button>
           </div>
         </div>
