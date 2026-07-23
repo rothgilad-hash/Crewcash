@@ -59,7 +59,11 @@ export default function Settings() {
       const regs = await navigator.serviceWorker.getRegistrations()
       await Promise.all(regs.map(r => r.unregister()))
     }
-    window.location.reload(true)
+    if ('caches' in window) {
+      const keys = await caches.keys()
+      await Promise.all(keys.map(k => caches.delete(k)))
+    }
+    window.location.href = window.location.href + '?v=' + Date.now()
   }
 
   const copyCode = () => {
