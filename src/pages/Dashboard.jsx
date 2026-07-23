@@ -38,6 +38,7 @@ export default function Dashboard() {
   const kittyRefundsTotal = kittyRefunds.reduce((s, r) => s + r.amount, 0)
   const cashBalance = totalCollected - cashSpent - kittyRefundsTotal
   const cashPct = totalCollected > 0 ? cashBalance / totalCollected : null
+  const kittyPct = totalCollected > 0 ? cashBalance / totalCollected : 0
   const cashAlert = cashPct !== null && cashPct <= 0.25 ? 'critical' : cashPct !== null && cashPct <= 0.5 ? 'warning' : null
 
   const categoryBreakdown = expenses
@@ -185,68 +186,37 @@ export default function Dashboard() {
       {participants.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}
           className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-gray-900 text-base">{isHe ? 'יתרה לאדם' : 'Balance per person'}</h3>
-            {(() => {
-              const total = participants.reduce((s, p) => {
-                const b = balances[p.id] || { owes: 0 }
-                const col = getCollectedAmount(kittyCollections, p.id, p)
-                const newParts = participants.reduce((sum, x) => sum + (x.is_gil ? 2 : 1), 0)
-                const myParts = p.is_gil ? 2 : 1
-                const ya = (p.joined_late && yachtTotal > 0) ? (myParts / newParts) * yachtTotal : 0
-                return s + Math.round((b.owes - ya - col) * 100) / 100
-              }, 0)
-              const rounded = Math.round(total * 100) / 100
-              return (
-                <span className={`text-sm font-bold ${Math.abs(rounded) <= 0.5 ? 'text-gray-400' : rounded > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-                  {Math.abs(rounded) <= 0.5 ? '✓' : rounded > 0 ? `סה״כ חוב ${formatCurrency(rounded, 'EUR')}` : `סה״כ +${formatCurrency(Math.abs(rounded), 'EUR')}`}
-                </span>
-              )
-            })()}
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-gray-900 text-base">{isHe ? 'חלק בקופה' : 'Kitty share'}</h3>
+            <span className={`text-sm font-bold px-2.5 py-1 rounded-xl ${cashBalance >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
+              {Math.round(kittyPct * 100)}% {isHe ? 'נותר' : 'remaining'}
+            </span>
           </div>
-          <div className="space-y-3.5">
+          <div className="space-y-2">
             {participants.map((p, i) => {
-              const b = balances[p.id] || { paid: 0, owes: 0 }
               const collected = getCollectedAmount(kittyCollections, p.id, p)
-              // For late joiners: subtract their yacht addition so we display net kitty contribution
-              const newParts = participants.reduce((sum, x) => sum + (x.is_gil ? 2 : 1), 0)
-              const myParts = p.is_gil ? 2 : 1
-              const yachtAddition = (p.joined_late && yachtTotal > 0)
-                ? (myParts / newParts) * yachtTotal : 0
-              const remaining = Math.round((b.owes - yachtAddition - collected) * 100) / 100
-              const isNeg = remaining > 0.5
-              const maxAbs = Math.max(...participants.map(x => {
-                const bx = balances[x.id] || { paid: 0, owes: 0 }
-                const col = getCollectedAmount(kittyCollections, x.id, x)
-                const xParts = x.is_gil ? 2 : 1
-                const xYacht = (x.joined_late && yachtTotal > 0) ? (xParts / newParts) * yachtTotal : 0
-                return Math.abs(Math.round((bx.owes - xYacht - col) * 100) / 100)
-              }), 1)
+              if (collected < 0.5) return null
+              const remaining = Math.round(collected * kittyPct * 100) / 100
               return (
                 <div key={p.id} className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                     style={{ backgroundColor: COLORS[i % COLORS.length] }}>
                     {p.name.charAt(0)}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center mb-1.5">
-                      <span className="font-semibold text-gray-900 text-sm">
-                        {p.name} {p.is_gil ? '⭐' : ''}
-                      </span>
-                      <span className={`text-sm font-bold ${Math.abs(remaining) <= 0.5 ? 'text-gray-400' : isNeg ? 'text-red-500' : 'text-emerald-600'}`}>
-                        {Math.abs(remaining) <= 0.5 ? '✓' : isNeg ? formatCurrency(remaining, 'EUR') : `+${formatCurrency(Math.abs(remaining), 'EUR')}`}
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-100 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full transition-all ${Math.abs(remaining) <= 0.5 ? 'bg-gray-300' : isNeg ? 'bg-red-400' : 'bg-emerald-400'}`}
-                        style={{ width: `${(Math.abs(remaining) / maxAbs) * 100}%` }}
-                      />
-                    </div>
-                  </div>
+                  <span className="flex-1 text-sm font-semibold text-gray-700">{p.name}{p.is_gil ? ' ⭐' : ''}</span>
+                  <span className="text-xs text-gray-400">{formatCurrency(collected, 'EUR')}</span>
+                  <span className={`text-sm font-bold w-16 text-right ${remaining >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {remaining >= 0 ? formatCurrency(remaining, 'EUR') : '−' + formatCurrency(Math.abs(remaining), 'EUR')}
+                  </span>
                 </div>
               )
             })}
+          </div>
+          <div className="flex items-center justify-between border-t border-gray-100 pt-2 mt-2">
+            <span className="text-xs text-gray-400">{isHe ? 'יתרת קופה' : 'Kitty balance'}</span>
+            <span className={`text-sm font-black ${cashBalance >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+              {cashBalance >= 0 ? formatCurrency(cashBalance, 'EUR') : '−' + formatCurrency(Math.abs(cashBalance), 'EUR')}
+            </span>
           </div>
         </motion.div>
       )}
