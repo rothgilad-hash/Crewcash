@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
-import { calculateBalances, formatCurrency, getCollectedAmount, getCollectionDebt, getCollectionOverpayment, getLastCollectionDate, getPostCollectionPaid } from '../lib/calculations'
+import { calculateBalances, formatCurrency, getCollectedAmount, getCollectionDebt } from '../lib/calculations'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
 import SignaturePad from '../components/SignaturePad'
@@ -35,14 +35,12 @@ export default function Debts() {
   }
 
   const getCollDebt = (p) => Math.round(getCollectionDebt(kittyCollections, p.id) * 100) / 100
-  const getOverpay = (p) => Math.round(getCollectionOverpayment(kittyCollections, p.id) * 100) / 100
-  const getPostPaid = (p) => {
-    const lastDate = getLastCollectionDate(kittyCollections, p.id)
-    return Math.round(getPostCollectionPaid(expenses, p.id, lastDate) * 100) / 100
-  }
 
   const owesKitty = participants.filter(p => getRemaining(p) > 0.5 || getCollDebt(p) > 0.5)
-  const kittyOwes = participants.filter(p => getOverpay(p) > 0.5 || getPostPaid(p) > 0.5)
+  const kittyOwes = participants.filter(p => {
+    const collected = getCollectedAmount(kittyCollections, p.id, p)
+    return collected > 0 && getRemaining(p) < -0.5
+  })
 
   const allSettled = owesKitty.length === 0 && kittyOwes.length === 0
 
@@ -133,10 +131,8 @@ export default function Debts() {
               </h3>
               <div className="space-y-3">
                 {kittyOwes.map((p, i) => {
-                  const postPaid = getPostPaid(p)
-                  const overpayment = getOverpay(p)
                   const idx = participants.indexOf(p)
-                  const owedByKitty = Math.round((overpayment + postPaid) * 100) / 100
+                  const owedByKitty = Math.abs(getRemaining(p))
                   return (
                     <motion.div
                       key={p.id}
@@ -151,12 +147,7 @@ export default function Debts() {
                       </div>
                       <div className="flex-1">
                         <p className="font-semibold text-gray-900 text-sm">{p.name}</p>
-                        {overpayment > 0.5 && (
-                          <p className="text-xs text-gray-400">{isHe ? '💰 שילם יותר מהיעד' : '💰 Overpaid target'}</p>
-                        )}
-                        {postPaid > 0.5 && (
-                          <p className="text-xs text-gray-400">{isHe ? '🧾 הוציא אחרי הגיוס' : '🧾 Spent after collection'}</p>
-                        )}
+                        <p className="text-xs text-gray-400">{isHe ? 'הקופה חייבת לו' : 'Kitty owes them'}</p>
                       </div>
                       <p className="font-black text-emerald-500 text-lg">{formatCurrency(owedByKitty, 'EUR')}</p>
                       {isAdmin && (

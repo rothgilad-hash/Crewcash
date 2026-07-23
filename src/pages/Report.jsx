@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
-import { calculateBalances, formatCurrency, getCategoryIcon, getEurAmount, getCollectedAmount, getCollectionOverpayment } from '../lib/calculations'
+import { calculateBalances, formatCurrency, getCategoryIcon, getEurAmount, getCollectedAmount } from '../lib/calculations'
 import { motion } from 'framer-motion'
 import { FileText } from 'lucide-react'
 
@@ -163,8 +163,7 @@ export default function Report() {
         const refunds = getRefunds(p.id)
         const remaining = Math.round((b.owes - collected - personalPaid + kittyPaidBack) * 100) / 100
         // Kitty owes only if no collection yet (collection already absorbs personal credit)
-        const overpay = Math.round(getCollectionOverpayment(kittyCollections, p.id) * 100) / 100
-        const kittyOwes = overpay > 0.5
+        const kittyOwes = collected > 0 && remaining < -0.5
 
         const personalExpenses = expenses.filter(e => e.paid_by === p.id && !e.is_yacht_cost)
 
@@ -208,7 +207,7 @@ export default function Report() {
                   {remaining > 0.5
                     ? `${isHe ? 'חייב לקופה' : 'Owes kitty'} ${formatCurrency(remaining, 'EUR')}`
                     : kittyOwes
-                    ? `${isHe ? 'הקופה חייבת לו' : 'Kitty owes'} ${formatCurrency(overpay, 'EUR')}`
+                    ? `${isHe ? 'הקופה חייבת לו' : 'Kitty owes'} ${formatCurrency(Math.abs(remaining), 'EUR')}`
                     : (isHe ? 'מסולק ✓' : 'Settled ✓')}
                 </p>
               </div>
@@ -320,7 +319,7 @@ export default function Report() {
                 <div className="flex items-center justify-between border-t border-gray-100 pt-2">
                   <span className="text-sm font-bold text-gray-700">{isHe ? 'יתרה סופית' : 'Final balance'}</span>
                   <span className={`text-sm font-black ${remaining > 0.5 ? 'text-red-500' : kittyOwes ? 'text-emerald-500' : 'text-gray-400'}`}>
-                    {remaining > 0.5 ? formatCurrency(remaining, 'EUR') : kittyOwes ? `−${formatCurrency(overpay, 'EUR')}` : (isHe ? 'מסולק ✓' : 'Settled ✓')}
+                    {remaining > 0.5 ? formatCurrency(remaining, 'EUR') : kittyOwes ? `−${formatCurrency(Math.abs(remaining), 'EUR')}` : (isHe ? 'מסולק ✓' : 'Settled ✓')}
                   </span>
                 </div>
               </div>
