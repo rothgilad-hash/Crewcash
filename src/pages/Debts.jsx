@@ -51,7 +51,7 @@ export default function Debts() {
     return Math.round((overpay + postNet) * 100) / 100
   }
 
-  const owesKitty = participants.filter(p => getRemaining(p) > 0.5 || getCollDebt(p) > 0.5)
+  const owesKitty = participants.filter(p => getRemaining(p) > 0.5)
   const kittyOwes = participants.filter(p => getKittyOwedAmount(p) > 0.5)
 
   const allSettled = owesKitty.length === 0 && kittyOwes.length === 0
@@ -105,7 +105,7 @@ export default function Debts() {
                   const remaining = getRemaining(p)
                   const collDebt = getCollDebt(p)
                   const idx = participants.indexOf(p)
-                  const totalDebt = Math.round((Math.max(remaining, 0) + collDebt) * 100) / 100
+                  const totalDebt = Math.round(Math.max(remaining, 0) * 100) / 100
                   return (
                     <motion.div
                       key={p.id}

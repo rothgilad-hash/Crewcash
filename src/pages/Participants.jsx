@@ -190,7 +190,7 @@ export default function Participants() {
                       </p>
                     ) : (
                       <p className="text-sm font-semibold text-red-500 mt-0.5">
-                        {isHe ? 'נשאר לשלם' : 'Remaining'} {formatCurrency(Math.max(remaining, 0) + collDebt, 'EUR')}
+                        {isHe ? 'נשאר לשלם' : 'Remaining'} {formatCurrency(Math.max(remaining, 0), 'EUR')}
                       </p>
                     )}
                   </div>
