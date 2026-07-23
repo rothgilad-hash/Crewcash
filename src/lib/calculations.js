@@ -1,3 +1,25 @@
+export function getCollectionOverpayment(kittyCollections, participantId) {
+  return (kittyCollections || [])
+    .filter(c => c.participant_id === participantId && c.amount > (c.target_amount || 0))
+    .reduce((s, c) => s + (c.amount - c.target_amount), 0)
+}
+
+export function getLastCollectionDate(kittyCollections, participantId) {
+  const dates = (kittyCollections || [])
+    .filter(c => c.participant_id === participantId && c.collected_at)
+    .map(c => c.collected_at)
+  return dates.length > 0 ? dates.sort().at(-1) : null
+}
+
+// Net amount kitty owes for post-collection personal expenses: expense - payer's share
+export function getPostCollectionNet(expenses, participantId, lastCollectionDate, totalParticipants) {
+  if (!lastCollectionDate || totalParticipants < 1) return 0
+  return expenses
+    .filter(e => e.paid_by === participantId && !e.is_yacht_cost)
+    .filter(e => (e.created_at || '').slice(0, 10) > lastCollectionDate)
+    .reduce((s, e) => s + getEurAmount(e) * (totalParticipants - 1) / totalParticipants, 0)
+}
+
 export function getCollectionDebt(kittyCollections, participantId) {
   return (kittyCollections || [])
     .filter(c => c.participant_id === participantId && c.target_amount > c.amount)

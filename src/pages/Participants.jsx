@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
-import { calculateBalances, formatCurrency, getCollectedAmount, getCollectionDebt } from '../lib/calculations'
+import { calculateBalances, formatCurrency, getCollectedAmount, getCollectionDebt, getCollectionOverpayment, getLastCollectionDate, getPostCollectionNet } from '../lib/calculations'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
 import { Plus, Star, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
@@ -141,7 +141,11 @@ export default function Participants() {
             const kittyPaidBack = getKittyPaidBack(p.id)
             const collDebt = Math.round(getCollectionDebt(kittyCollections, p.id) * 100) / 100
             const remaining = Math.round((b.owes - totalCollected - b.paid + kittyPaidBack) * 100) / 100
-            const kittyOwes = totalCollected > 0 && remaining < -0.5
+            const overpay = getCollectionOverpayment(kittyCollections, p.id)
+            const lastDate = getLastCollectionDate(kittyCollections, p.id)
+            const postNet = getPostCollectionNet(expenses, p.id, lastDate, participants.length)
+            const kittyOwedAmount = Math.round((overpay + postNet) * 100) / 100
+            const kittyOwes = kittyOwedAmount > 0.5
             const settled = !kittyOwes && remaining <= 0.5 && collDebt <= 0.5
             const color = COLORS[i % COLORS.length]
             const myCollections = kittyCollections.filter(c => c.participant_id === p.id)
@@ -166,7 +170,7 @@ export default function Participants() {
                     </div>
                     {kittyOwes ? (
                       <p className="text-sm font-semibold text-emerald-500 mt-0.5">
-                        {isHe ? 'הקופה חייבת לך' : 'Kitty owes you'} {formatCurrency(Math.abs(remaining), 'EUR')}
+                        {isHe ? 'הקופה חייבת לך' : 'Kitty owes you'} {formatCurrency(kittyOwedAmount, 'EUR')}
                       </p>
                     ) : settled ? (
                       <p className="text-sm font-semibold text-emerald-500 mt-0.5">{isHe ? 'מסולק ✓' : 'Settled ✓'}</p>

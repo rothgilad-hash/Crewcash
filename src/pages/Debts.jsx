@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
-import { calculateBalances, formatCurrency, getCollectedAmount, getCollectionDebt } from '../lib/calculations'
+import { calculateBalances, formatCurrency, getCollectedAmount, getCollectionDebt, getCollectionOverpayment, getLastCollectionDate, getPostCollectionNet } from '../lib/calculations'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
 import SignaturePad from '../components/SignaturePad'
@@ -35,12 +35,15 @@ export default function Debts() {
   }
 
   const getCollDebt = (p) => Math.round(getCollectionDebt(kittyCollections, p.id) * 100) / 100
+  const getKittyOwedAmount = (p) => {
+    const overpay = getCollectionOverpayment(kittyCollections, p.id)
+    const lastDate = getLastCollectionDate(kittyCollections, p.id)
+    const postNet = getPostCollectionNet(expenses, p.id, lastDate, participants.length)
+    return Math.round((overpay + postNet) * 100) / 100
+  }
 
   const owesKitty = participants.filter(p => getRemaining(p) > 0.5 || getCollDebt(p) > 0.5)
-  const kittyOwes = participants.filter(p => {
-    const collected = getCollectedAmount(kittyCollections, p.id, p)
-    return collected > 0 && getRemaining(p) < -0.5
-  })
+  const kittyOwes = participants.filter(p => getKittyOwedAmount(p) > 0.5)
 
   const allSettled = owesKitty.length === 0 && kittyOwes.length === 0
 
@@ -132,7 +135,7 @@ export default function Debts() {
               <div className="space-y-3">
                 {kittyOwes.map((p, i) => {
                   const idx = participants.indexOf(p)
-                  const owedByKitty = Math.abs(getRemaining(p))
+                  const owedByKitty = getKittyOwedAmount(p)
                   return (
                     <motion.div
                       key={p.id}
