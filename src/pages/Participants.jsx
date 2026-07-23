@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
-import { calculateBalances, formatCurrency, getCollectedAmount, getCollectionDebt } from '../lib/calculations'
+import { calculateBalances, formatCurrency, getCollectedAmount, getCollectionDebt, getCollectionOverpayment } from '../lib/calculations'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
 import { Plus, Star, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
@@ -140,8 +140,9 @@ export default function Participants() {
             const totalCollected = getCollectedAmount(kittyCollections, p.id, p)
             const kittyPaidBack = getKittyPaidBack(p.id)
             const collDebt = Math.round(getCollectionDebt(kittyCollections, p.id) * 100) / 100
+            const overpay = Math.round(getCollectionOverpayment(kittyCollections, p.id) * 100) / 100
             const remaining = Math.round((b.owes - totalCollected - b.paid + kittyPaidBack) * 100) / 100
-            const kittyOwes = remaining < -0.5 && b.paid > 0 && totalCollected === 0
+            const kittyOwes = overpay > 0.5
             const settled = !kittyOwes && remaining <= 0.5 && collDebt <= 0.5
             const color = COLORS[i % COLORS.length]
             const myCollections = kittyCollections.filter(c => c.participant_id === p.id)
@@ -166,10 +167,10 @@ export default function Participants() {
                     </div>
                     {kittyOwes ? (
                       <p className="text-sm font-semibold text-emerald-500 mt-0.5">
-                        {isHe ? 'הקופה חייבת לך' : 'Kitty owes you'} {formatCurrency(Math.abs(remaining), 'EUR')}
+                        {isHe ? 'הקופה חייבת לך' : 'Kitty owes you'} {formatCurrency(overpay, 'EUR')}
                       </p>
                     ) : settled ? (
-                      <p className="text-sm font-semibold text-emerald-500 mt-0.5">{isHe ? 'אין חובות ✓' : 'No debts ✓'}</p>
+                      <p className="text-sm font-semibold text-emerald-500 mt-0.5">{isHe ? 'מסולק ✓' : 'Settled ✓'}</p>
                     ) : collDebt > 0.5 && remaining <= 0.5 ? (
                       <p className="text-sm font-semibold text-red-500 mt-0.5">
                         💰 {isHe ? 'יתרת גיוס' : 'Collection debt'} {formatCurrency(collDebt, 'EUR')}

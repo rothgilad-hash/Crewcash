@@ -16,6 +16,12 @@ export function getPostCollectionPaid(expenses, participantId, lastCollectionDat
     .reduce((s, e) => s + (e.eur_rate && e.currency !== 'EUR' ? e.amount * e.eur_rate : e.amount), 0)
 }
 
+export function getCollectionOverpayment(kittyCollections, participantId) {
+  return (kittyCollections || [])
+    .filter(c => c.participant_id === participantId && c.amount > c.target_amount)
+    .reduce((s, c) => s + (c.amount - c.target_amount), 0)
+}
+
 export function getCollectionDebt(kittyCollections, participantId) {
   return (kittyCollections || [])
     .filter(c => c.participant_id === participantId && c.target_amount > c.amount)
