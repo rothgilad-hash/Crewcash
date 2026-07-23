@@ -27,7 +27,7 @@ export default function Dashboard() {
     : null
 
   const yachtTotal = expenses.filter(e => e.is_yacht_cost).reduce((s, e) => s + e.amount, 0)
-  const otherTotal = expenses.filter(e => !e.is_yacht_cost).reduce((s, e) => s + e.amount, 0)
+  const otherTotal = expenses.filter(e => !e.is_yacht_cost).reduce((s, e) => s + getEurAmount(e), 0)
 
   const navigate = useNavigate()
   const [showBreakdown, setShowBreakdown] = useState(false)

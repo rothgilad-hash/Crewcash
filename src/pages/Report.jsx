@@ -167,9 +167,8 @@ export default function Report() {
           e.paid_by === p.id && !e.is_yacht_cost &&
           (!lastDate || (e.created_at || '').slice(0, 10) <= lastDate)
         )
-        // Credit = full amount paid (b.owes already includes their share, so subtracting b.paid gives correct net)
         const prePersonalNet = Math.round(
-          prePersonal.reduce((s, e) => s + getEurAmount(e), 0) * 100
+          prePersonal.reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0) * 100
         ) / 100
 
         // Post-collection: kitty owes them
