@@ -187,8 +187,8 @@ export default function Report() {
         const kittyOwedAmount = Math.round((overpay + postNet) * 100) / 100
         const kittyOwes = kittyOwedAmount > 0.5
 
-        // Net to collect = what they owe minus pre-collection personal credit
-        const netToCollect = Math.round((b.owes - prePersonalNet) * 100) / 100
+        // Net to collect = pre-collection owes minus personal credit
+        const netToCollect = Math.round((displayOwes - prePersonalNet) * 100) / 100
 
         // Late joiner reduction
         const existing = participants.filter(x => !x.joined_late)
@@ -198,9 +198,18 @@ export default function Report() {
         const yachtReduction = (hasLateJoiners && !p.joined_late && oldParts > 0 && newParts > 0)
           ? Math.round(yachtTotal * myParts * (1 / oldParts - 1 / newParts) * 100) / 100
           : 0
-        const runningShare = Math.round((totalExpenses / N) * 100) / 100
+        // Only include pre-collection running expenses in the breakdown
+        const preRunningExpenses = lastDate
+          ? runningExpenses.filter(e => getExpenseDate(e) <= lastDate)
+          : runningExpenses
+        const postRunningTotal = lastDate
+          ? runningExpenses.filter(e => getExpenseDate(e) > lastDate).reduce((s, e) => s + getEurAmount(e), 0)
+          : 0
 
-        const categoryBreakdown = runningExpenses.reduce((acc, e) => {
+        const runningShare = Math.round(preRunningExpenses.reduce((s, e) => s + getEurAmount(e), 0) / N * 100) / 100
+        const displayOwes = Math.round((b.owes - postRunningTotal / N) * 100) / 100
+
+        const categoryBreakdown = preRunningExpenses.reduce((acc, e) => {
           acc[e.category] = (acc[e.category] || 0) + getEurAmount(e) / N
           return acc
         }, {})
@@ -251,7 +260,7 @@ export default function Report() {
               )}
               <div className="flex items-center justify-between border-t border-gray-100 pt-2">
                 <span className="text-sm font-bold text-gray-700">{isHe ? 'תשלום לקופה' : 'Owed to kitty'}</span>
-                <span className="text-sm font-black text-gray-900">{formatCurrency(b.owes, 'EUR')}</span>
+                <span className="text-sm font-black text-gray-900">{formatCurrency(displayOwes, 'EUR')}</span>
               </div>
               {prePersonalNet > 0.5 && (
                 <>
