@@ -79,7 +79,13 @@ export default function Participants() {
     const target = parseFloat(targetStr) || 0
     setGroupTarget(targetStr)
     const targets = {}
-    participants.forEach(p => { targets[p.id] = String(target) })
+    participants.forEach(p => {
+      const b = balances[p.id] || { owes: 0, paid: 0 }
+      const refunded = getKittyPaidBack(p.id)
+      const netOwes = b.owes - b.paid + refunded
+      const suggested = Math.round(Math.min(target, Math.max(0, netOwes)) * 100) / 100
+      targets[p.id] = String(suggested)
+    })
     setGroupTargets(targets)
     setGroupAmounts({ ...targets })
   }
@@ -357,7 +363,7 @@ export default function Participants() {
                       <p className="text-sm font-semibold text-gray-800">{p.name}</p>
                     </div>
                     <div className="w-16 text-center text-xs text-gray-400 font-medium">
-                      {formatCurrency(b.owes, 'EUR')}
+                      {formatCurrency(Math.max(0, b.owes - b.paid + getKittyPaidBack(p.id)), 'EUR')}
                     </div>
                     <input type="number" inputMode="decimal"
                       className="w-16 border-2 border-gray-200 rounded-xl px-1 py-1.5 text-xs font-semibold text-gray-900 bg-white focus:outline-none focus:border-purple-500 text-center"
