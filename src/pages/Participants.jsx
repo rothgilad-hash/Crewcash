@@ -21,6 +21,7 @@ export default function Participants() {
   const [groupRound, setGroupRound] = useState('')
   const [groupAmounts, setGroupAmounts] = useState({})
   const [groupSuggestedAmounts, setGroupSuggestedAmounts] = useState({})
+  const [groupDate, setGroupDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [form, setForm] = useState({ name: '', is_gil: false, joined_late: false })
   const [collectAmount, setCollectAmount] = useState('')
   const [collectRound, setCollectRound] = useState('')
@@ -69,6 +70,8 @@ export default function Participants() {
     setGroupRound(nextName)
     setGroupTarget('')
     setGroupAmounts({})
+    setGroupSuggestedAmounts({})
+    setGroupDate(new Date().toISOString().slice(0, 10))
     setGroupCollectOpen(true)
   }
 
@@ -97,7 +100,7 @@ export default function Participants() {
         amount: parseFloat(groupAmounts[p.id]) || 0,
         target_amount: parseFloat(groupSuggestedAmounts[p.id]) || parseFloat(groupAmounts[p.id]) || 0,
         round_name: groupRound.trim(),
-        collected_at: new Date().toISOString().slice(0, 10)
+        collected_at: groupDate
       }))
       .filter(r => r.amount > 0 || r.target_amount > 0)
     const { error } = await supabase.from('kitty_collections').insert(rows)
@@ -340,7 +343,14 @@ export default function Participants() {
 
           {groupTarget && (
             <div className="border border-gray-100 rounded-2xl overflow-hidden">
+              <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-100">
+                <div className="w-7 flex-shrink-0" />
+                <div className="flex-1" />
+                <div className="w-24 text-center text-xs font-semibold text-gray-400">{isHe ? 'יעד' : 'Target'}</div>
+                <div className="w-24 text-center text-xs font-semibold text-gray-400">{isHe ? 'שילם' : 'Paid'}</div>
+              </div>
               {participants.map((p, i) => {
+                const suggested = parseFloat(groupSuggestedAmounts[p.id]) || 0
                 const b = balances[p.id] || { owes: 0, paid: 0 }
                 const collected = getCollectedAmount(kittyCollections, p.id, p)
                 const refunded = getKittyPaidBack(p.id)
@@ -358,6 +368,9 @@ export default function Participants() {
                         <p className="text-xs text-emerald-500">{isHe ? `מקוזז ${formatCurrency(Math.abs(remaining), 'EUR')}` : `offset ${formatCurrency(Math.abs(remaining), 'EUR')}`}</p>
                       )}
                     </div>
+                    <div className="w-24 text-center text-sm text-gray-400 font-medium">
+                      {suggested > 0 ? formatCurrency(suggested, 'EUR') : '—'}
+                    </div>
                     <input type="number" inputMode="decimal"
                       className="w-24 border-2 border-gray-200 rounded-xl px-2 py-1.5 text-sm font-semibold text-gray-900 bg-white focus:outline-none focus:border-purple-500 text-center"
                       value={groupAmounts[p.id] || ''}
@@ -367,6 +380,13 @@ export default function Participants() {
               })}
             </div>
           )}
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{isHe ? 'תאריך הגיוס' : 'Collection date'}</label>
+            <input type="date"
+              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 focus:outline-none focus:border-purple-500 text-gray-900 bg-white"
+              value={groupDate} onChange={e => setGroupDate(e.target.value)} />
+          </div>
 
           <div className="flex gap-3">
             <button onClick={() => setGroupCollectOpen(false)} className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold active:bg-gray-50">{t('cancel')}</button>

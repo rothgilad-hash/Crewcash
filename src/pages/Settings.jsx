@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { LogOut, Trash2, Globe, Copy, Check, Pencil, RotateCcw } from 'lucide-react'
+import { LogOut, Trash2, Globe, Copy, Check, Pencil, RotateCcw, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Modal from '../components/Modal'
@@ -52,6 +52,14 @@ export default function Settings() {
     await supabase.from('trips').delete().eq('id', trip.id)
     leaveTrip()
     navigate('/landing')
+  }
+
+  const forceUpdate = async () => {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations()
+      await Promise.all(regs.map(r => r.unregister()))
+    }
+    window.location.reload(true)
   }
 
   const copyCode = () => {
@@ -162,6 +170,11 @@ export default function Settings() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
         className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
         <div className="space-y-3">
+          <button onClick={forceUpdate}
+            className="w-full flex items-center gap-3 py-3 px-4 rounded-2xl border border-blue-200 text-blue-600 hover:bg-blue-50 transition-colors">
+            <RefreshCw size={18} />
+            <span className="font-medium">{isHe ? 'עדכן אפליקציה' : 'Update App'}</span>
+          </button>
           <button onClick={handleLeave}
             className="w-full flex items-center gap-3 py-3 px-4 rounded-2xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors">
             <LogOut size={18} className="text-gray-500" />
