@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
-import { calculateBalances, formatCurrency, getCategoryIcon, getCollectedAmount } from '../lib/calculations'
+import { calculateBalances, formatCurrency, getCategoryIcon, getCollectedAmount, getEurAmount } from '../lib/calculations'
 import { Copy, Check, AlertCircle, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
@@ -44,7 +44,7 @@ export default function Dashboard() {
     .filter(e => !e.is_yacht_cost)
     .reduce((acc, e) => {
       const key = e.category
-      acc[key] = (acc[key] || 0) + e.amount
+      acc[key] = (acc[key] || 0) + getEurAmount(e)
       return acc
     }, {})
 
