@@ -26,6 +26,12 @@ export default function Report() {
   const lateJoiners = participants.filter(p => p.joined_late)
   const hasLateJoiners = lateJoiners.length > 0
 
+  const totalCollected = participants.reduce((s, p) => s + getCollectedAmount(kittyCollections, p.id, p), 0)
+  const cashSpent = expenses.filter(e => e.is_cash && e.is_paid).reduce((s, e) => s + getEurAmount(e), 0)
+  const kittyRefundsTotal = kittyRefunds.reduce((s, r) => s + r.amount, 0)
+  const cashBalance = totalCollected - cashSpent - kittyRefundsTotal
+  const kittyPct = totalCollected > 0 ? cashBalance / totalCollected : 0
+
   const generatePDF = () => {
     const totalCollected = participants.reduce((s, p) => s + getCollectedAmount(kittyCollections, p.id, p), 0)
 
@@ -158,6 +164,44 @@ export default function Report() {
           {runningExpenses.length} {isHe ? 'הוצאות' : 'expenses'} · {participants.length} {isHe ? 'משתתפים' : 'participants'}
         </p>
       </div>
+
+      {/* Kitty balance per person */}
+      {totalCollected > 0 && (
+        <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-gray-900 text-base">{isHe ? 'חלק בקופה' : 'Kitty share'}</h3>
+            <span className={`text-sm font-bold px-2.5 py-1 rounded-xl ${cashBalance >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
+              {Math.round(kittyPct * 100)}% {isHe ? 'נותר' : 'remaining'}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {participants.map((p, i) => {
+              const collected = getCollectedAmount(kittyCollections, p.id, p)
+              if (collected < 0.5) return null
+              const remaining = Math.round(collected * kittyPct * 100) / 100
+              return (
+                <div key={p.id} className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                    style={{ backgroundColor: COLORS[i % COLORS.length] }}>
+                    {p.name.charAt(0)}
+                  </div>
+                  <span className="flex-1 text-sm font-semibold text-gray-700">{p.name}</span>
+                  <span className="text-xs text-gray-400">{isHe ? 'גויס' : 'paid'} {formatCurrency(collected, 'EUR')}</span>
+                  <span className={`text-sm font-bold w-16 text-right ${remaining >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {remaining >= 0 ? formatCurrency(remaining, 'EUR') : '−' + formatCurrency(Math.abs(remaining), 'EUR')}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+          <div className="flex items-center justify-between border-t border-gray-100 pt-2 mt-2">
+            <span className="text-xs text-gray-400">{isHe ? 'יתרת קופה' : 'Kitty balance'}</span>
+            <span className={`text-sm font-black ${cashBalance >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+              {cashBalance >= 0 ? formatCurrency(cashBalance, 'EUR') : '−' + formatCurrency(Math.abs(cashBalance), 'EUR')}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Per-person breakdown */}
       {participants.map((p, i) => {
