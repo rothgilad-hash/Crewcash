@@ -26,7 +26,7 @@ export default function Dashboard() {
     ? Math.ceil((new Date(trip.end_date) - new Date(trip.start_date)) / 86400000)
     : null
 
-  const yachtTotal = expenses.filter(e => e.is_yacht_cost).reduce((s, e) => s + e.amount, 0)
+  const yachtTotal = expenses.filter(e => e.is_yacht_cost).reduce((s, e) => s + getEurAmount(e), 0)
   const otherTotal = expenses.filter(e => !e.is_yacht_cost).reduce((s, e) => s + getEurAmount(e), 0)
 
   const navigate = useNavigate()
@@ -34,7 +34,7 @@ export default function Dashboard() {
   const uncheckedItems = shoppingItems.filter(i => !i.checked)
 
   const totalCollected = participants.reduce((s, p) => s + getCollectedAmount(kittyCollections, p.id, p), 0)
-  const cashSpent = expenses.filter(e => e.is_cash && e.is_paid).reduce((s, e) => s + e.amount, 0)
+  const cashSpent = expenses.filter(e => e.is_cash && e.is_paid).reduce((s, e) => s + getEurAmount(e), 0)
   const kittyRefundsTotal = kittyRefunds.reduce((s, r) => s + r.amount, 0)
   const cashBalance = totalCollected - cashSpent - kittyRefundsTotal
   const cashPct = totalCollected > 0 ? cashBalance / totalCollected : null
