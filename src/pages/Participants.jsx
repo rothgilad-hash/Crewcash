@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
-import { calculateBalances, formatCurrency, getCollectedAmount, getCollectionDebt, getCollectionOverpayment, getLastCollectionDate, getPostCollectionNet } from '../lib/calculations'
+import { calculateBalances, formatCurrency, getCollectedAmount, getCollectionDebt, getCollectionOverpayment, getEurAmount, getLastCollectionDate, getPostCollectionNet } from '../lib/calculations'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
 import { Plus, Star, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
@@ -146,9 +146,13 @@ export default function Participants() {
             const totalCollected = getCollectedAmount(kittyCollections, p.id, p)
             const kittyPaidBack = getKittyPaidBack(p.id)
             const collDebt = Math.round(getCollectionDebt(kittyCollections, p.id) * 100) / 100
-            const remaining = Math.round((b.owes - totalCollected - b.paid + kittyPaidBack) * 100) / 100
-            const overpay = getCollectionOverpayment(kittyCollections, p.id)
             const lastDate = getLastCollectionDate(kittyCollections, p.id)
+            const N = participants.length
+            const prePersonalNet = expenses
+              .filter(e => e.paid_by === p.id && !e.is_yacht_cost && (!lastDate || (e.created_at || '').slice(0, 10) <= lastDate))
+              .reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0)
+            const remaining = Math.round((b.owes - totalCollected - prePersonalNet + kittyPaidBack) * 100) / 100
+            const overpay = getCollectionOverpayment(kittyCollections, p.id)
             const postNet = getPostCollectionNet(expenses, p.id, lastDate, participants.length)
             const kittyOwedAmount = Math.round((overpay + postNet) * 100) / 100
             const kittyOwes = kittyOwedAmount > 0.5
@@ -353,6 +357,11 @@ export default function Participants() {
               </div>
               {participants.map((p, i) => {
                 const b = balances[p.id] || { owes: 0, paid: 0 }
+                const lastDateG = getLastCollectionDate(kittyCollections, p.id)
+                const NG = participants.length
+                const prePersonalNetG = expenses
+                  .filter(e => e.paid_by === p.id && !e.is_yacht_cost && (!lastDateG || (e.created_at || '').slice(0, 10) <= lastDateG))
+                  .reduce((s, e) => s + getEurAmount(e) * (NG - 1) / NG, 0)
                 return (
                   <div key={p.id} className={`flex items-center gap-1 px-3 py-2.5 ${i > 0 ? 'border-t border-gray-50' : ''}`}>
                     <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
@@ -363,7 +372,7 @@ export default function Participants() {
                       <p className="text-sm font-semibold text-gray-800">{p.name}</p>
                     </div>
                     <div className="w-16 text-center text-xs text-gray-400 font-medium">
-                      {formatCurrency(Math.max(0, b.owes - b.paid + getKittyPaidBack(p.id)), 'EUR')}
+                      {formatCurrency(Math.max(0, b.owes - prePersonalNetG + getKittyPaidBack(p.id)), 'EUR')}
                     </div>
                     <input type="number" inputMode="decimal"
                       className="w-16 border-2 border-gray-200 rounded-xl px-1 py-1.5 text-xs font-semibold text-gray-900 bg-white focus:outline-none focus:border-purple-500 text-center"
