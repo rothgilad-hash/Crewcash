@@ -299,7 +299,7 @@ export default function Report() {
                   <div key={c.id} className="flex items-center justify-between gap-2">
                     <span className="text-sm text-gray-500 flex-shrink-0">💰 {c.round_name}{c.collected_at ? ` · ${new Date(c.collected_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}` : ''}</span>
                     <span className="flex items-center gap-1.5">
-                      {c.target_amount > 0 && c.amount < c.target_amount && (
+                      {c.target_amount > 0 && c.target_amount < netToCollect - 0.5 && (
                         <span className="text-xs text-amber-500 font-medium">{isHe ? 'באישור הגזבר' : 'treasurer approved'}</span>
                       )}
                       <span className="text-sm font-semibold text-blue-600">{formatCurrency(c.amount, 'EUR')}</span>
