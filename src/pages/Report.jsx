@@ -252,7 +252,7 @@ export default function Report() {
           getExpenseDate(e) > lastDate
         ) : []
         const postNet = Math.round(postPersonal.reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0) * 100) / 100
-        const kittyOwedAmount = Math.round((overpay + postNet) * 100) / 100
+        const kittyOwedAmount = Math.round((overpay + postNet - kittyPaidBack) * 100) / 100
         const kittyOwes = kittyOwedAmount > 0.5
 
         // Net to collect = pre-collection owes minus personal credit
