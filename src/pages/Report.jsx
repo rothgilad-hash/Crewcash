@@ -364,22 +364,24 @@ export default function Report() {
             )}
 
             {/* Collections */}
-            {myCollections.length > 0 && (
-              <div className="border-t border-gray-100 px-4 py-3 space-y-1.5">
-                <p className="text-xs font-semibold text-gray-400 mb-1">{isHe ? 'גיוסים' : 'Collections'}</p>
-                {myCollections.map(c => (
-                  <div key={c.id} className="flex items-center justify-between gap-2">
-                    <span className="text-sm text-gray-500 flex-shrink-0">💰 {c.round_name}{c.collected_at ? ` · ${new Date(c.collected_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}` : ''}</span>
-                    <span className="flex items-center gap-1.5">
-                      {c.target_amount > 0 && c.target_amount < netToCollect - 0.5 && (
-                        <span className="text-xs text-amber-500 font-medium">{isHe ? 'באישור הגזבר' : 'treasurer approved'}</span>
-                      )}
+            {myCollections.length > 0 && (() => {
+              const totalTarget = myCollections.reduce((s, c) => s + (c.target_amount || 0), 0)
+              const treasurerApproved = totalTarget > 0 && totalTarget < netToCollect - 0.5
+              return (
+                <div className="border-t border-gray-100 px-4 py-3 space-y-1.5">
+                  <p className="text-xs font-semibold text-gray-400 mb-1">{isHe ? 'גיוסים' : 'Collections'}</p>
+                  {myCollections.map(c => (
+                    <div key={c.id} className="flex items-center justify-between gap-2">
+                      <span className="text-sm text-gray-500 flex-shrink-0">💰 {c.round_name}{c.collected_at ? ` · ${new Date(c.collected_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}` : ''}</span>
                       <span className="text-sm font-semibold text-blue-600">{formatCurrency(c.amount, 'EUR')}</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+                    </div>
+                  ))}
+                  {treasurerApproved && (
+                    <p className="text-xs text-amber-500 font-medium pt-0.5">{isHe ? 'באישור הגזבר' : 'treasurer approved'}</p>
+                  )}
+                </div>
+              )
+            })()}
 
             {/* Refunds */}
             {refunds.length > 0 && (
