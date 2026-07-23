@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
-import { calculateBalances, formatCurrency, getCollectedAmount, getCollectionDebt, getCollectionOverpayment, getLastCollectionDate, getPostCollectionNet } from '../lib/calculations'
+import { calculateBalances, formatCurrency, getCollectedAmount, getCollectionDebt, getCollectionOverpayment, getEurAmount, getLastCollectionDate, getPostCollectionNet } from '../lib/calculations'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
 import SignaturePad from '../components/SignaturePad'
@@ -28,10 +28,19 @@ export default function Debts() {
     return fromTable > 0 ? fromTable : (p?.kitty_paid_back || 0)
   }
 
+  const getPrePersonalNet = (p) => {
+    const lastDate = getLastCollectionDate(kittyCollections, p.id)
+    const N = participants.length
+    return expenses
+      .filter(e => e.paid_by === p.id && !e.is_yacht_cost && (!lastDate || (e.created_at || '').slice(0, 10) <= lastDate))
+      .reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0)
+  }
+
   const getRemaining = (p) => {
     const b = balances[p.id] || { owes: 0, paid: 0 }
     const collected = getCollectedAmount(kittyCollections, p.id, p)
-    return Math.round((b.owes - collected - b.paid + getKittyPaidBack(p.id)) * 100) / 100
+    const prePersonalNet = getPrePersonalNet(p)
+    return Math.round((b.owes - collected - prePersonalNet + getKittyPaidBack(p.id)) * 100) / 100
   }
 
   const getCollDebt = (p) => Math.round(getCollectionDebt(kittyCollections, p.id) * 100) / 100
