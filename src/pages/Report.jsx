@@ -107,10 +107,16 @@ export default function Report() {
   ${participants.map(p => {
     const b = balances[p.id] || { owes:0 }
     const col = getCollectedAmount(kittyCollections, p.id, p)
-    const rem = Math.round((b.owes - col)*100)/100
+    const lastDateP = getLastCollectionDate(kittyCollections, p.id)
+    const NP = participants.length
+    const preNet = expenses
+      .filter(e => e.paid_by === p.id && !e.is_yacht_cost && (!lastDateP || (e.created_at||'').slice(0,10) <= lastDateP))
+      .reduce((s, e) => s + getEurAmount(e) * (NP-1) / NP, 0)
+    const netToCollect = Math.round((b.owes - preNet)*100)/100
+    const rem = Math.round((netToCollect - col)*100)/100
     return `<tr>
       <td>${p.name}${p.is_gil?' ⭐':''}${p.joined_late?' ⏰':''}</td>
-      <td>${fmt(b.owes)}</td>
+      <td>${fmt(netToCollect)}</td>
       <td>${fmt(col)}</td>
       <td class="${rem>0.5?'red':rem<-0.5?'green':''}">${Math.abs(rem)<=0.5?'✓':rem>0?fmt(rem):`+${fmt(Math.abs(rem))}`}</td>
     </tr>`
@@ -173,7 +179,11 @@ export default function Report() {
 
         // Post-collection: kitty owes them
         const overpay = getCollectionOverpayment(kittyCollections, p.id)
-        const postNet = getPostCollectionNet(expenses, p.id, lastDate, N)
+        const postPersonal = lastDate ? expenses.filter(e =>
+          e.paid_by === p.id && !e.is_yacht_cost &&
+          (e.created_at || '').slice(0, 10) > lastDate
+        ) : []
+        const postNet = Math.round(postPersonal.reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0) * 100) / 100
         const kittyOwedAmount = Math.round((overpay + postNet) * 100) / 100
         const kittyOwes = kittyOwedAmount > 0.5
 
@@ -278,11 +288,20 @@ export default function Report() {
                     <span className="text-sm font-semibold text-emerald-600">{formatCurrency(overpay, 'EUR')}</span>
                   </div>
                 )}
-                {postNet > 0.5 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">{isHe ? '🧾 הוציא אחרי הגיוס (נטו)' : '🧾 Spent after collection (net)'}</span>
-                    <span className="text-sm font-semibold text-emerald-600">{formatCurrency(postNet, 'EUR')}</span>
-                  </div>
+                {postPersonal.length > 0 && (
+                  <>
+                    <p className="text-xs font-semibold text-emerald-700 mt-1">{isHe ? 'הוצאות מכיס לאחר הגיוס' : 'Personal expenses after collection'}</p>
+                    {postPersonal.map(e => (
+                      <div key={e.id} className="flex items-center justify-between py-0.5 gap-2">
+                        <span className="text-xs text-gray-600 flex-1 min-w-0 truncate">{getCategoryIcon(e.category)} {e.description}</span>
+                        <span className="text-xs text-gray-500 flex-shrink-0">{formatCurrency(getEurAmount(e), 'EUR')}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between pt-0.5">
+                      <span className="text-xs text-emerald-600">{isHe ? 'חלק הקופה (נטו)' : 'Kitty share (net)'}</span>
+                      <span className="text-sm font-semibold text-emerald-600">{formatCurrency(postNet, 'EUR')}</span>
+                    </div>
+                  </>
                 )}
                 <div className="flex items-center justify-between border-t border-emerald-200 pt-1">
                   <span className="text-sm font-bold text-emerald-700">{isHe ? 'סה״כ להחזר' : 'Total to refund'}</span>
