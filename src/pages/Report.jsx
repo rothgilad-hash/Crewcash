@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
-import { calculateBalances, formatCurrency, getCategoryIcon, getEurAmount, getCollectedAmount, getCollectionOverpayment, getLastCollectionDate, getPostCollectionNet } from '../lib/calculations'
+import { calculateBalances, formatCurrency, getCategoryIcon, getEurAmount, getExpenseDate, getCollectedAmount, getCollectionOverpayment, getLastCollectionDate, getPostCollectionNet } from '../lib/calculations'
 import { motion } from 'framer-motion'
 import { FileText } from 'lucide-react'
 
@@ -110,7 +110,7 @@ export default function Report() {
     const lastDateP = getLastCollectionDate(kittyCollections, p.id)
     const NP = participants.length
     const preNet = expenses
-      .filter(e => e.paid_by === p.id && !e.is_yacht_cost && (!lastDateP || (e.created_at||'').slice(0,10) <= lastDateP))
+      .filter(e => e.paid_by === p.id && !e.is_yacht_cost && (!lastDateP || getExpenseDate(e) <= lastDateP))
       .reduce((s, e) => s + getEurAmount(e) * (NP-1) / NP, 0)
     const netToCollect = Math.round((b.owes - preNet)*100)/100
     const rem = Math.round((netToCollect - col)*100)/100
@@ -171,7 +171,7 @@ export default function Report() {
         // Pre-collection personal expenses (paid before collection date, or all if no date)
         const prePersonal = expenses.filter(e =>
           e.paid_by === p.id && !e.is_yacht_cost &&
-          (!lastDate || (e.created_at || '').slice(0, 10) <= lastDate)
+          (!lastDate || getExpenseDate(e) <= lastDate)
         )
         const prePersonalNet = Math.round(
           prePersonal.reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0) * 100
@@ -181,7 +181,7 @@ export default function Report() {
         const overpay = getCollectionOverpayment(kittyCollections, p.id)
         const postPersonal = lastDate ? expenses.filter(e =>
           e.paid_by === p.id && !e.is_yacht_cost &&
-          (e.created_at || '').slice(0, 10) > lastDate
+          getExpenseDate(e) > lastDate
         ) : []
         const postNet = Math.round(postPersonal.reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0) * 100) / 100
         const kittyOwedAmount = Math.round((overpay + postNet) * 100) / 100

@@ -16,7 +16,7 @@ export function getPostCollectionNet(expenses, participantId, lastCollectionDate
   if (!lastCollectionDate || totalParticipants < 1) return 0
   return expenses
     .filter(e => e.paid_by === participantId && !e.is_yacht_cost)
-    .filter(e => (e.created_at || '').slice(0, 10) > lastCollectionDate)
+    .filter(e => getExpenseDate(e) > lastCollectionDate)
     .reduce((s, e) => s + getEurAmount(e) * (totalParticipants - 1) / totalParticipants, 0)
 }
 
@@ -31,6 +31,11 @@ export function getCollectedAmount(kittyCollections, participantId, participant)
     .filter(c => c.participant_id === participantId)
     .reduce((s, c) => s + c.amount, 0)
   return fromCollections > 0 ? fromCollections : (participant?.amount_paid || 0)
+}
+
+// Returns the date of an expense: planned_date (actual purchase date) or created_at
+export function getExpenseDate(expense) {
+  return expense.planned_date || (expense.created_at || '').slice(0, 10)
 }
 
 // Returns the EUR-equivalent of an expense (uses stored eur_rate if available)

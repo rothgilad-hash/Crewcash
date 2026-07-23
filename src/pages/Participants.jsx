@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
-import { calculateBalances, formatCurrency, getCollectedAmount, getCollectionDebt, getCollectionOverpayment, getEurAmount, getLastCollectionDate, getPostCollectionNet } from '../lib/calculations'
+import { calculateBalances, formatCurrency, getCollectedAmount, getCollectionDebt, getCollectionOverpayment, getEurAmount, getExpenseDate, getLastCollectionDate, getPostCollectionNet } from '../lib/calculations'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
 import { Plus, Star, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
@@ -150,7 +150,7 @@ export default function Participants() {
             const N = participants.length
             const hasCollections = kittyCollections.some(c => c.participant_id === p.id)
             const prePersonalNet = expenses
-              .filter(e => e.paid_by === p.id && !e.is_yacht_cost && (!lastDate || (e.created_at || '').slice(0, 10) <= lastDate))
+              .filter(e => e.paid_by === p.id && !e.is_yacht_cost && (!lastDate || getExpenseDate(e) <= lastDate))
               .reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0)
             const remaining = hasCollections
               ? collDebt
@@ -363,7 +363,7 @@ export default function Participants() {
                 const lastDateG = getLastCollectionDate(kittyCollections, p.id)
                 const NG = participants.length
                 const prePersonalNetG = expenses
-                  .filter(e => e.paid_by === p.id && !e.is_yacht_cost && (!lastDateG || (e.created_at || '').slice(0, 10) <= lastDateG))
+                  .filter(e => e.paid_by === p.id && !e.is_yacht_cost && (!lastDateG || getExpenseDate(e) <= lastDateG))
                   .reduce((s, e) => s + getEurAmount(e) * (NG - 1) / NG, 0)
                 return (
                   <div key={p.id} className={`flex items-center gap-1 px-3 py-2.5 ${i > 0 ? 'border-t border-gray-50' : ''}`}>

@@ -377,7 +377,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
         {form.is_cash && (
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              📅 {isHe ? 'תאריך משוער לתשלום' : 'Planned payment date'}
+              📅 {isHe ? 'תאריך ההוצאה' : 'Expense date'}
             </label>
             <input
               type="date"
