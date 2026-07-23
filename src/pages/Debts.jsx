@@ -37,10 +37,13 @@ export default function Debts() {
   }
 
   const getRemaining = (p) => {
+    const hasCollections = kittyCollections.some(c => c.participant_id === p.id)
+    if (hasCollections) {
+      return Math.round(getCollectionDebt(kittyCollections, p.id) * 100) / 100
+    }
     const b = balances[p.id] || { owes: 0, paid: 0 }
-    const collected = getCollectedAmount(kittyCollections, p.id, p)
     const prePersonalNet = getPrePersonalNet(p)
-    return Math.round((b.owes - collected - prePersonalNet + getKittyPaidBack(p.id)) * 100) / 100
+    return Math.round((b.owes - prePersonalNet + getKittyPaidBack(p.id)) * 100) / 100
   }
 
   const getCollDebt = (p) => Math.round(getCollectionDebt(kittyCollections, p.id) * 100) / 100

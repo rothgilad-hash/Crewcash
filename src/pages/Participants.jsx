@@ -148,10 +148,13 @@ export default function Participants() {
             const collDebt = Math.round(getCollectionDebt(kittyCollections, p.id) * 100) / 100
             const lastDate = getLastCollectionDate(kittyCollections, p.id)
             const N = participants.length
+            const hasCollections = kittyCollections.some(c => c.participant_id === p.id)
             const prePersonalNet = expenses
               .filter(e => e.paid_by === p.id && !e.is_yacht_cost && (!lastDate || (e.created_at || '').slice(0, 10) <= lastDate))
               .reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0)
-            const remaining = Math.round((b.owes - totalCollected - prePersonalNet + kittyPaidBack) * 100) / 100
+            const remaining = hasCollections
+              ? collDebt
+              : Math.round((b.owes - prePersonalNet + kittyPaidBack) * 100) / 100
             const overpay = getCollectionOverpayment(kittyCollections, p.id)
             const postNet = getPostCollectionNet(expenses, p.id, lastDate, participants.length)
             const kittyOwedAmount = Math.round((overpay + postNet) * 100) / 100
