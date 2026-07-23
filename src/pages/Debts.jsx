@@ -11,7 +11,7 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'
 
 export default function Debts() {
   const { t } = useTranslation()
-  const { participants, expenses, kittyRefunds, kittyCollections, isAdmin, lang, reloadRefunds } = useApp()
+  const { participants, expenses, kittyRefunds, kittyCollections, isAdmin, lang, reloadRefunds, reloadCollections } = useApp()
   const isHe = lang === 'he'
 
   const [refundOpen, setRefundOpen] = useState(null)
@@ -19,6 +19,11 @@ export default function Debts() {
   const [saving, setSaving] = useState(false)
   const [sigOpen, setSigOpen] = useState(false)
   const [sigTarget, setSigTarget] = useState(null)
+
+  const [receivedOpen, setReceivedOpen] = useState(null)
+  const [receivedAmount, setReceivedAmount] = useState('')
+  const [receivedReason, setReceivedReason] = useState('יתרת גיוס')
+  const [receivedDate, setReceivedDate] = useState('')
 
   const balances = calculateBalances(expenses, participants)
 
@@ -59,6 +64,30 @@ export default function Debts() {
   const kittyOwes = participants.filter(p => getKittyOwedAmount(p) > 0.5)
 
   const allSettled = owesKitty.length === 0 && kittyOwes.length === 0
+
+  const openReceived = (p) => {
+    setReceivedAmount(String(Math.abs(getRemaining(p))))
+    setReceivedReason('יתרת גיוס')
+    setReceivedDate(new Date().toISOString().slice(0, 10))
+    setReceivedOpen(p)
+  }
+
+  const handleSaveReceived = async () => {
+    if (!receivedOpen) return
+    const amt = parseFloat(receivedAmount) || 0
+    setSaving(true)
+    await supabase.from('kitty_collections').insert({
+      participant_id: receivedOpen.id,
+      amount: amt,
+      target_amount: amt,
+      round_name: receivedReason,
+      collected_at: receivedDate
+    })
+    reloadCollections(participants.map(x => x.id))
+    setReceivedOpen(null)
+    setReceivedAmount('')
+    setSaving(false)
+  }
 
   const openRefund = (p) => {
     setRefundAmount(String(Math.abs(getRemaining(p))))
@@ -132,6 +161,14 @@ export default function Debts() {
                         )}
                       </div>
                       <p className="font-black text-red-500 text-lg">{formatCurrency(totalDebt, 'EUR')}</p>
+                      {isAdmin && (
+                        <button
+                          onClick={() => openReceived(p)}
+                          className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-semibold bg-white border border-red-300 text-red-600 active:bg-red-50 flex-shrink-0"
+                        >
+                          ✓ {isHe ? 'קיבלתי' : 'Received'}
+                        </button>
+                      )}
                     </motion.div>
                   )
                 })}
@@ -182,6 +219,52 @@ export default function Debts() {
           )}
         </>
       )}
+
+      <Modal open={!!receivedOpen} onClose={() => setReceivedOpen(null)}
+        title={isHe ? 'תיעוד קבלת תשלום' : 'Record Payment Received'}>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              {isHe ? 'סיבה' : 'Reason'}
+            </label>
+            <div className="flex gap-2">
+              {['יתרת גיוס', 'גיוס שלא שולם'].map(reason => (
+                <button
+                  key={reason}
+                  onClick={() => setReceivedReason(reason)}
+                  className={`flex-1 py-3 rounded-2xl text-sm font-semibold border-2 transition-all ${
+                    receivedReason === reason
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 text-gray-600 bg-white'
+                  }`}
+                >
+                  {reason}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              {isHe ? `סכום שהתקבל מ${receivedOpen?.name} (EUR)` : `Amount received from ${receivedOpen?.name} (EUR)`}
+            </label>
+            <input type="number" inputMode="decimal"
+              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 focus:outline-none focus:border-blue-500 text-gray-900 bg-white"
+              placeholder="0" value={receivedAmount} onChange={e => setReceivedAmount(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              {isHe ? 'תאריך קבלת התשלום' : 'Payment date'}
+            </label>
+            <input type="date"
+              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 focus:outline-none focus:border-blue-500 text-gray-900 bg-white"
+              value={receivedDate} onChange={e => setReceivedDate(e.target.value)} />
+          </div>
+          <div className="flex gap-3">
+            <button onClick={() => setReceivedOpen(null)} className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold active:bg-gray-50">{t('cancel')}</button>
+            <button onClick={handleSaveReceived} disabled={saving || !receivedAmount || !receivedDate} className="flex-1 py-4 rounded-2xl bg-blue-600 text-white font-bold active:bg-blue-700 disabled:opacity-40">{saving ? '...' : t('save')}</button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal open={!!refundOpen} onClose={() => setRefundOpen(null)}
         title={isHe ? 'החזר מהקופה' : 'Kitty Refund'}>
