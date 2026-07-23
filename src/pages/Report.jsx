@@ -177,6 +177,30 @@ export default function Report() {
           prePersonal.reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0) * 100
         ) / 100
 
+        // Late joiner reduction
+        const existing = participants.filter(x => !x.joined_late)
+        const oldParts = existing.reduce((sum, x) => sum + (x.is_gil ? 2 : 1), 0)
+        const newParts = participants.reduce((sum, x) => sum + (x.is_gil ? 2 : 1), 0)
+        const myParts = p.is_gil ? 2 : 1
+        const yachtReduction = (hasLateJoiners && !p.joined_late && oldParts > 0 && newParts > 0)
+          ? Math.round(yachtTotal * myParts * (1 / oldParts - 1 / newParts) * 100) / 100
+          : 0
+
+        // Only include pre-collection running expenses in the breakdown
+        const preRunningExpenses = lastDate
+          ? runningExpenses.filter(e => getExpenseDate(e) <= lastDate)
+          : runningExpenses
+        const postRunningTotal = lastDate
+          ? runningExpenses.filter(e => getExpenseDate(e) > lastDate).reduce((s, e) => s + getEurAmount(e), 0)
+          : 0
+        const runningShare = Math.round(preRunningExpenses.reduce((s, e) => s + getEurAmount(e), 0) / N * 100) / 100
+        const displayOwes = Math.round((b.owes - postRunningTotal / N) * 100) / 100
+
+        const categoryBreakdown = preRunningExpenses.reduce((acc, e) => {
+          acc[e.category] = (acc[e.category] || 0) + getEurAmount(e) / N
+          return acc
+        }, {})
+
         // Post-collection: kitty owes them
         const overpay = getCollectionOverpayment(kittyCollections, p.id)
         const postPersonal = lastDate ? expenses.filter(e =>
@@ -189,30 +213,6 @@ export default function Report() {
 
         // Net to collect = pre-collection owes minus personal credit
         const netToCollect = Math.round((displayOwes - prePersonalNet) * 100) / 100
-
-        // Late joiner reduction
-        const existing = participants.filter(x => !x.joined_late)
-        const oldParts = existing.reduce((sum, x) => sum + (x.is_gil ? 2 : 1), 0)
-        const newParts = participants.reduce((sum, x) => sum + (x.is_gil ? 2 : 1), 0)
-        const myParts = p.is_gil ? 2 : 1
-        const yachtReduction = (hasLateJoiners && !p.joined_late && oldParts > 0 && newParts > 0)
-          ? Math.round(yachtTotal * myParts * (1 / oldParts - 1 / newParts) * 100) / 100
-          : 0
-        // Only include pre-collection running expenses in the breakdown
-        const preRunningExpenses = lastDate
-          ? runningExpenses.filter(e => getExpenseDate(e) <= lastDate)
-          : runningExpenses
-        const postRunningTotal = lastDate
-          ? runningExpenses.filter(e => getExpenseDate(e) > lastDate).reduce((s, e) => s + getEurAmount(e), 0)
-          : 0
-
-        const runningShare = Math.round(preRunningExpenses.reduce((s, e) => s + getEurAmount(e), 0) / N * 100) / 100
-        const displayOwes = Math.round((b.owes - postRunningTotal / N) * 100) / 100
-
-        const categoryBreakdown = preRunningExpenses.reduce((acc, e) => {
-          acc[e.category] = (acc[e.category] || 0) + getEurAmount(e) / N
-          return acc
-        }, {})
 
         const lateJoinerNames = lateJoiners.map(x => x.name).join(', ')
 
