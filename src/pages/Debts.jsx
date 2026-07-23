@@ -74,15 +74,20 @@ export default function Debts() {
 
   const handleSaveReceived = async () => {
     if (!receivedOpen) return
-    const amt = parseFloat(receivedAmount) || 0
+    let remaining = parseFloat(receivedAmount) || 0
     setSaving(true)
-    await supabase.from('kitty_collections').insert({
-      participant_id: receivedOpen.id,
-      amount: amt,
-      target_amount: amt,
-      round_name: receivedReason,
-      collected_at: receivedDate
-    })
+    const shortfallRows = kittyCollections
+      .filter(c => c.participant_id === receivedOpen.id && c.target_amount > c.amount)
+      .sort((a, b) => (a.collected_at || '').localeCompare(b.collected_at || ''))
+    for (const row of shortfallRows) {
+      if (remaining <= 0) break
+      const gap = row.target_amount - row.amount
+      const toAdd = Math.min(gap, remaining)
+      await supabase.from('kitty_collections')
+        .update({ amount: row.amount + toAdd, round_name: receivedReason, collected_at: receivedDate })
+        .eq('id', row.id)
+      remaining -= toAdd
+    }
     reloadCollections(participants.map(x => x.id))
     setReceivedOpen(null)
     setReceivedAmount('')
