@@ -84,7 +84,7 @@ export default function Debts() {
       const gap = row.target_amount - row.amount
       const toAdd = Math.min(gap, remaining)
       await supabase.from('kitty_collections')
-        .update({ amount: row.amount + toAdd, round_name: receivedReason, collected_at: receivedDate })
+        .update({ amount: row.amount + toAdd, round_name: receivedReason })
         .eq('id', row.id)
       remaining -= toAdd
     }
