@@ -20,7 +20,7 @@ export default function Participants() {
   const [groupTarget, setGroupTarget] = useState('')
   const [groupRound, setGroupRound] = useState('')
   const [groupAmounts, setGroupAmounts] = useState({})
-  const [groupSuggestedAmounts, setGroupSuggestedAmounts] = useState({})
+  const [groupTargets, setGroupTargets] = useState({})
   const [groupDate, setGroupDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [form, setForm] = useState({ name: '', is_gil: false, joined_late: false })
   const [collectAmount, setCollectAmount] = useState('')
@@ -70,7 +70,7 @@ export default function Participants() {
     setGroupRound(nextName)
     setGroupTarget('')
     setGroupAmounts({})
-    setGroupSuggestedAmounts({})
+    setGroupTargets({})
     setGroupDate(new Date().toISOString().slice(0, 10))
     setGroupCollectOpen(true)
   }
@@ -78,17 +78,10 @@ export default function Participants() {
   const applyGroupTarget = (targetStr) => {
     const target = parseFloat(targetStr) || 0
     setGroupTarget(targetStr)
-    const amounts = {}
-    participants.forEach(p => {
-      const b = balances[p.id] || { owes: 0, paid: 0 }
-      const collected = getCollectedAmount(kittyCollections, p.id, p)
-      const refunded = getKittyPaidBack(p.id)
-      const remaining = b.owes - collected - b.paid + refunded
-      const suggested = Math.max(0, remaining < 0 ? target + remaining : target)
-      amounts[p.id] = String(Math.round(suggested * 100) / 100)
-    })
-    setGroupAmounts(amounts)
-    setGroupSuggestedAmounts({ ...amounts })
+    const targets = {}
+    participants.forEach(p => { targets[p.id] = String(target) })
+    setGroupTargets(targets)
+    setGroupAmounts({ ...targets })
   }
 
   const handleSaveGroupCollection = async () => {
@@ -98,7 +91,7 @@ export default function Participants() {
       .map(p => ({
         participant_id: p.id,
         amount: parseFloat(groupAmounts[p.id]) || 0,
-        target_amount: parseFloat(groupSuggestedAmounts[p.id]) || parseFloat(groupAmounts[p.id]) || 0,
+        target_amount: parseFloat(groupTargets[p.id]) || 0,
         round_name: groupRound.trim(),
         collected_at: groupDate
       }))
@@ -341,45 +334,39 @@ export default function Participants() {
             <p className="text-xs text-gray-400 mt-1.5">{isHe ? 'הסכום מחושב אוטומטית בניכוי הוצאות קיימות' : 'Amount auto-adjusted for existing expenses'}</p>
           </div>
 
-          {groupTarget && (
-            <div className="border border-gray-100 rounded-2xl overflow-hidden">
-              <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-100">
+          <div className="border border-gray-100 rounded-2xl overflow-hidden">
+              <div className="flex items-center gap-1 px-3 py-2 bg-gray-50 border-b border-gray-100">
                 <div className="w-7 flex-shrink-0" />
-                <div className="flex-1" />
-                <div className="w-24 text-center text-xs font-semibold text-gray-400">{isHe ? 'יעד' : 'Target'}</div>
-                <div className="w-24 text-center text-xs font-semibold text-gray-400">{isHe ? 'שילם' : 'Paid'}</div>
+                <div className="flex-1 text-xs font-semibold text-gray-400 ps-1">{isHe ? 'הוצאות משויכות' : 'Share'}</div>
+                <div className="w-16 text-center text-xs font-semibold text-gray-400">{isHe ? 'יעד גיוס' : 'Target'}</div>
+                <div className="w-16 text-center text-xs font-semibold text-gray-400">{isHe ? 'שילם' : 'Paid'}</div>
               </div>
               {participants.map((p, i) => {
-                const suggested = parseFloat(groupSuggestedAmounts[p.id]) || 0
                 const b = balances[p.id] || { owes: 0, paid: 0 }
-                const collected = getCollectedAmount(kittyCollections, p.id, p)
-                const refunded = getKittyPaidBack(p.id)
-                const remaining = b.owes - collected - b.paid + refunded
-                const isReduced = remaining < -0.5
                 return (
-                  <div key={p.id} className={`flex items-center gap-3 px-3 py-2.5 ${i > 0 ? 'border-t border-gray-50' : ''}`}>
+                  <div key={p.id} className={`flex items-center gap-1 px-3 py-2.5 ${i > 0 ? 'border-t border-gray-50' : ''}`}>
                     <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                       style={{ backgroundColor: COLORS[i % COLORS.length] }}>
                       {p.name.charAt(0)}
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 ps-1">
                       <p className="text-sm font-semibold text-gray-800">{p.name}</p>
-                      {isReduced && (
-                        <p className="text-xs text-emerald-500">{isHe ? `מקוזז ${formatCurrency(Math.abs(remaining), 'EUR')}` : `offset ${formatCurrency(Math.abs(remaining), 'EUR')}`}</p>
-                      )}
                     </div>
-                    <div className="w-24 text-center text-sm text-gray-400 font-medium">
-                      {suggested > 0 ? formatCurrency(suggested, 'EUR') : '—'}
+                    <div className="w-16 text-center text-xs text-gray-400 font-medium">
+                      {formatCurrency(b.owes, 'EUR')}
                     </div>
                     <input type="number" inputMode="decimal"
-                      className="w-24 border-2 border-gray-200 rounded-xl px-2 py-1.5 text-sm font-semibold text-gray-900 bg-white focus:outline-none focus:border-purple-500 text-center"
+                      className="w-16 border-2 border-gray-200 rounded-xl px-1 py-1.5 text-xs font-semibold text-gray-900 bg-white focus:outline-none focus:border-purple-500 text-center"
+                      value={groupTargets[p.id] || ''}
+                      onChange={e => setGroupTargets(a => ({ ...a, [p.id]: e.target.value }))} />
+                    <input type="number" inputMode="decimal"
+                      className="w-16 border-2 border-gray-200 rounded-xl px-1 py-1.5 text-xs font-semibold text-gray-900 bg-white focus:outline-none focus:border-purple-500 text-center"
                       value={groupAmounts[p.id] || ''}
                       onChange={e => setGroupAmounts(a => ({ ...a, [p.id]: e.target.value }))} />
                   </div>
                 )
               })}
             </div>
-          )}
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">{isHe ? 'תאריך הגיוס' : 'Collection date'}</label>
@@ -390,7 +377,7 @@ export default function Participants() {
 
           <div className="flex gap-3">
             <button onClick={() => setGroupCollectOpen(false)} className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold active:bg-gray-50">{t('cancel')}</button>
-            <button onClick={handleSaveGroupCollection} disabled={saving || !groupTarget}
+            <button onClick={handleSaveGroupCollection} disabled={saving || Object.values(groupAmounts).every(v => !parseFloat(v))}
               className="flex-1 py-4 rounded-2xl bg-purple-600 text-white font-bold active:bg-purple-700 disabled:opacity-40">
               {saving ? '...' : (isHe ? 'שמור הכל' : 'Save All')}
             </button>
