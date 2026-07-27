@@ -33,31 +33,25 @@ export default function Debts() {
     return fromTable > 0 ? fromTable : (p?.kitty_paid_back || 0)
   }
 
-  const getPrePersonalNet = (p) => {
-    const lastDate = getLastCollectionDate(kittyCollections, p.id)
-    const N = participants.length
-    return expenses
-      .filter(e => e.paid_by === p.id && !e.is_yacht_cost && (!lastDate || getExpenseDate(e) <= lastDate))
-      .reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0)
-  }
-
   const getRemaining = (p) => {
     const hasCollections = kittyCollections.some(c => c.participant_id === p.id)
     if (hasCollections) {
       return Math.round(getCollectionDebt(kittyCollections, p.id) * 100) / 100
     }
-    const b = balances[p.id] || { owes: 0, paid: 0 }
-    const prePersonalNet = getPrePersonalNet(p)
-    return Math.round((b.owes - prePersonalNet + getKittyPaidBack(p.id)) * 100) / 100
+    const b = balances[p.id] || { owes: 0 }
+    return Math.round(b.owes * 100) / 100
   }
 
   const getCollDebt = (p) => Math.round(getCollectionDebt(kittyCollections, p.id) * 100) / 100
   const getKittyOwedAmount = (p) => {
     const overpay = getCollectionOverpayment(kittyCollections, p.id)
     const lastDate = getLastCollectionDate(kittyCollections, p.id)
-    const postNet = getPostCollectionNet(expenses, p.id, lastDate, participants.length)
+    const prePersonalFull = expenses
+      .filter(e => e.paid_by === p.id && !e.is_yacht_cost && (!lastDate || getExpenseDate(e) <= lastDate))
+      .reduce((s, e) => s + getEurAmount(e), 0)
+    const postFull = getPostCollectionNet(expenses, p.id, lastDate)
     const refunded = getKittyPaidBack(p.id)
-    return Math.round((overpay + postNet - refunded) * 100) / 100
+    return Math.round((overpay + prePersonalFull + postFull - refunded) * 100) / 100
   }
 
   const owesKitty = participants.filter(p => getRemaining(p) > 0.5)

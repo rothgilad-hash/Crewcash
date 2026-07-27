@@ -11,13 +11,13 @@ export function getLastCollectionDate(kittyCollections, participantId) {
   return dates.length > 0 ? dates.sort().at(-1) : null
 }
 
-// Net amount kitty owes for post-collection personal expenses: expense - payer's share
-export function getPostCollectionNet(expenses, participantId, lastCollectionDate, totalParticipants) {
-  if (!lastCollectionDate || totalParticipants < 1) return 0
+// Full amount kitty owes for post-collection personal expenses (no offset — kitty refunds 100%)
+export function getPostCollectionNet(expenses, participantId, lastCollectionDate) {
+  if (!lastCollectionDate) return 0
   return expenses
     .filter(e => e.paid_by === participantId && !e.is_yacht_cost)
     .filter(e => getExpenseDate(e) > lastCollectionDate)
-    .reduce((s, e) => s + getEurAmount(e) * (totalParticipants - 1) / totalParticipants, 0)
+    .reduce((s, e) => s + getEurAmount(e), 0)
 }
 
 export function getCollectionDebt(kittyCollections, participantId) {

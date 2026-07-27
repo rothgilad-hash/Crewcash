@@ -115,12 +115,7 @@ export default function Report() {
   ${participants.map(p => {
     const b = balances[p.id] || { owes:0 }
     const col = getCollectedAmount(kittyCollections, p.id, p)
-    const lastDateP = getLastCollectionDate(kittyCollections, p.id)
-    const NP = participants.length
-    const preNet = expenses
-      .filter(e => e.paid_by === p.id && !e.is_yacht_cost && (!lastDateP || getExpenseDate(e) <= lastDateP))
-      .reduce((s, e) => s + getEurAmount(e) * (NP-1) / NP, 0)
-    const netToCollect = Math.round((b.owes - preNet)*100)/100
+    const netToCollect = Math.round(b.owes*100)/100
     const rem = Math.round((netToCollect - col)*100)/100
     return `<tr>
       <td>${p.name}${p.is_gil?' ⭐':''}${p.joined_late?' ⏰':''}</td>
@@ -210,23 +205,23 @@ export default function Report() {
         const lastDate = getLastCollectionDate(kittyCollections, p.id)
         const N = participants.length
 
-        // Pre-collection personal expenses (exclude unexpected)
+        // Pre-collection personal expenses (exclude unexpected) — kitty refunds FULL amount
         const prePersonal = expenses.filter(e =>
           e.paid_by === p.id && !e.is_yacht_cost && !e.is_unexpected &&
           (!lastDate || getExpenseDate(e) <= lastDate)
         )
-        const prePersonalNet = Math.round(
-          prePersonal.reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0) * 100
+        const prePersonalFull = Math.round(
+          prePersonal.reduce((s, e) => s + getEurAmount(e), 0) * 100
         ) / 100
 
-        // Unexpected expenses — person's share
+        // Unexpected expenses — everyone pays equal share, personal payers get full refund
         const unexpectedShare = Math.round(unexpectedTotal / N * 100) / 100
-        const unexpectedPersonalNet = Math.round(
+        const unexpectedPersonalFull = Math.round(
           unexpectedExpenses
             .filter(e => e.paid_by === p.id)
-            .reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0) * 100
+            .reduce((s, e) => s + getEurAmount(e), 0) * 100
         ) / 100
-        const unexpectedNet = Math.max(0, Math.round((unexpectedShare - unexpectedPersonalNet) * 100) / 100)
+        const unexpectedNet = unexpectedShare
 
         // Late joiner reduction
         const existing = participants.filter(x => !x.joined_late)
@@ -245,18 +240,18 @@ export default function Report() {
           return acc
         }, {})
 
-        // Post-collection: kitty owes them (exclude unexpected)
+        // Post-collection: kitty owes FULL amount (no offset)
         const overpay = getCollectionOverpayment(kittyCollections, p.id)
         const postPersonal = lastDate ? expenses.filter(e =>
           e.paid_by === p.id && !e.is_yacht_cost && !e.is_unexpected &&
           getExpenseDate(e) > lastDate
         ) : []
-        const postNet = Math.round(postPersonal.reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0) * 100) / 100
-        const kittyOwedAmount = Math.round((overpay + postNet - kittyPaidBack) * 100) / 100
+        const postFull = Math.round(postPersonal.reduce((s, e) => s + getEurAmount(e), 0) * 100) / 100
+        const kittyOwedAmount = Math.round((overpay + prePersonalFull + postFull + unexpectedPersonalFull - kittyPaidBack) * 100) / 100
         const kittyOwes = kittyOwedAmount > 0.5
 
-        // Net to collect = pre-collection owes minus personal credit
-        const netToCollect = Math.round((displayOwes - prePersonalNet) * 100) / 100
+        // Collection is always equal — full share, no personal offset
+        const netToCollect = displayOwes
 
         const lateJoinerNames = lateJoiners.map(x => x.name).join(', ')
 
@@ -302,36 +297,15 @@ export default function Report() {
                   <span className="text-sm font-bold text-emerald-600">−{formatCurrency(yachtReduction, 'EUR')}</span>
                 </div>
               )}
-              <div className="flex items-center justify-between border-t border-gray-100 pt-2">
-                <span className="text-sm font-bold text-gray-700">{isHe ? 'תשלום לקופה' : 'Owed to kitty'}</span>
-                <span className="text-sm font-black text-gray-900">{formatCurrency(displayOwes, 'EUR')}</span>
-              </div>
-              {prePersonalNet > 0.5 && (
-                <>
-                  <div className="pt-1">
-                    <p className="text-xs font-semibold text-gray-400 mb-1">{isHe ? 'הוציא מכיסו לפני הגיוס' : 'Paid personally before collection'}</p>
-                    {prePersonal.map(e => (
-                      <div key={e.id} className="flex items-center justify-between py-0.5 gap-2">
-                        <span className="text-xs text-gray-500 flex-1 min-w-0 truncate">{getCategoryIcon(e.category)} {e.description}</span>
-                        <span className="text-xs text-gray-400 flex-shrink-0">{formatCurrency(getEurAmount(e), 'EUR')}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-blue-600">{isHe ? 'קיזוז — שילם מכיסו (נטו)' : 'Offset — personal payments (net)'}</span>
-                    <span className="text-sm font-bold text-blue-600">−{formatCurrency(prePersonalNet, 'EUR')}</span>
-                  </div>
-                </>
-              )}
               <div className="flex items-center justify-between border-t-2 border-gray-200 pt-2">
-                <span className="text-sm font-black text-gray-800">{isHe ? 'נטו לגיוס' : 'Net to collect'}</span>
+                <span className="text-sm font-black text-gray-800">{isHe ? 'תשלום לקופה' : 'Owed to kitty'}</span>
                 <span className={`text-base font-black ${netToCollect > 0.5 ? 'text-red-500' : 'text-gray-400'}`}>
                   {netToCollect > 0.5 ? formatCurrency(netToCollect, 'EUR') : (isHe ? 'מסולק ✓' : 'Settled ✓')}
                 </span>
               </div>
             </div>
 
-            {/* Unexpected expenses — second collection */}
+            {/* Unexpected expenses — second collection (equal share for everyone) */}
             {unexpectedTotal > 0.5 && (
               <div className="border-t border-orange-200 px-4 py-3 bg-orange-50 space-y-1.5">
                 <p className="text-xs font-semibold text-orange-500 mb-1">⚡ {isHe ? 'הוצאות לא צפויות' : 'Unexpected expenses'}</p>
@@ -341,12 +315,6 @@ export default function Report() {
                     <span className="text-xs text-gray-400">{formatCurrency(getEurAmount(e) / N, 'EUR')}</span>
                   </div>
                 ))}
-                {unexpectedPersonalNet > 0.5 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-blue-600">{isHe ? 'קיזוז — שילם מכיסו (נטו)' : 'Offset — personal (net)'}</span>
-                    <span className="text-xs font-bold text-blue-600">−{formatCurrency(unexpectedPersonalNet, 'EUR')}</span>
-                  </div>
-                )}
                 <div className="flex items-center justify-between border-t border-orange-200 pt-1">
                   <span className="text-sm font-black text-orange-700">{isHe ? 'חלק בגיוס שני' : 'Second collection share'}</span>
                   <span className="text-base font-black text-orange-600">{formatCurrency(unexpectedNet, 'EUR')}</span>
@@ -354,7 +322,7 @@ export default function Report() {
               </div>
             )}
 
-            {/* Kitty owes — post collection */}
+            {/* Kitty owes — pre-collection, post-collection, overpayment */}
             {kittyOwes && (
               <div className="border-t border-gray-100 px-4 py-3 bg-emerald-50 space-y-1">
                 <p className="text-xs font-semibold text-emerald-600 mb-1">{isHe ? 'הקופה חייבת לו' : 'Kitty owes them'}</p>
@@ -363,6 +331,23 @@ export default function Report() {
                     <span className="text-sm text-gray-600">{isHe ? '💰 שילם יותר מהיעד' : '💰 Overpaid target'}</span>
                     <span className="text-sm font-semibold text-emerald-600">{formatCurrency(overpay, 'EUR')}</span>
                   </div>
+                )}
+                {prePersonal.length > 0 && (
+                  <>
+                    <p className="text-xs font-semibold text-emerald-700 mt-1">{isHe ? 'הוצאות מכיס לפני הגיוס' : 'Personal expenses before collection'}</p>
+                    {prePersonal.map(e => (
+                      <div key={e.id} className="flex items-center justify-between py-0.5 gap-2">
+                        <span className="text-xs text-gray-600 flex-1 min-w-0 truncate">{getCategoryIcon(e.category)} {e.description}</span>
+                        <span className="text-xs text-gray-500 flex-shrink-0">{formatCurrency(getEurAmount(e), 'EUR')}</span>
+                      </div>
+                    ))}
+                    {prePersonalFull > 0.5 && (
+                      <div className="flex items-center justify-between pt-0.5">
+                        <span className="text-xs text-emerald-600">{isHe ? 'סה"כ לפני הגיוס' : 'Total before collection'}</span>
+                        <span className="text-sm font-semibold text-emerald-600">{formatCurrency(prePersonalFull, 'EUR')}</span>
+                      </div>
+                    )}
+                  </>
                 )}
                 {postPersonal.length > 0 && (
                   <>
@@ -373,11 +358,19 @@ export default function Report() {
                         <span className="text-xs text-gray-500 flex-shrink-0">{formatCurrency(getEurAmount(e), 'EUR')}</span>
                       </div>
                     ))}
-                    <div className="flex items-center justify-between pt-0.5">
-                      <span className="text-xs text-emerald-600">{isHe ? 'חלק הקופה (נטו)' : 'Kitty share (net)'}</span>
-                      <span className="text-sm font-semibold text-emerald-600">{formatCurrency(postNet, 'EUR')}</span>
-                    </div>
+                    {postFull > 0.5 && (
+                      <div className="flex items-center justify-between pt-0.5">
+                        <span className="text-xs text-emerald-600">{isHe ? 'סה"כ אחרי הגיוס' : 'Total after collection'}</span>
+                        <span className="text-sm font-semibold text-emerald-600">{formatCurrency(postFull, 'EUR')}</span>
+                      </div>
+                    )}
                   </>
+                )}
+                {unexpectedPersonalFull > 0.5 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">⚡ {isHe ? 'הוצאות לא צפויות ששילם' : 'Unexpected expenses paid'}</span>
+                    <span className="text-sm font-semibold text-emerald-600">{formatCurrency(unexpectedPersonalFull, 'EUR')}</span>
+                  </div>
                 )}
                 <div className="flex items-center justify-between border-t border-emerald-200 pt-1">
                   <span className="text-sm font-bold text-emerald-700">{isHe ? 'סה״כ להחזר' : 'Total to refund'}</span>
