@@ -19,7 +19,9 @@ export default function Report() {
     return fromTable > 0 ? fromTable : (p?.kitty_paid_back || 0)
   }
 
-  const runningExpenses = expenses.filter(e => !e.is_yacht_cost)
+  const runningExpenses = expenses.filter(e => !e.is_yacht_cost && !e.is_unexpected)
+  const unexpectedExpenses = expenses.filter(e => !e.is_yacht_cost && e.is_unexpected)
+  const unexpectedTotal = unexpectedExpenses.reduce((s, e) => s + getEurAmount(e), 0)
   const totalExpenses = runningExpenses.reduce((s, e) => s + getEurAmount(e), 0)
   const yachtTotal = expenses.filter(e => e.is_yacht_cost).reduce((s, e) => s + getEurAmount(e), 0)
 
@@ -212,14 +214,23 @@ export default function Report() {
         const lastDate = getLastCollectionDate(kittyCollections, p.id)
         const N = participants.length
 
-        // Pre-collection personal expenses (paid before collection date, or all if no date)
+        // Pre-collection personal expenses (exclude unexpected)
         const prePersonal = expenses.filter(e =>
-          e.paid_by === p.id && !e.is_yacht_cost &&
+          e.paid_by === p.id && !e.is_yacht_cost && !e.is_unexpected &&
           (!lastDate || getExpenseDate(e) <= lastDate)
         )
         const prePersonalNet = Math.round(
           prePersonal.reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0) * 100
         ) / 100
+
+        // Unexpected expenses — person's share
+        const unexpectedShare = Math.round(unexpectedTotal / N * 100) / 100
+        const unexpectedPersonalNet = Math.round(
+          unexpectedExpenses
+            .filter(e => e.paid_by === p.id)
+            .reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0) * 100
+        ) / 100
+        const unexpectedNet = Math.max(0, Math.round((unexpectedShare - unexpectedPersonalNet) * 100) / 100)
 
         // Late joiner reduction
         const existing = participants.filter(x => !x.joined_late)
@@ -231,17 +242,17 @@ export default function Report() {
           : 0
 
         const runningShare = Math.round(runningExpenses.reduce((s, e) => s + getEurAmount(e), 0) / N * 100) / 100
-        const displayOwes = Math.round(b.owes * 100) / 100
+        const displayOwes = Math.round((b.owes - unexpectedShare) * 100) / 100
 
         const categoryBreakdown = runningExpenses.reduce((acc, e) => {
           acc[e.category] = (acc[e.category] || 0) + getEurAmount(e) / N
           return acc
         }, {})
 
-        // Post-collection: kitty owes them
+        // Post-collection: kitty owes them (exclude unexpected)
         const overpay = getCollectionOverpayment(kittyCollections, p.id)
         const postPersonal = lastDate ? expenses.filter(e =>
-          e.paid_by === p.id && !e.is_yacht_cost &&
+          e.paid_by === p.id && !e.is_yacht_cost && !e.is_unexpected &&
           getExpenseDate(e) > lastDate
         ) : []
         const postNet = Math.round(postPersonal.reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0) * 100) / 100
@@ -323,6 +334,29 @@ export default function Report() {
                 </span>
               </div>
             </div>
+
+            {/* Unexpected expenses — second collection */}
+            {unexpectedTotal > 0.5 && (
+              <div className="border-t border-orange-200 px-4 py-3 bg-orange-50 space-y-1.5">
+                <p className="text-xs font-semibold text-orange-500 mb-1">⚡ {isHe ? 'הוצאות לא צפויות' : 'Unexpected expenses'}</p>
+                {unexpectedExpenses.map(e => (
+                  <div key={e.id} className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-gray-500 flex-1 min-w-0 truncate">{getCategoryIcon(e.category)} {e.description}</span>
+                    <span className="text-xs text-gray-400">{formatCurrency(getEurAmount(e) / N, 'EUR')}</span>
+                  </div>
+                ))}
+                {unexpectedPersonalNet > 0.5 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-blue-600">{isHe ? 'קיזוז — שילם מכיסו (נטו)' : 'Offset — personal (net)'}</span>
+                    <span className="text-xs font-bold text-blue-600">−{formatCurrency(unexpectedPersonalNet, 'EUR')}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between border-t border-orange-200 pt-1">
+                  <span className="text-sm font-black text-orange-700">{isHe ? 'חלק בגיוס שני' : 'Second collection share'}</span>
+                  <span className="text-base font-black text-orange-600">{formatCurrency(unexpectedNet, 'EUR')}</span>
+                </div>
+              </div>
+            )}
 
             {/* Kitty owes — post collection */}
             {kittyOwes && (
