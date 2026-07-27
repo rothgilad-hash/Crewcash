@@ -180,7 +180,6 @@ export default function Report() {
             {participants.map((p, i) => {
               const collected = getCollectedAmount(kittyCollections, p.id, p)
               if (collected < 0.5) return null
-              const remaining = Math.round(collected * kittyPct * 100) / 100
               return (
                 <div key={p.id} className="flex items-center gap-3">
                   <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
@@ -188,19 +187,14 @@ export default function Report() {
                     {p.name.charAt(0)}
                   </div>
                   <span className="flex-1 text-sm font-semibold text-gray-700">{p.name}</span>
-                  <span className="text-xs text-gray-400">{isHe ? 'גויס' : 'paid'} {formatCurrency(collected, 'EUR')}</span>
-                  <span className={`text-sm font-bold w-16 text-right ${remaining >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                    {remaining >= 0 ? formatCurrency(remaining, 'EUR') : '−' + formatCurrency(Math.abs(remaining), 'EUR')}
-                  </span>
+                  <span className="text-sm font-bold text-emerald-600">{formatCurrency(collected, 'EUR')}</span>
                 </div>
               )
             })}
           </div>
           <div className="flex items-center justify-between border-t border-gray-100 pt-2 mt-2">
-            <span className="text-xs text-gray-400">{isHe ? 'יתרת קופה' : 'Kitty balance'}</span>
-            <span className={`text-sm font-black ${cashBalance >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-              {cashBalance >= 0 ? formatCurrency(cashBalance, 'EUR') : '−' + formatCurrency(Math.abs(cashBalance), 'EUR')}
-            </span>
+            <span className="text-xs text-gray-400">{isHe ? 'סך גיוסים' : 'Total collected'}</span>
+            <span className="text-sm font-black text-emerald-600">{formatCurrency(totalCollected, 'EUR')}</span>
           </div>
         </div>
       )}
