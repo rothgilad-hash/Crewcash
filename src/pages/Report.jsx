@@ -230,12 +230,8 @@ export default function Report() {
           ? Math.round(yachtTotal * myParts * (1 / oldParts - 1 / newParts) * 100) / 100
           : 0
 
-        const postRunningTotal = lastDate
-          ? runningExpenses.filter(e => getExpenseDate(e) > lastDate).reduce((s, e) => s + getEurAmount(e), 0)
-          : 0
-        const postRunningDeduction = Math.round(postRunningTotal / N * 100) / 100
         const runningShare = Math.round(runningExpenses.reduce((s, e) => s + getEurAmount(e), 0) / N * 100) / 100
-        const displayOwes = Math.round((b.owes - postRunningTotal / N) * 100) / 100
+        const displayOwes = Math.round(b.owes * 100) / 100
 
         const categoryBreakdown = runningExpenses.reduce((acc, e) => {
           acc[e.category] = (acc[e.category] || 0) + getEurAmount(e) / N
