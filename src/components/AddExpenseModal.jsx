@@ -49,8 +49,9 @@ const ALCOHOL_ITEMS = [
 const SUBCATEGORIES = {
   insurance: ['insurance_main', 'insurance_deductible'],
   transport: ['transport_taxi_il', 'transport_taxi_abroad', 'transport_car_rental'],
+  fuel: ['fuel_yacht', 'fuel_car_rental'],
   gear: ['gear_defibrillator'],
-  yacht_services: ['yacht_services_cleaning', 'yacht_services_dinghy', 'yacht_services_sup'],
+  yacht_services: ['yacht_services_cleaning', 'yacht_services_dinghy', 'yacht_services_sup', 'yacht_services_repairs', 'yacht_services_mooring'],
   other: ['other_shirts', 'other_gifts', 'other_misc'],
 }
 const CURRENCIES = ['ILS', 'EUR', 'USD']

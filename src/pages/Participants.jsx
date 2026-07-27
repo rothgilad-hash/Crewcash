@@ -228,12 +228,6 @@ export default function Participants() {
                     )}
                   </div>
                   <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {isAdmin && p.joined_late && (
-                      <button onClick={() => openCollect(p)}
-                        className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-semibold bg-blue-50 border border-blue-200 text-blue-600 active:bg-blue-100">
-                        💰 {isHe ? 'גיוס' : 'Collect'}
-                      </button>
-                    )}
                     {isAdmin && (
                       <button onClick={() => handleDelete(p.id, p.name)}
                         className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-300 active:text-red-400 active:bg-red-50">

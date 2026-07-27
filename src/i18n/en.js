@@ -81,9 +81,13 @@ export default {
     subcat_other_shirts: 'Shirts',
     subcat_other_gifts: 'Gifts',
     subcat_other_misc: 'Miscellaneous',
+    subcat_fuel_yacht: 'Yacht Fuel',
+    subcat_fuel_car_rental: 'Rental Car Fuel',
     subcat_yacht_services_cleaning: 'Check-in & Cleaning',
     subcat_yacht_services_dinghy: 'Dinghy',
     subcat_yacht_services_sup: 'SUP',
+    subcat_yacht_services_repairs: 'Repairs',
+    subcat_yacht_services_mooring: 'Mooring Fees',
     subCategory: 'Sub-category',
 
     addParticipant: 'Add Participant',

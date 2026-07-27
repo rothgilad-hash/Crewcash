@@ -86,9 +86,13 @@ export default {
     subcat_other_shirts: 'חולצות',
     subcat_other_gifts: 'מתנות',
     subcat_other_misc: 'תשלומים שונים',
+    subcat_fuel_yacht: 'דלק יאכטה',
+    subcat_fuel_car_rental: 'דלק רכב שכור',
     subcat_yacht_services_cleaning: 'קבלה וניקיון',
     subcat_yacht_services_dinghy: 'דינגי',
     subcat_yacht_services_sup: 'סאפ',
+    subcat_yacht_services_repairs: 'תיקונים',
+    subcat_yacht_services_mooring: 'דמי עגינה',
     subCategory: 'תת-קטגוריה',
 
     // Participants
