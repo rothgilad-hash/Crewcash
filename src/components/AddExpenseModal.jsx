@@ -58,7 +58,7 @@ const CURRENCIES = ['ILS', 'EUR', 'USD']
 const defaultForm = {
   description: '', amount: '', currency: 'EUR', category: '',
   sub_category: '', paid_by: '', is_yacht_cost: false, is_cash: false, notes: '',
-  planned_date: '', is_paid: false
+  planned_date: '', is_paid: false, is_unexpected: false
 }
 
 export default function AddExpenseModal({ open, onClose, expense = null }) {
@@ -162,7 +162,8 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
       is_cash: form.is_cash,
       notes: form.notes,
       planned_date: form.planned_date || null,
-      is_paid: form.is_paid
+      is_paid: form.is_paid,
+      is_unexpected: form.is_unexpected
     }
     let error
     if (expense?.id) {
@@ -341,6 +342,14 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
               <input type="checkbox" className="sr-only" checked={form.is_cash} onChange={e => set('is_cash', e.target.checked)} />
               <div className={`w-11 h-6 rounded-full transition-colors ${form.is_cash ? 'bg-blue-600' : 'bg-gray-200'}`} />
               <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.is_cash ? 'translate-x-5' : ''}`} />
+            </div>
+          </label>
+          <label className="flex items-center justify-between py-3.5 px-4 bg-orange-50 rounded-2xl cursor-pointer active:bg-orange-100 transition-colors">
+            <span className="text-sm font-medium text-gray-800">⚡ {isHe ? 'הוצאה לא צפויה' : 'Unexpected expense'}</span>
+            <div className="relative">
+              <input type="checkbox" className="sr-only" checked={form.is_unexpected} onChange={e => set('is_unexpected', e.target.checked)} />
+              <div className={`w-11 h-6 rounded-full transition-colors ${form.is_unexpected ? 'bg-orange-500' : 'bg-gray-200'}`} />
+              <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.is_unexpected ? 'translate-x-5' : ''}`} />
             </div>
           </label>
         </div>

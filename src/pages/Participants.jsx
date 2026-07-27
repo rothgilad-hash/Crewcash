@@ -71,14 +71,14 @@ export default function Participants() {
     if (hasCollections) {
       const collDebt = Math.round(getCollectionDebt(kittyCollections, p.id) * 100) / 100
       if (collDebt > 0.5) return collDebt
-      // Fully settled — compute share of new post-collection shared expenses
-      const postRunningTotal = expenses
-        .filter(e => !e.is_yacht_cost && lastDate && getExpenseDate(e) > lastDate)
+      // Fully settled — compute share of unexpected expenses only
+      const unexpectedTotal = expenses
+        .filter(e => !e.is_yacht_cost && e.is_unexpected)
         .reduce((s, e) => s + getEurAmount(e), 0)
-      const postPersonalNet = expenses
-        .filter(e => e.paid_by === p.id && !e.is_yacht_cost && lastDate && getExpenseDate(e) > lastDate)
+      const unexpectedPersonalNet = expenses
+        .filter(e => e.paid_by === p.id && !e.is_yacht_cost && e.is_unexpected)
         .reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0)
-      return Math.max(0, Math.round((postRunningTotal / N - postPersonalNet) * 100) / 100)
+      return Math.max(0, Math.round((unexpectedTotal / N - unexpectedPersonalNet) * 100) / 100)
     }
 
     const b = balances[p.id] || { owes: 0 }
