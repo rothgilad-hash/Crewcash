@@ -63,14 +63,33 @@ export default function Participants() {
     await supabase.from('participants').delete().eq('id', id)
   }
 
+  const getPersonDebt = (p) => {
+    const hasCollections = kittyCollections.some(c => c.participant_id === p.id)
+    if (hasCollections) {
+      return Math.round(getCollectionDebt(kittyCollections, p.id) * 100) / 100
+    }
+    const b = balances[p.id] || { owes: 0 }
+    const lastDate = getLastCollectionDate(kittyCollections, p.id)
+    const N = participants.length
+    const prePersonalNet = expenses
+      .filter(e => e.paid_by === p.id && !e.is_yacht_cost && (!lastDate || getExpenseDate(e) <= lastDate))
+      .reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0)
+    return Math.max(0, Math.round((b.owes - prePersonalNet) * 100) / 100)
+  }
+
   const openGroupCollect = () => {
     const maxRounds = Math.max(0, ...participants.map(p => kittyCollections.filter(c => c.participant_id === p.id).length))
     const names = isHe ? ROUND_NAMES_HE : ROUND_NAMES_EN
     const nextName = names[maxRounds] || (isHe ? `גיוס ${maxRounds + 1}` : `Round ${maxRounds + 1}`)
+    const targets = {}
+    participants.forEach(p => {
+      const debt = getPersonDebt(p)
+      targets[p.id] = debt > 0.5 ? String(debt) : ''
+    })
     setGroupRound(nextName)
     setGroupTarget('')
+    setGroupTargets(targets)
     setGroupAmounts({})
-    setGroupTargets({})
     setGroupDate(new Date().toISOString().slice(0, 10))
     setGroupCollectOpen(true)
   }
