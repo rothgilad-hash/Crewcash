@@ -84,7 +84,7 @@ export default function Participants() {
     const targets = {}
     participants.forEach(p => {
       const debt = getPersonDebt(p)
-      targets[p.id] = debt > 0.5 ? String(debt) : ''
+      targets[p.id] = debt > 0.5 ? String(Math.round(debt)) : ''
     })
     setGroupRound(nextName)
     setGroupTarget('')
