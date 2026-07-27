@@ -196,6 +196,8 @@ export default function Dashboard() {
             {participants.map((p, i) => {
               const collected = getCollectedAmount(kittyCollections, p.id, p)
               if (collected < 0.5) return null
+              const refunded = kittyRefunds.filter(r => r.participant_id === p.id).reduce((s, r) => s + r.amount, 0) || p.kitty_paid_back || 0
+              const net = Math.round((collected - refunded) * 100) / 100
               return (
                 <div key={p.id} className="flex items-center gap-3">
                   <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
@@ -203,7 +205,7 @@ export default function Dashboard() {
                     {p.name.charAt(0)}
                   </div>
                   <span className="flex-1 text-sm font-semibold text-gray-700">{p.name}{p.is_gil ? ' ⭐' : ''}</span>
-                  <span className="text-sm font-bold text-emerald-600">{formatCurrency(collected, 'EUR')}</span>
+                  <span className="text-sm font-bold text-emerald-600">{formatCurrency(net, 'EUR')}</span>
                 </div>
               )
             })}
