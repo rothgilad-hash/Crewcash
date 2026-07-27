@@ -230,17 +230,14 @@ export default function Report() {
           ? Math.round(yachtTotal * myParts * (1 / oldParts - 1 / newParts) * 100) / 100
           : 0
 
-        // Only include pre-collection running expenses in the breakdown
-        const preRunningExpenses = lastDate
-          ? runningExpenses.filter(e => getExpenseDate(e) <= lastDate)
-          : runningExpenses
         const postRunningTotal = lastDate
           ? runningExpenses.filter(e => getExpenseDate(e) > lastDate).reduce((s, e) => s + getEurAmount(e), 0)
           : 0
-        const runningShare = Math.round(preRunningExpenses.reduce((s, e) => s + getEurAmount(e), 0) / N * 100) / 100
+        const postRunningDeduction = Math.round(postRunningTotal / N * 100) / 100
+        const runningShare = Math.round(runningExpenses.reduce((s, e) => s + getEurAmount(e), 0) / N * 100) / 100
         const displayOwes = Math.round((b.owes - postRunningTotal / N) * 100) / 100
 
-        const categoryBreakdown = preRunningExpenses.reduce((acc, e) => {
+        const categoryBreakdown = runningExpenses.reduce((acc, e) => {
           acc[e.category] = (acc[e.category] || 0) + getEurAmount(e) / N
           return acc
         }, {})
@@ -296,6 +293,12 @@ export default function Report() {
                 <span className="text-sm text-gray-500">{isHe ? 'סה״כ' : 'Subtotal'}</span>
                 <span className="text-sm font-bold text-gray-800">{formatCurrency(runningShare, 'EUR')}</span>
               </div>
+              {postRunningDeduction > 0.5 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-400">📦 {isHe ? 'הוצאות אחרי גיוס (כוסו מהקופה)' : 'Post-collection expenses (kitty covered)'}</span>
+                  <span className="text-sm font-bold text-gray-400">−{formatCurrency(postRunningDeduction, 'EUR')}</span>
+                </div>
+              )}
               {yachtReduction > 0 && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-emerald-600">⏰ {isHe ? `הפחתה — ${lateJoinerNames} הצטרף מאוחר` : `Reduction — ${lateJoinerNames} joined late`}</span>
