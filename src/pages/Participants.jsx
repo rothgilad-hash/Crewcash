@@ -64,13 +64,24 @@ export default function Participants() {
   }
 
   const getPersonDebt = (p) => {
-    const hasCollections = kittyCollections.some(c => c.participant_id === p.id)
-    if (hasCollections) {
-      return Math.round(getCollectionDebt(kittyCollections, p.id) * 100) / 100
-    }
-    const b = balances[p.id] || { owes: 0 }
-    const lastDate = getLastCollectionDate(kittyCollections, p.id)
     const N = participants.length
+    const lastDate = getLastCollectionDate(kittyCollections, p.id)
+    const hasCollections = kittyCollections.some(c => c.participant_id === p.id)
+
+    if (hasCollections) {
+      const collDebt = Math.round(getCollectionDebt(kittyCollections, p.id) * 100) / 100
+      if (collDebt > 0.5) return collDebt
+      // Fully settled — compute share of new post-collection shared expenses
+      const postRunningTotal = expenses
+        .filter(e => !e.is_yacht_cost && lastDate && getExpenseDate(e) > lastDate)
+        .reduce((s, e) => s + getEurAmount(e), 0)
+      const postPersonalNet = expenses
+        .filter(e => e.paid_by === p.id && !e.is_yacht_cost && lastDate && getExpenseDate(e) > lastDate)
+        .reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0)
+      return Math.max(0, Math.round((postRunningTotal / N - postPersonalNet) * 100) / 100)
+    }
+
+    const b = balances[p.id] || { owes: 0 }
     const prePersonalNet = expenses
       .filter(e => e.paid_by === p.id && !e.is_yacht_cost && (!lastDate || getExpenseDate(e) <= lastDate))
       .reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0)
