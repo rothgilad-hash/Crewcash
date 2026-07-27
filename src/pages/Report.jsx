@@ -293,12 +293,6 @@ export default function Report() {
                 <span className="text-sm text-gray-500">{isHe ? 'סה״כ' : 'Subtotal'}</span>
                 <span className="text-sm font-bold text-gray-800">{formatCurrency(runningShare, 'EUR')}</span>
               </div>
-              {postRunningDeduction > 0.5 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400">📦 {isHe ? 'הוצאות אחרי גיוס (כוסו מהקופה)' : 'Post-collection expenses (kitty covered)'}</span>
-                  <span className="text-sm font-bold text-gray-400">−{formatCurrency(postRunningDeduction, 'EUR')}</span>
-                </div>
-              )}
               {yachtReduction > 0 && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-emerald-600">⏰ {isHe ? `הפחתה — ${lateJoinerNames} הצטרף מאוחר` : `Reduction — ${lateJoinerNames} joined late`}</span>
