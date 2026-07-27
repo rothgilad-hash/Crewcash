@@ -195,8 +195,8 @@ export default function Report() {
             })}
           </div>
           <div className="flex items-center justify-between border-t border-gray-100 pt-2 mt-2">
-            <span className="text-xs text-gray-400">{isHe ? 'סך גיוסים' : 'Total collected'}</span>
-            <span className="text-sm font-black text-emerald-600">{formatCurrency(totalCollected, 'EUR')}</span>
+            <span className="text-xs text-gray-400">{isHe ? 'נטו בקופה' : 'Net in kitty'}</span>
+            <span className="text-sm font-black text-emerald-600">{formatCurrency(cashBalance, 'EUR')}</span>
           </div>
         </div>
       )}
