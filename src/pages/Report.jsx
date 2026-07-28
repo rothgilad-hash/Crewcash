@@ -162,39 +162,6 @@ export default function Report() {
         </p>
       </div>
 
-      {/* Kitty balance per person */}
-      {totalCollected > 0 && (
-        <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-gray-900 text-base">{isHe ? 'חלק בקופה' : 'Kitty share'}</h3>
-            <span className={`text-sm font-bold px-2.5 py-1 rounded-xl ${cashBalance >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
-              {Math.round(kittyPct * 100)}% {isHe ? 'נותר' : 'remaining'}
-            </span>
-          </div>
-          <div className="space-y-2">
-            {participants.map((p, i) => {
-              const collected = getCollectedAmount(kittyCollections, p.id, p)
-              if (collected < 0.5) return null
-              const refunded = kittyRefunds.filter(r => r.participant_id === p.id).reduce((s, r) => s + r.amount, 0) || p.kitty_paid_back || 0
-              const net = Math.round((collected - refunded) * 100) / 100
-              return (
-                <div key={p.id} className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                    style={{ backgroundColor: COLORS[i % COLORS.length] }}>
-                    {p.name.charAt(0)}
-                  </div>
-                  <span className="flex-1 text-sm font-semibold text-gray-700">{p.name}</span>
-                  <span className="text-sm font-bold text-emerald-600">{formatCurrency(net, 'EUR')}</span>
-                </div>
-              )
-            })}
-          </div>
-          <div className="flex items-center justify-between border-t border-gray-100 pt-2 mt-2">
-            <span className="text-xs text-gray-400">{isHe ? 'נטו בקופה' : 'Net in kitty'}</span>
-            <span className="text-sm font-black text-emerald-600">{formatCurrency(cashBalance, 'EUR')}</span>
-          </div>
-        </div>
-      )}
 
       {/* Per-person breakdown */}
       {participants.map((p, i) => {

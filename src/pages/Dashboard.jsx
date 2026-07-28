@@ -12,7 +12,7 @@ export default function Dashboard() {
   const [copied, setCopied] = useState(false)
   const isHe = lang === 'he'
 
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0)
+  const totalExpenses = expenses.reduce((s, e) => s + getEurAmount(e), 0)
   const balances = calculateBalances(expenses, participants)
 
   const inviteUrl = `${window.location.origin}/join/${trip?.invite_token}`
