@@ -367,10 +367,10 @@ export default function Report() {
                     )}
                   </>
                 )}
-                {unexpectedPersonalFull > 0.5 && (
+                {unexpectedPersonalNet > 0.5 && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">⚡ {isHe ? 'הוצאות לא צפויות ששילם' : 'Unexpected expenses paid'}</span>
-                    <span className="text-sm font-semibold text-emerald-600">{formatCurrency(unexpectedPersonalFull, 'EUR')}</span>
+                    <span className="text-sm text-gray-600">⚡ {isHe ? 'הוצאות לא צפויות (נטו)' : 'Unexpected expenses (net)'}</span>
+                    <span className="text-sm font-semibold text-emerald-600">{formatCurrency(unexpectedPersonalNet, 'EUR')}</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between border-t border-emerald-200 pt-1">
