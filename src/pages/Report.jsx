@@ -324,8 +324,8 @@ export default function Report() {
                 </div>
               )}
 
-              {/* Kitty owes — all consolidated in round 1 */}
-              {kittyOwesRound1 && (
+              {/* Kitty owes round 1 + refunds — shown together whenever kitty owed or refund exists */}
+              {(kittyOwesRound1 || refunds.length > 0) && (
                 <div className="border-t border-gray-100 px-4 py-3 space-y-1">
                   <p className="text-xs font-semibold text-emerald-500 mb-1">✅ {isHe ? 'הקופה חייבת לו' : 'Kitty owes'}</p>
                   {round1Overpay > 0.5 && (
@@ -345,26 +345,25 @@ export default function Report() {
                       ))}
                     </>
                   )}
-                  <div className="flex items-center justify-between border-t border-emerald-200 pt-1">
-                    <span className="text-sm font-bold text-emerald-700">{isHe ? 'סה״כ להחזר' : 'Total to refund'}</span>
-                    <span className="text-base font-black text-emerald-600">{formatCurrency(kittyOwedRound1, 'EUR')}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Refunds + signatures */}
-              {refunds.length > 0 && (
-                <div className="border-t border-gray-100 px-4 py-3 space-y-2">
-                  <p className="text-xs font-semibold text-gray-400">💸 {isHe ? 'החזרים מהקופה' : 'Kitty refunds'}</p>
-                  {refunds.map((r, ri) => (
-                    <div key={r.id} className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500">{isHe ? `החזר ${ri + 1}` : `Refund ${ri + 1}`}{r.created_at && <span className="text-gray-400 text-xs ms-2">{new Date(r.created_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}</span>}</span>
-                        <span className="text-sm font-semibold text-emerald-600">{formatCurrency(r.amount, 'EUR')}</span>
-                      </div>
-                      {r.signature && <div className="border border-gray-100 rounded-xl overflow-hidden"><img src={r.signature} alt="signature" className="w-full max-h-20 object-contain" /></div>}
+                  {kittyOwesRound1 && (
+                    <div className="flex items-center justify-between border-t border-emerald-200 pt-1">
+                      <span className="text-sm font-bold text-emerald-700">{isHe ? 'סה״כ להחזר' : 'Total to refund'}</span>
+                      <span className="text-base font-black text-emerald-600">{formatCurrency(kittyOwedRound1, 'EUR')}</span>
                     </div>
-                  ))}
+                  )}
+                  {refunds.length > 0 && (
+                    <div className="space-y-2 pt-1">
+                      {refunds.map((r, ri) => (
+                        <div key={r.id} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-500">💸 {isHe ? `החזר ${ri + 1}` : `Refund ${ri + 1}`}{r.created_at && <span className="text-gray-400 text-xs ms-2">{new Date(r.created_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}</span>}</span>
+                            <span className="text-sm font-semibold text-emerald-600">{formatCurrency(r.amount, 'EUR')}</span>
+                          </div>
+                          {r.signature && <div className="border border-gray-100 rounded-xl overflow-hidden"><img src={r.signature} alt="signature" className="w-full max-h-20 object-contain" /></div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
