@@ -31,6 +31,7 @@ export default function Dashboard() {
 
   const navigate = useNavigate()
   const [showBreakdown, setShowBreakdown] = useState(false)
+  const [expandedCat, setExpandedCat] = useState(null)
   const uncheckedItems = shoppingItems.filter(i => !i.checked)
 
   const totalCollected = participants.reduce((s, p) => s + getCollectedAmount(kittyCollections, p.id, p), 0)
@@ -48,7 +49,10 @@ export default function Dashboard() {
   const unpaidTotal = unpaidExpenses.reduce((s, e) => s + getEurAmount(e), 0)
 
   const makeCatBreakdown = (list) => list.reduce((acc, e) => {
-    acc[e.category] = (acc[e.category] || 0) + getEurAmount(e)
+    if (!acc[e.category]) acc[e.category] = { total: 0, subs: {} }
+    acc[e.category].total += getEurAmount(e)
+    const sub = e.sub_category || '__none__'
+    acc[e.category].subs[sub] = (acc[e.category].subs[sub] || 0) + getEurAmount(e)
     return acc
   }, {})
 
@@ -113,12 +117,33 @@ export default function Dashboard() {
                   <div>
                     <p className="text-blue-200 text-xs font-semibold mb-1 px-1">✅ {isHe ? 'שולמו' : 'Paid'} · {formatCurrency(paidTotal, 'EUR')}</p>
                     <div className="space-y-1">
-                      {Object.entries(makeCatBreakdown(paidExpenses)).sort((a, b) => b[1] - a[1]).map(([cat, amt]) => (
-                        <div key={cat} className="flex items-center justify-between bg-white/10 rounded-xl px-3 py-2">
-                          <span className="text-blue-100 text-sm">{getCategoryIcon(cat)} {t('cat_' + cat)}</span>
-                          <span className="text-white font-semibold text-sm">{formatCurrency(amt, 'EUR')}</span>
-                        </div>
-                      ))}
+                      {Object.entries(makeCatBreakdown(paidExpenses)).sort((a, b) => b[1].total - a[1].total).reverse().map(([cat, { total, subs }]) => {
+                        const key = 'paid_' + cat
+                        const hasSubs = Object.keys(subs).some(s => s !== '__none__')
+                        const isOpen = expandedCat === key
+                        return (
+                          <div key={cat}>
+                            <button onClick={() => hasSubs && setExpandedCat(isOpen ? null : key)}
+                              className={`w-full flex items-center justify-between bg-white/10 rounded-xl px-3 py-2 ${hasSubs ? 'active:bg-white/20' : ''}`}>
+                              <span className="text-blue-100 text-sm">{getCategoryIcon(cat)} {t('cat_' + cat)}</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-white font-semibold text-sm">{formatCurrency(total, 'EUR')}</span>
+                                {hasSubs && (isOpen ? <ChevronUp size={12} className="text-blue-200" /> : <ChevronDown size={12} className="text-blue-200" />)}
+                              </div>
+                            </button>
+                            {isOpen && (
+                              <div className="mt-0.5 ms-3 space-y-0.5">
+                                {Object.entries(subs).filter(([s]) => s !== '__none__').sort((a, b) => b[1] - a[1]).map(([sub, amt]) => (
+                                  <div key={sub} className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-1.5">
+                                    <span className="text-blue-200 text-xs">{t('subcat_' + sub) || sub}</span>
+                                    <span className="text-blue-100 text-xs font-semibold">{formatCurrency(amt, 'EUR')}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -127,12 +152,33 @@ export default function Dashboard() {
                   <div>
                     <p className="text-blue-200 text-xs font-semibold mb-1 px-1">⏳ {isHe ? 'טרם שולמו' : 'Unpaid'} · {formatCurrency(unpaidTotal, 'EUR')}</p>
                     <div className="space-y-1">
-                      {Object.entries(makeCatBreakdown(unpaidExpenses)).sort((a, b) => b[1] - a[1]).map(([cat, amt]) => (
-                        <div key={cat} className="flex items-center justify-between bg-amber-400/20 rounded-xl px-3 py-2">
-                          <span className="text-blue-100 text-sm">{getCategoryIcon(cat)} {t('cat_' + cat)}</span>
-                          <span className="text-amber-200 font-semibold text-sm">{formatCurrency(amt, 'EUR')}</span>
-                        </div>
-                      ))}
+                      {Object.entries(makeCatBreakdown(unpaidExpenses)).sort((a, b) => b[1].total - a[1].total).map(([cat, { total, subs }]) => {
+                        const key = 'unpaid_' + cat
+                        const hasSubs = Object.keys(subs).some(s => s !== '__none__')
+                        const isOpen = expandedCat === key
+                        return (
+                          <div key={cat}>
+                            <button onClick={() => hasSubs && setExpandedCat(isOpen ? null : key)}
+                              className={`w-full flex items-center justify-between bg-amber-400/20 rounded-xl px-3 py-2 ${hasSubs ? 'active:bg-amber-400/30' : ''}`}>
+                              <span className="text-blue-100 text-sm">{getCategoryIcon(cat)} {t('cat_' + cat)}</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-amber-200 font-semibold text-sm">{formatCurrency(total, 'EUR')}</span>
+                                {hasSubs && (isOpen ? <ChevronUp size={12} className="text-amber-200" /> : <ChevronDown size={12} className="text-amber-200" />)}
+                              </div>
+                            </button>
+                            {isOpen && (
+                              <div className="mt-0.5 ms-3 space-y-0.5">
+                                {Object.entries(subs).filter(([s]) => s !== '__none__').sort((a, b) => b[1] - a[1]).map(([sub, amt]) => (
+                                  <div key={sub} className="flex items-center justify-between bg-amber-400/10 rounded-lg px-3 py-1.5">
+                                    <span className="text-amber-200 text-xs">{t('subcat_' + sub) || sub}</span>
+                                    <span className="text-amber-100 text-xs font-semibold">{formatCurrency(amt, 'EUR')}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
