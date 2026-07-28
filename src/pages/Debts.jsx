@@ -90,7 +90,7 @@ export default function Debts() {
   }
 
   const openRefund = (p) => {
-    setRefundAmount(String(Math.abs(getRemaining(p))))
+    setRefundAmount(String(Math.round(getKittyOwedAmount(p) * 100) / 100))
     setRefundOpen(p)
   }
 
