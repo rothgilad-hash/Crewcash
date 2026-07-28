@@ -221,11 +221,12 @@ export default function Report() {
         const firstRound2Date = round2Collections.length > 0
           ? round2Collections.map(c => c.collected_at).filter(Boolean).sort()[0]
           : null
+        const getRefundDate = (r) => r.refund_date || r.created_at?.slice(0, 10) || ''
         const refunds = firstRound2Date
-          ? allRefunds.filter(r => !r.created_at || r.created_at < firstRound2Date)
+          ? allRefunds.filter(r => !getRefundDate(r) || getRefundDate(r) < firstRound2Date)
           : allRefunds
         const round2Refunds = firstRound2Date
-          ? allRefunds.filter(r => r.created_at && r.created_at >= firstRound2Date)
+          ? allRefunds.filter(r => getRefundDate(r) >= firstRound2Date)
           : []
         const lastDate = getLastCollectionDate(kittyCollections, p.id)
         const N = participants.length
