@@ -42,8 +42,8 @@ export default function Dashboard() {
   const cashAlert = cashPct !== null && cashPct <= 0.25 ? 'critical' : cashPct !== null && cashPct <= 0.5 ? 'warning' : null
 
   const otherExpenses = expenses.filter(e => !e.is_yacht_cost)
-  const paidExpenses = otherExpenses.filter(e => e.is_paid)
-  const unpaidExpenses = otherExpenses.filter(e => !e.is_paid)
+  const paidExpenses = otherExpenses.filter(e => !e.is_cash || e.is_paid)
+  const unpaidExpenses = otherExpenses.filter(e => e.is_cash && !e.is_paid)
   const paidTotal = paidExpenses.reduce((s, e) => s + getEurAmount(e), 0)
   const unpaidTotal = unpaidExpenses.reduce((s, e) => s + getEurAmount(e), 0)
 
