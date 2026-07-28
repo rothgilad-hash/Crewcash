@@ -167,6 +167,8 @@ export default function Report() {
       {participants.map((p, i) => {
         const b = balances[p.id] || { owes: 0, paid: 0 }
         const myCollections = kittyCollections.filter(c => c.participant_id === p.id)
+        const round1Collections = myCollections.filter(c => !c.round_name?.includes('שני'))
+        const round2Collections = myCollections.filter(c => c.round_name?.includes('שני'))
         const kittyPaidBack = getKittyPaidBack(p.id)
         const refunds = getRefunds(p.id)
         const lastDate = getLastCollectionDate(kittyCollections, p.id)
@@ -297,10 +299,10 @@ export default function Report() {
               </div>
 
               {/* Collections for round 1 */}
-              {myCollections.length > 0 && (
+              {round1Collections.length > 0 && (
                 <div className="border-t border-gray-100 px-4 py-3 space-y-1.5">
                   <p className="text-xs font-semibold text-gray-400 mb-1">💰 {isHe ? 'גיוסים' : 'Collections'}</p>
-                  {myCollections.map(c => (
+                  {round1Collections.map(c => (
                     <div key={c.id} className="flex items-center justify-between gap-2">
                       <span className="text-sm text-gray-600 flex-shrink-0">{c.round_name}{c.collected_at ? ` · ${new Date(c.collected_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}` : ''}</span>
                       <span className="text-sm font-semibold text-blue-600">{formatCurrency(c.amount, 'EUR')}</span>
@@ -398,6 +400,19 @@ export default function Report() {
                     </span>
                   </div>
                 </div>
+
+                {/* Collections for round 2 */}
+                {round2Collections.length > 0 && (
+                  <div className="border-t border-gray-100 px-4 py-3 space-y-1.5">
+                    <p className="text-xs font-semibold text-gray-400 mb-1">💰 {isHe ? 'גיוסים' : 'Collections'}</p>
+                    {round2Collections.map(c => (
+                      <div key={c.id} className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-gray-600 flex-shrink-0">{c.round_name}{c.collected_at ? ` · ${new Date(c.collected_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}` : ''}</span>
+                        <span className="text-sm font-semibold text-blue-600">{formatCurrency(c.amount, 'EUR')}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Kitty owes for round 2 */}
                 {kittyOwesRound2 && (
