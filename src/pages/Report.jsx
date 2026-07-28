@@ -246,7 +246,7 @@ export default function Report() {
         const unexpectedPersonalNet = Math.round(
           unexpectedPersonal.reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0) * 100
         ) / 100
-        const unexpectedNet = Math.max(0, Math.round((unexpectedShare - unexpectedPersonalNet) * 100) / 100)
+        const unexpectedNet = Math.round(unexpectedShare * 100) / 100
 
         // Late joiner reduction
         const existing = participants.filter(x => !x.joined_late)
