@@ -41,13 +41,16 @@ export default function Dashboard() {
   const kittyPct = totalCollected > 0 ? cashBalance / totalCollected : 0
   const cashAlert = cashPct !== null && cashPct <= 0.25 ? 'critical' : cashPct !== null && cashPct <= 0.5 ? 'warning' : null
 
-  const categoryBreakdown = expenses
-    .filter(e => !e.is_yacht_cost)
-    .reduce((acc, e) => {
-      const key = e.category
-      acc[key] = (acc[key] || 0) + getEurAmount(e)
-      return acc
-    }, {})
+  const otherExpenses = expenses.filter(e => !e.is_yacht_cost)
+  const paidExpenses = otherExpenses.filter(e => e.is_paid)
+  const unpaidExpenses = otherExpenses.filter(e => !e.is_paid)
+  const paidTotal = paidExpenses.reduce((s, e) => s + getEurAmount(e), 0)
+  const unpaidTotal = unpaidExpenses.reduce((s, e) => s + getEurAmount(e), 0)
+
+  const makeCatBreakdown = (list) => list.reduce((acc, e) => {
+    acc[e.category] = (acc[e.category] || 0) + getEurAmount(e)
+    return acc
+  }, {})
 
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316']
 
@@ -96,23 +99,43 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {/* Category breakdown */}
+          {/* Paid / Unpaid breakdown */}
           <AnimatePresence>
-            {showBreakdown && Object.keys(categoryBreakdown).length > 0 && (
+            {showBreakdown && otherExpenses.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden mt-3"
+                className="overflow-hidden mt-3 space-y-2"
               >
-                <div className="space-y-1.5">
-                  {Object.entries(categoryBreakdown).sort((a, b) => b[1] - a[1]).map(([cat, amt]) => (
-                    <div key={cat} className="flex items-center justify-between bg-white/10 rounded-xl px-3 py-2">
-                      <span className="text-blue-100 text-sm">{getCategoryIcon(cat)} {t('cat_' + cat)}</span>
-                      <span className="text-white font-semibold text-sm">{formatCurrency(amt, 'EUR')}</span>
+                {/* Paid */}
+                {paidExpenses.length > 0 && (
+                  <div>
+                    <p className="text-blue-200 text-xs font-semibold mb-1 px-1">✅ {isHe ? 'שולמו' : 'Paid'} · {formatCurrency(paidTotal, 'EUR')}</p>
+                    <div className="space-y-1">
+                      {Object.entries(makeCatBreakdown(paidExpenses)).sort((a, b) => b[1] - a[1]).map(([cat, amt]) => (
+                        <div key={cat} className="flex items-center justify-between bg-white/10 rounded-xl px-3 py-2">
+                          <span className="text-blue-100 text-sm">{getCategoryIcon(cat)} {t('cat_' + cat)}</span>
+                          <span className="text-white font-semibold text-sm">{formatCurrency(amt, 'EUR')}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
+                {/* Unpaid */}
+                {unpaidExpenses.length > 0 && (
+                  <div>
+                    <p className="text-blue-200 text-xs font-semibold mb-1 px-1">⏳ {isHe ? 'טרם שולמו' : 'Unpaid'} · {formatCurrency(unpaidTotal, 'EUR')}</p>
+                    <div className="space-y-1">
+                      {Object.entries(makeCatBreakdown(unpaidExpenses)).sort((a, b) => b[1] - a[1]).map(([cat, amt]) => (
+                        <div key={cat} className="flex items-center justify-between bg-amber-400/20 rounded-xl px-3 py-2">
+                          <span className="text-blue-100 text-sm">{getCategoryIcon(cat)} {t('cat_' + cat)}</span>
+                          <span className="text-amber-200 font-semibold text-sm">{formatCurrency(amt, 'EUR')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
