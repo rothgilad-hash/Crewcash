@@ -208,9 +208,13 @@ export default function Report() {
           return acc
         }, {})
 
-        // Overpay from round 1 collections only
+        // Overpay per round
         const round1Overpay = Math.round(
           round1Collections.filter(c => c.amount > (c.target_amount || 0))
+            .reduce((s, c) => s + c.amount - (c.target_amount || 0), 0) * 100
+        ) / 100
+        const round2Overpay = Math.round(
+          round2Collections.filter(c => c.amount > (c.target_amount || 0))
             .reduce((s, c) => s + c.amount - (c.target_amount || 0), 0) * 100
         ) / 100
 
@@ -422,6 +426,17 @@ export default function Report() {
                         <span className="text-sm font-semibold text-blue-600">{formatCurrency(c.amount, 'EUR')}</span>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* Kitty owes — round 2 overpay only */}
+                {round2Overpay > 0.5 && (
+                  <div className="border-t border-gray-100 px-4 py-3 space-y-1">
+                    <p className="text-xs font-semibold text-emerald-500 mb-1">✅ {isHe ? 'הקופה חייבת לו' : 'Kitty owes'}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">{isHe ? 'שילם יותר מהיעד' : 'Overpaid target'}</span>
+                      <span className="text-base font-black text-emerald-600">{formatCurrency(round2Overpay, 'EUR')}</span>
+                    </div>
                   </div>
                 )}
 
