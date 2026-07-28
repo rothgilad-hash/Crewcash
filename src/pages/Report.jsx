@@ -247,11 +247,11 @@ export default function Report() {
           getExpenseDate(e) > lastDate
         ) : []
         const postFull = Math.round(postPersonal.reduce((s, e) => s + getEurAmount(e), 0) * 100) / 100
-        const kittyOwedAmount = Math.round((overpay + prePersonalFull + postFull + unexpectedPersonalFull - kittyPaidBack) * 100) / 100
+        const kittyOwedAmount = Math.round((overpay + postFull + unexpectedPersonalFull - kittyPaidBack) * 100) / 100
         const kittyOwes = kittyOwedAmount > 0.5
 
-        // Collection is always equal — full share, no personal offset
-        const netToCollect = displayOwes
+        // netToCollect = full share minus pre-collection personal (100% deduction, not (N-1)/N)
+        const netToCollect = Math.round((displayOwes - prePersonalFull) * 100) / 100
 
         const lateJoinerNames = lateJoiners.map(x => x.name).join(', ')
 
@@ -297,8 +297,29 @@ export default function Report() {
                   <span className="text-sm font-bold text-emerald-600">−{formatCurrency(yachtReduction, 'EUR')}</span>
                 </div>
               )}
+              <div className="flex items-center justify-between border-t border-gray-100 pt-2">
+                <span className="text-sm font-bold text-gray-700">{isHe ? 'תשלום לקופה' : 'Owed to kitty'}</span>
+                <span className="text-sm font-black text-gray-900">{formatCurrency(displayOwes, 'EUR')}</span>
+              </div>
+              {prePersonalFull > 0.5 && (
+                <>
+                  <div className="pt-1">
+                    <p className="text-xs font-semibold text-gray-400 mb-1">{isHe ? 'הוציא מכיסו לפני הגיוס' : 'Paid personally before collection'}</p>
+                    {prePersonal.map(e => (
+                      <div key={e.id} className="flex items-center justify-between py-0.5 gap-2">
+                        <span className="text-xs text-gray-500 flex-1 min-w-0 truncate">{getCategoryIcon(e.category)} {e.description}</span>
+                        <span className="text-xs text-gray-400 flex-shrink-0">{formatCurrency(getEurAmount(e), 'EUR')}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-blue-600">{isHe ? 'הפחתה בגין הוצאה פרטית' : 'Deduction — personal payment'}</span>
+                    <span className="text-sm font-bold text-blue-600">−{formatCurrency(prePersonalFull, 'EUR')}</span>
+                  </div>
+                </>
+              )}
               <div className="flex items-center justify-between border-t-2 border-gray-200 pt-2">
-                <span className="text-sm font-black text-gray-800">{isHe ? 'תשלום לקופה' : 'Owed to kitty'}</span>
+                <span className="text-sm font-black text-gray-800">{isHe ? 'נטו לגיוס' : 'Net to collect'}</span>
                 <span className={`text-base font-black ${netToCollect > 0.5 ? 'text-red-500' : 'text-gray-400'}`}>
                   {netToCollect > 0.5 ? formatCurrency(netToCollect, 'EUR') : (isHe ? 'מסולק ✓' : 'Settled ✓')}
                 </span>
@@ -331,23 +352,6 @@ export default function Report() {
                     <span className="text-sm text-gray-600">{isHe ? '💰 שילם יותר מהיעד' : '💰 Overpaid target'}</span>
                     <span className="text-sm font-semibold text-emerald-600">{formatCurrency(overpay, 'EUR')}</span>
                   </div>
-                )}
-                {prePersonal.length > 0 && (
-                  <>
-                    <p className="text-xs font-semibold text-emerald-700 mt-1">{isHe ? 'הוצאות מכיס לפני הגיוס' : 'Personal expenses before collection'}</p>
-                    {prePersonal.map(e => (
-                      <div key={e.id} className="flex items-center justify-between py-0.5 gap-2">
-                        <span className="text-xs text-gray-600 flex-1 min-w-0 truncate">{getCategoryIcon(e.category)} {e.description}</span>
-                        <span className="text-xs text-gray-500 flex-shrink-0">{formatCurrency(getEurAmount(e), 'EUR')}</span>
-                      </div>
-                    ))}
-                    {prePersonalFull > 0.5 && (
-                      <div className="flex items-center justify-between pt-0.5">
-                        <span className="text-xs text-emerald-600">{isHe ? 'סה"כ לפני הגיוס' : 'Total before collection'}</span>
-                        <span className="text-sm font-semibold text-emerald-600">{formatCurrency(prePersonalFull, 'EUR')}</span>
-                      </div>
-                    )}
-                  </>
                 )}
                 {postPersonal.length > 0 && (
                   <>

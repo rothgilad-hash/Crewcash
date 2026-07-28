@@ -70,7 +70,7 @@ export default function Participants() {
     if (hasCollections) {
       const collDebt = Math.round(getCollectionDebt(kittyCollections, p.id) * 100) / 100
       if (collDebt > 0.5) return collDebt
-      // Fully settled from first collection — compute equal share of unexpected expenses only
+      // Fully settled from first collection — equal share of unexpected expenses only
       const unexpectedTotal = expenses
         .filter(e => !e.is_yacht_cost && e.is_unexpected)
         .reduce((s, e) => s + getEurAmount(e), 0)
@@ -78,7 +78,11 @@ export default function Participants() {
     }
 
     const b = balances[p.id] || { owes: 0 }
-    return Math.max(0, Math.round(b.owes * 100) / 100)
+    const lastDate = getLastCollectionDate(kittyCollections, p.id)
+    const prePersonalFull = expenses
+      .filter(e => e.paid_by === p.id && !e.is_yacht_cost && (!lastDate || getExpenseDate(e) <= lastDate))
+      .reduce((s, e) => s + getEurAmount(e), 0)
+    return Math.max(0, Math.round((b.owes - prePersonalFull) * 100) / 100)
   }
 
   const openGroupCollect = () => {
@@ -172,15 +176,15 @@ export default function Participants() {
             const lastDate = getLastCollectionDate(kittyCollections, p.id)
             const N = participants.length
             const hasCollections = kittyCollections.some(c => c.participant_id === p.id)
-            const remaining = hasCollections
-              ? collDebt
-              : Math.round(b.owes * 100) / 100
-            const overpay = getCollectionOverpayment(kittyCollections, p.id)
-            const postFull = getPostCollectionNet(expenses, p.id, lastDate)
             const prePersonalFull = expenses
               .filter(e => e.paid_by === p.id && !e.is_yacht_cost && (!lastDate || getExpenseDate(e) <= lastDate))
               .reduce((s, e) => s + getEurAmount(e), 0)
-            const kittyOwedAmount = Math.round((overpay + prePersonalFull + postFull - kittyPaidBack) * 100) / 100
+            const remaining = hasCollections
+              ? collDebt
+              : Math.round((b.owes - prePersonalFull) * 100) / 100
+            const overpay = getCollectionOverpayment(kittyCollections, p.id)
+            const postFull = getPostCollectionNet(expenses, p.id, lastDate)
+            const kittyOwedAmount = Math.round((overpay + postFull - kittyPaidBack) * 100) / 100
             const kittyOwes = kittyOwedAmount > 0.5
             const settled = !kittyOwes && remaining <= 0.5 && collDebt <= 0.5
             const color = COLORS[i % COLORS.length]
@@ -377,6 +381,10 @@ export default function Participants() {
               </div>
               {participants.map((p, i) => {
                 const b = balances[p.id] || { owes: 0, paid: 0 }
+                const lastDateG = getLastCollectionDate(kittyCollections, p.id)
+                const prePersonalFullG = expenses
+                  .filter(e => e.paid_by === p.id && !e.is_yacht_cost && (!lastDateG || getExpenseDate(e) <= lastDateG))
+                  .reduce((s, e) => s + getEurAmount(e), 0)
                 return (
                   <div key={p.id} className={`flex items-center gap-1 px-3 py-2.5 ${i > 0 ? 'border-t border-gray-50' : ''}`}>
                     <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
@@ -387,7 +395,7 @@ export default function Participants() {
                       <p className="text-sm font-semibold text-gray-800">{p.name}</p>
                     </div>
                     <div className="w-16 text-center text-xs text-gray-400 font-medium">
-                      {formatCurrency(Math.max(0, b.owes), 'EUR')}
+                      {formatCurrency(Math.max(0, b.owes - prePersonalFullG), 'EUR')}
                     </div>
                     <input type="number" inputMode="decimal"
                       className="w-16 border-2 border-gray-200 rounded-xl px-1 py-1.5 text-xs font-semibold text-gray-900 bg-white focus:outline-none focus:border-purple-500 text-center"
