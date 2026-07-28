@@ -221,102 +221,60 @@ export default function Report() {
 
         const lateJoinerNames = lateJoiners.map(x => x.name).join(', ')
 
+        const kittyOwedRound1 = Math.round((overpay + postFull - kittyPaidBack) * 100) / 100
+        const kittyOwesRound1 = kittyOwedRound1 > 0.5
+        const kittyOwesRound2 = unexpectedPersonalNet > 0.5
+
         return (
           <motion.div key={p.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
             className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
 
-            {/* Header */}
+            {/* Name header */}
             <div className="p-4 flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-base flex-shrink-0"
                 style={{ backgroundColor: COLORS[i % COLORS.length] }}>
                 {p.name.charAt(0)}
               </div>
               <div className="flex-1">
-                <p className="font-bold text-gray-900">{p.name}{p.is_gil ? ' ⭐' : ''}{p.joined_late ? ' ⏰' : ''}</p>
-                <p className={`text-sm font-semibold ${netToCollect > 0.5 ? 'text-red-500' : kittyOwes ? 'text-emerald-500' : 'text-gray-400'}`}>
-                  {netToCollect > 0.5
-                    ? `${isHe ? 'נטו לגיוס' : 'Net to collect'}: ${formatCurrency(netToCollect, 'EUR')}`
-                    : kittyOwes
-                    ? `${isHe ? 'הקופה חייבת לו' : 'Kitty owes'}: ${formatCurrency(kittyOwedAmount, 'EUR')}`
-                    : (isHe ? 'מסולק ✓' : 'Settled ✓')}
-                </p>
+                <p className="font-bold text-gray-900 text-base">{p.name}{p.is_gil ? ' ⭐' : ''}{p.joined_late ? ' ⏰' : ''}</p>
               </div>
             </div>
 
-            {/* Expense breakdown */}
-            <div className="border-t border-gray-100 px-4 py-3 space-y-1.5">
-              <p className="text-xs font-semibold text-gray-400 mb-2">{isHe ? 'חלקו בהוצאות השוטפות' : 'Share of running expenses'}</p>
-              {Object.entries(categoryBreakdown).sort((a, c) => c[1] - a[1]).map(([cat, amt]) => (
-                <div key={cat} className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">{getCategoryIcon(cat)} {t('cat_' + cat)}</span>
-                  <span className="text-sm font-semibold text-gray-800">{formatCurrency(amt, 'EUR')}</span>
-                </div>
-              ))}
-              <div className="flex items-center justify-between border-t border-gray-100 pt-2">
-                <span className="text-sm text-gray-500">{isHe ? 'סה״כ' : 'Subtotal'}</span>
-                <span className="text-sm font-bold text-gray-800">{formatCurrency(runningShare, 'EUR')}</span>
+            {/* ── סבב 1 — גיוס ראשון ── */}
+            <div className="border-t-2 border-blue-100">
+              <div className="bg-blue-50 px-4 py-2">
+                <p className="text-xs font-bold text-blue-500">📋 {isHe ? 'סבב 1 — גיוס ראשון' : 'Round 1 — First Collection'}</p>
               </div>
-              {yachtReduction > 0 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-emerald-600">⏰ {isHe ? `הפחתה — ${lateJoinerNames} הצטרף מאוחר` : `Reduction — ${lateJoinerNames} joined late`}</span>
-                  <span className="text-sm font-bold text-emerald-600">−{formatCurrency(yachtReduction, 'EUR')}</span>
-                </div>
-              )}
-              <div className="flex items-center justify-between border-t border-gray-100 pt-2">
-                <span className="text-sm font-bold text-gray-700">{isHe ? 'תשלום לקופה' : 'Owed to kitty'}</span>
-                <span className="text-sm font-black text-gray-900">{formatCurrency(displayOwes, 'EUR')}</span>
-              </div>
-              {prePersonalFull > 0.5 && (
-                <>
-                  <div className="pt-1">
-                    <p className="text-xs font-semibold text-gray-400 mb-1">{isHe ? 'הוציא מכיסו לפני הגיוס' : 'Paid personally before collection'}</p>
-                    {prePersonal.map(e => (
-                      <div key={e.id} className="flex items-center justify-between py-0.5 gap-2">
-                        <span className="text-xs text-gray-500 flex-1 min-w-0 truncate">{getCategoryIcon(e.category)} {e.description}</span>
-                        <span className="text-xs text-gray-400 flex-shrink-0">{formatCurrency(getEurAmount(e), 'EUR')}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-blue-600">{isHe ? 'הפחתה בגין הוצאה פרטית' : 'Deduction — personal payment'}</span>
-                    <span className="text-sm font-bold text-blue-600">−{formatCurrency(prePersonalFull, 'EUR')}</span>
-                  </div>
-                </>
-              )}
-              <div className="flex items-center justify-between border-t-2 border-gray-200 pt-2">
-                <span className="text-sm font-black text-gray-800">{isHe ? 'נטו לגיוס' : 'Net to collect'}</span>
-                <span className={`text-base font-black ${netToCollect > 0.5 ? 'text-red-500' : 'text-gray-400'}`}>
-                  {netToCollect > 0.5 ? formatCurrency(netToCollect, 'EUR') : (isHe ? 'מסולק ✓' : 'Settled ✓')}
-                </span>
-              </div>
-            </div>
 
-            {/* Unexpected expenses — standalone second-collection block */}
-            {unexpectedTotal > 0.5 && (
-              <div className="border-t-2 border-orange-300 px-4 py-3 bg-orange-50 space-y-1.5">
-                <p className="text-xs font-bold text-orange-500 mb-2">⚡ {isHe ? 'גיוס שני — הוצאות לא צפויות' : 'Second Collection — Unexpected'}</p>
-
-                {/* Per-expense share */}
-                {unexpectedExpenses.map(e => (
-                  <div key={e.id} className="flex items-center justify-between gap-2">
-                    <span className="text-xs text-gray-500 flex-1 min-w-0 truncate">{getCategoryIcon(e.category)} {e.description}</span>
-                    <span className="text-xs text-gray-400">{formatCurrency(getEurAmount(e) / N, 'EUR')}</span>
+              {/* Expense breakdown */}
+              <div className="px-4 py-3 space-y-1.5">
+                <p className="text-xs font-semibold text-gray-400 mb-1">{isHe ? 'חלק בהוצאות השוטפות' : 'Share of running expenses'}</p>
+                {Object.entries(categoryBreakdown).sort((a, c) => c[1] - a[1]).map(([cat, amt]) => (
+                  <div key={cat} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">{getCategoryIcon(cat)} {t('cat_' + cat)}</span>
+                    <span className="text-sm font-semibold text-gray-800">{formatCurrency(amt, 'EUR')}</span>
                   </div>
                 ))}
-
-                {/* Subtotal share */}
-                <div className="flex items-center justify-between border-t border-orange-200 pt-1">
-                  <span className="text-sm font-bold text-orange-700">{isHe ? 'חלק בהוצאות' : 'Share of expenses'}</span>
-                  <span className="text-sm font-black text-orange-700">{formatCurrency(unexpectedShare, 'EUR')}</span>
+                <div className="flex items-center justify-between border-t border-gray-100 pt-2">
+                  <span className="text-sm text-gray-500">{isHe ? 'סה״כ' : 'Subtotal'}</span>
+                  <span className="text-sm font-bold text-gray-800">{formatCurrency(runningShare, 'EUR')}</span>
                 </div>
-
-                {/* Personal payment deduction */}
-                {unexpectedPersonal.length > 0 && (
+                {yachtReduction > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-emerald-600">⏰ {isHe ? `הפחתה — ${lateJoinerNames} הצטרף מאוחר` : `Reduction — ${lateJoinerNames} joined late`}</span>
+                    <span className="text-sm font-bold text-emerald-600">−{formatCurrency(yachtReduction, 'EUR')}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between border-t border-gray-100 pt-2">
+                  <span className="text-sm font-bold text-gray-700">{isHe ? 'תשלום לקופה' : 'Owed to kitty'}</span>
+                  <span className="text-sm font-black text-gray-900">{formatCurrency(displayOwes, 'EUR')}</span>
+                </div>
+                {prePersonalFull > 0.5 && (
                   <>
-                    <div className="pt-1">
-                      <p className="text-xs font-semibold text-gray-400 mb-1">{isHe ? 'הוציא מכיסו' : 'Paid personally'}</p>
-                      {unexpectedPersonal.map(e => (
+                    <div className="pt-0.5">
+                      <p className="text-xs font-semibold text-gray-400 mb-1">{isHe ? 'הוציא מכיסו לפני הגיוס' : 'Paid personally before collection'}</p>
+                      {prePersonal.map(e => (
                         <div key={e.id} className="flex items-center justify-between py-0.5 gap-2">
                           <span className="text-xs text-gray-500 flex-1 min-w-0 truncate">{getCategoryIcon(e.category)} {e.description}</span>
                           <span className="text-xs text-gray-400 flex-shrink-0">{formatCurrency(getEurAmount(e), 'EUR')}</span>
@@ -325,94 +283,130 @@ export default function Report() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-blue-600">{isHe ? 'הפחתה בגין הוצאה פרטית' : 'Deduction — personal payment'}</span>
-                      <span className="text-sm font-bold text-blue-600">−{formatCurrency(unexpectedPersonalNet, 'EUR')}</span>
+                      <span className="text-sm font-bold text-blue-600">−{formatCurrency(prePersonalFull, 'EUR')}</span>
                     </div>
                   </>
                 )}
-
-                {/* Net for second collection */}
-                <div className="flex items-center justify-between border-t-2 border-orange-300 pt-2">
-                  <span className="text-sm font-black text-orange-800">{isHe ? 'נטו לגיוס שני' : 'Net for 2nd collection'}</span>
-                  <span className={`text-base font-black ${unexpectedNet > 0.5 ? 'text-orange-600' : 'text-gray-400'}`}>
-                    {unexpectedNet > 0.5 ? formatCurrency(unexpectedNet, 'EUR') : (isHe ? 'מסולק ✓' : 'Settled ✓')}
+                <div className="flex items-center justify-between border-t-2 border-blue-200 pt-2">
+                  <span className="text-sm font-black text-gray-800">{isHe ? 'נטו לגיוס' : 'Net to collect'}</span>
+                  <span className={`text-base font-black ${netToCollect > 0.5 ? 'text-red-500' : 'text-blue-500'}`}>
+                    {netToCollect > 0.5 ? formatCurrency(netToCollect, 'EUR') : (isHe ? 'מסולק ✓' : 'Settled ✓')}
                   </span>
                 </div>
               </div>
-            )}
 
-            {/* Kitty owes — pre-collection, post-collection, overpayment */}
-            {kittyOwes && (
-              <div className="border-t border-gray-100 px-4 py-3 bg-emerald-50 space-y-1">
-                <p className="text-xs font-semibold text-emerald-600 mb-1">{isHe ? 'הקופה חייבת לו' : 'Kitty owes them'}</p>
-                {overpay > 0.5 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">{isHe ? '💰 שילם יותר מהיעד' : '💰 Overpaid target'}</span>
-                    <span className="text-sm font-semibold text-emerald-600">{formatCurrency(overpay, 'EUR')}</span>
-                  </div>
-                )}
-                {postPersonal.length > 0 && (
-                  <>
-                    <p className="text-xs font-semibold text-emerald-700 mt-1">{isHe ? 'הוצאות מכיס לאחר הגיוס' : 'Personal expenses after collection'}</p>
-                    {postPersonal.map(e => (
-                      <div key={e.id} className="flex items-center justify-between py-0.5 gap-2">
-                        <span className="text-xs text-gray-600 flex-1 min-w-0 truncate">{getCategoryIcon(e.category)} {e.description}</span>
-                        <span className="text-xs text-gray-500 flex-shrink-0">{formatCurrency(getEurAmount(e), 'EUR')}</span>
-                      </div>
-                    ))}
-                    {postFull > 0.5 && (
-                      <div className="flex items-center justify-between pt-0.5">
-                        <span className="text-xs text-emerald-600">{isHe ? 'סה"כ אחרי הגיוס' : 'Total after collection'}</span>
-                        <span className="text-sm font-semibold text-emerald-600">{formatCurrency(postFull, 'EUR')}</span>
-                      </div>
-                    )}
-                  </>
-                )}
-                {unexpectedPersonalNet > 0.5 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">⚡ {isHe ? 'הוצאות לא צפויות (נטו)' : 'Unexpected expenses (net)'}</span>
-                    <span className="text-sm font-semibold text-emerald-600">{formatCurrency(unexpectedPersonalNet, 'EUR')}</span>
-                  </div>
-                )}
-                <div className="flex items-center justify-between border-t border-emerald-200 pt-1">
-                  <span className="text-sm font-bold text-emerald-700">{isHe ? 'סה״כ להחזר' : 'Total to refund'}</span>
-                  <span className="text-base font-black text-emerald-600">{formatCurrency(kittyOwedAmount, 'EUR')}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Collections */}
-            {myCollections.length > 0 && (() => {
-              const totalTarget = myCollections.reduce((s, c) => s + (c.target_amount || 0), 0)
-              const treasurerApproved = totalTarget > 0 && totalTarget < netToCollect - 0.5
-              return (
-                <div className="border-t border-gray-100 px-4 py-3 space-y-1.5">
-                  <p className="text-xs font-semibold text-gray-400 mb-1">{isHe ? 'גיוסים' : 'Collections'}</p>
+              {/* Collections for round 1 */}
+              {myCollections.length > 0 && (
+                <div className="border-t border-blue-100 bg-blue-50/50 px-4 py-3 space-y-1.5">
+                  <p className="text-xs font-semibold text-blue-400 mb-1">💰 {isHe ? 'גיוסים' : 'Collections'}</p>
                   {myCollections.map(c => (
                     <div key={c.id} className="flex items-center justify-between gap-2">
-                      <span className="text-sm text-gray-500 flex-shrink-0">💰 {c.round_name}{c.collected_at ? ` · ${new Date(c.collected_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}` : ''}</span>
+                      <span className="text-sm text-gray-600 flex-shrink-0">{c.round_name}{c.collected_at ? ` · ${new Date(c.collected_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}` : ''}</span>
                       <span className="text-sm font-semibold text-blue-600">{formatCurrency(c.amount, 'EUR')}</span>
                     </div>
                   ))}
-                  {treasurerApproved && (
-                    <p className="text-xs text-amber-500 font-medium pt-0.5">{isHe ? 'באישור הגזבר' : 'treasurer approved'}</p>
-                  )}
                 </div>
-              )
-            })()}
+              )}
 
-            {/* Refunds */}
-            {refunds.length > 0 && (
-              <div className="border-t border-gray-100 px-4 py-3 space-y-2">
-                <p className="text-xs font-semibold text-gray-400">{isHe ? 'החזרים מהקופה' : 'Kitty refunds'}</p>
-                {refunds.map((r, ri) => (
-                  <div key={r.id} className="space-y-1">
+              {/* Kitty owes — round 1 (overpay + post-collection personal) */}
+              {kittyOwesRound1 && (
+                <div className="border-t border-emerald-100 bg-emerald-50 px-4 py-3 space-y-1">
+                  <p className="text-xs font-semibold text-emerald-600 mb-1">✅ {isHe ? 'הקופה חייבת לו' : 'Kitty owes'}</p>
+                  {overpay > 0.5 && (
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">{isHe ? `החזר ${ri + 1}` : `Refund ${ri + 1}`}{r.created_at && <span className="text-gray-400 text-xs ms-2">{new Date(r.created_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}</span>}</span>
-                      <span className="text-sm font-semibold text-emerald-600">{formatCurrency(r.amount, 'EUR')}</span>
+                      <span className="text-sm text-gray-600">{isHe ? 'שילם יותר מהיעד' : 'Overpaid target'}</span>
+                      <span className="text-sm font-semibold text-emerald-600">{formatCurrency(overpay, 'EUR')}</span>
                     </div>
-                    {r.signature && <div className="border border-gray-100 rounded-xl overflow-hidden"><img src={r.signature} alt="signature" className="w-full max-h-20 object-contain" /></div>}
+                  )}
+                  {postPersonal.length > 0 && (
+                    <>
+                      <p className="text-xs font-semibold text-gray-400 mt-1">{isHe ? 'הוצאות מכיס לאחר הגיוס' : 'Personal expenses after collection'}</p>
+                      {postPersonal.map(e => (
+                        <div key={e.id} className="flex items-center justify-between py-0.5 gap-2">
+                          <span className="text-xs text-gray-600 flex-1 min-w-0 truncate">{getCategoryIcon(e.category)} {e.description}</span>
+                          <span className="text-xs text-gray-500 flex-shrink-0">{formatCurrency(getEurAmount(e), 'EUR')}</span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  <div className="flex items-center justify-between border-t border-emerald-200 pt-1">
+                    <span className="text-sm font-bold text-emerald-700">{isHe ? 'סה״כ להחזר' : 'Total to refund'}</span>
+                    <span className="text-base font-black text-emerald-600">{formatCurrency(kittyOwedRound1, 'EUR')}</span>
                   </div>
-                ))}
+                </div>
+              )}
+
+              {/* Refunds + signatures */}
+              {refunds.length > 0 && (
+                <div className="border-t border-gray-100 px-4 py-3 space-y-2">
+                  <p className="text-xs font-semibold text-gray-400">💸 {isHe ? 'החזרים מהקופה' : 'Kitty refunds'}</p>
+                  {refunds.map((r, ri) => (
+                    <div key={r.id} className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-500">{isHe ? `החזר ${ri + 1}` : `Refund ${ri + 1}`}{r.created_at && <span className="text-gray-400 text-xs ms-2">{new Date(r.created_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}</span>}</span>
+                        <span className="text-sm font-semibold text-emerald-600">{formatCurrency(r.amount, 'EUR')}</span>
+                      </div>
+                      {r.signature && <div className="border border-gray-100 rounded-xl overflow-hidden"><img src={r.signature} alt="signature" className="w-full max-h-20 object-contain" /></div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── סבב 2 — גיוס שני (רק אם יש הוצאות לא צפויות) ── */}
+            {unexpectedTotal > 0.5 && (
+              <div className="border-t-2 border-orange-200">
+                <div className="bg-orange-50 px-4 py-2">
+                  <p className="text-xs font-bold text-orange-500">⚡ {isHe ? 'סבב 2 — גיוס שני' : 'Round 2 — Second Collection'}</p>
+                </div>
+
+                <div className="px-4 py-3 space-y-1.5 bg-orange-50/30">
+                  <p className="text-xs font-semibold text-gray-400 mb-1">{isHe ? 'חלק בהוצאות הלא צפויות' : 'Share of unexpected expenses'}</p>
+                  {unexpectedExpenses.map(e => (
+                    <div key={e.id} className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-gray-500 flex-1 min-w-0 truncate">{getCategoryIcon(e.category)} {e.description}</span>
+                      <span className="text-xs text-gray-400">{formatCurrency(getEurAmount(e) / N, 'EUR')}</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between border-t border-orange-100 pt-2">
+                    <span className="text-sm font-bold text-gray-700">{isHe ? 'תשלום לקופה' : 'Owed to kitty'}</span>
+                    <span className="text-sm font-black text-gray-900">{formatCurrency(unexpectedShare, 'EUR')}</span>
+                  </div>
+                  {unexpectedPersonal.length > 0 && (
+                    <>
+                      <div className="pt-0.5">
+                        <p className="text-xs font-semibold text-gray-400 mb-1">{isHe ? 'הוציא מכיסו' : 'Paid personally'}</p>
+                        {unexpectedPersonal.map(e => (
+                          <div key={e.id} className="flex items-center justify-between py-0.5 gap-2">
+                            <span className="text-xs text-gray-500 flex-1 min-w-0 truncate">{getCategoryIcon(e.category)} {e.description}</span>
+                            <span className="text-xs text-gray-400 flex-shrink-0">{formatCurrency(getEurAmount(e), 'EUR')}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-blue-600">{isHe ? 'הפחתה בגין הוצאה פרטית' : 'Deduction — personal payment'}</span>
+                        <span className="text-sm font-bold text-blue-600">−{formatCurrency(unexpectedPersonalNet, 'EUR')}</span>
+                      </div>
+                    </>
+                  )}
+                  <div className="flex items-center justify-between border-t-2 border-orange-300 pt-2">
+                    <span className="text-sm font-black text-gray-800">{isHe ? 'נטו לגיוס שני' : 'Net for 2nd collection'}</span>
+                    <span className={`text-base font-black ${unexpectedNet > 0.5 ? 'text-orange-600' : 'text-orange-400'}`}>
+                      {unexpectedNet > 0.5 ? formatCurrency(unexpectedNet, 'EUR') : (isHe ? 'מסולק ✓' : 'Settled ✓')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Kitty owes for round 2 */}
+                {kittyOwesRound2 && (
+                  <div className="border-t border-emerald-100 bg-emerald-50 px-4 py-3 space-y-1">
+                    <p className="text-xs font-semibold text-emerald-600 mb-1">✅ {isHe ? 'הקופה חייבת לו (גיוס שני)' : 'Kitty owes (round 2)'}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">⚡ {isHe ? 'הוצאה לא צפויה ששילם (נטו)' : 'Unexpected expense paid (net)'}</span>
+                      <span className="text-sm font-semibold text-emerald-600">{formatCurrency(unexpectedPersonalNet, 'EUR')}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </motion.div>
