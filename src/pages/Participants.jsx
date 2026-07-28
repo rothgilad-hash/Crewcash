@@ -184,7 +184,12 @@ export default function Participants() {
               : Math.round((b.owes - prePersonalFull) * 100) / 100
             const overpay = getCollectionOverpayment(kittyCollections, p.id)
             const postFull = getPostCollectionNet(expenses, p.id, lastDate)
-            const kittyOwedAmount = Math.round((overpay + postFull - kittyPaidBack) * 100) / 100
+            const unexpectedPersonalNet = N > 0
+              ? expenses
+                  .filter(e => e.paid_by === p.id && !e.is_yacht_cost && e.is_unexpected)
+                  .reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0)
+              : 0
+            const kittyOwedAmount = Math.round((overpay + postFull + unexpectedPersonalNet - kittyPaidBack) * 100) / 100
             const kittyOwes = kittyOwedAmount > 0.5
             const settled = !kittyOwes && remaining <= 0.5 && collDebt <= 0.5
             const color = COLORS[i % COLORS.length]

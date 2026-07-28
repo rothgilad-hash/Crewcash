@@ -181,14 +181,13 @@ export default function Report() {
           prePersonal.reduce((s, e) => s + getEurAmount(e), 0) * 100
         ) / 100
 
-        // Unexpected expenses — everyone pays equal share, personal payers get full refund
+        // Unexpected expenses — equal share for 2nd collection; personal payers get (N-1)/N refund
         const unexpectedShare = Math.round(unexpectedTotal / N * 100) / 100
-        const unexpectedPersonalFull = Math.round(
-          unexpectedExpenses
-            .filter(e => e.paid_by === p.id)
-            .reduce((s, e) => s + getEurAmount(e), 0) * 100
+        const unexpectedPersonal = unexpectedExpenses.filter(e => e.paid_by === p.id)
+        const unexpectedPersonalNet = Math.round(
+          unexpectedPersonal.reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0) * 100
         ) / 100
-        const unexpectedNet = unexpectedShare
+        const unexpectedNet = Math.max(0, Math.round((unexpectedShare - unexpectedPersonalNet) * 100) / 100)
 
         // Late joiner reduction
         const existing = participants.filter(x => !x.joined_late)
@@ -214,7 +213,7 @@ export default function Report() {
           getExpenseDate(e) > lastDate
         ) : []
         const postFull = Math.round(postPersonal.reduce((s, e) => s + getEurAmount(e), 0) * 100) / 100
-        const kittyOwedAmount = Math.round((overpay + postFull + unexpectedPersonalFull - kittyPaidBack) * 100) / 100
+        const kittyOwedAmount = Math.round((overpay + postFull + unexpectedPersonalNet - kittyPaidBack) * 100) / 100
         const kittyOwes = kittyOwedAmount > 0.5
 
         // netToCollect = full share minus pre-collection personal (100% deduction, not (N-1)/N)
@@ -293,19 +292,50 @@ export default function Report() {
               </div>
             </div>
 
-            {/* Unexpected expenses — second collection (equal share for everyone) */}
+            {/* Unexpected expenses — standalone second-collection block */}
             {unexpectedTotal > 0.5 && (
-              <div className="border-t border-orange-200 px-4 py-3 bg-orange-50 space-y-1.5">
-                <p className="text-xs font-semibold text-orange-500 mb-1">⚡ {isHe ? 'הוצאות לא צפויות' : 'Unexpected expenses'}</p>
+              <div className="border-t-2 border-orange-300 px-4 py-3 bg-orange-50 space-y-1.5">
+                <p className="text-xs font-bold text-orange-500 mb-2">⚡ {isHe ? 'גיוס שני — הוצאות לא צפויות' : 'Second Collection — Unexpected'}</p>
+
+                {/* Per-expense share */}
                 {unexpectedExpenses.map(e => (
                   <div key={e.id} className="flex items-center justify-between gap-2">
                     <span className="text-xs text-gray-500 flex-1 min-w-0 truncate">{getCategoryIcon(e.category)} {e.description}</span>
                     <span className="text-xs text-gray-400">{formatCurrency(getEurAmount(e) / N, 'EUR')}</span>
                   </div>
                 ))}
+
+                {/* Subtotal share */}
                 <div className="flex items-center justify-between border-t border-orange-200 pt-1">
-                  <span className="text-sm font-black text-orange-700">{isHe ? 'חלק בגיוס שני' : 'Second collection share'}</span>
-                  <span className="text-base font-black text-orange-600">{formatCurrency(unexpectedNet, 'EUR')}</span>
+                  <span className="text-sm font-bold text-orange-700">{isHe ? 'חלק בהוצאות' : 'Share of expenses'}</span>
+                  <span className="text-sm font-black text-orange-700">{formatCurrency(unexpectedShare, 'EUR')}</span>
+                </div>
+
+                {/* Personal payment deduction */}
+                {unexpectedPersonal.length > 0 && (
+                  <>
+                    <div className="pt-1">
+                      <p className="text-xs font-semibold text-gray-400 mb-1">{isHe ? 'הוציא מכיסו' : 'Paid personally'}</p>
+                      {unexpectedPersonal.map(e => (
+                        <div key={e.id} className="flex items-center justify-between py-0.5 gap-2">
+                          <span className="text-xs text-gray-500 flex-1 min-w-0 truncate">{getCategoryIcon(e.category)} {e.description}</span>
+                          <span className="text-xs text-gray-400 flex-shrink-0">{formatCurrency(getEurAmount(e), 'EUR')}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-blue-600">{isHe ? 'הפחתה בגין הוצאה פרטית' : 'Deduction — personal payment'}</span>
+                      <span className="text-sm font-bold text-blue-600">−{formatCurrency(unexpectedPersonalNet, 'EUR')}</span>
+                    </div>
+                  </>
+                )}
+
+                {/* Net for second collection */}
+                <div className="flex items-center justify-between border-t-2 border-orange-300 pt-2">
+                  <span className="text-sm font-black text-orange-800">{isHe ? 'נטו לגיוס שני' : 'Net for 2nd collection'}</span>
+                  <span className={`text-base font-black ${unexpectedNet > 0.5 ? 'text-orange-600' : 'text-gray-400'}`}>
+                    {unexpectedNet > 0.5 ? formatCurrency(unexpectedNet, 'EUR') : (isHe ? 'מסולק ✓' : 'Settled ✓')}
+                  </span>
                 </div>
               </div>
             )}

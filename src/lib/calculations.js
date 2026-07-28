@@ -12,10 +12,11 @@ export function getLastCollectionDate(kittyCollections, participantId) {
 }
 
 // Full amount kitty owes for post-collection personal expenses (no offset — kitty refunds 100%)
+// Excludes unexpected expenses, which are handled separately with (N-1)/N logic
 export function getPostCollectionNet(expenses, participantId, lastCollectionDate) {
   if (!lastCollectionDate) return 0
   return expenses
-    .filter(e => e.paid_by === participantId && !e.is_yacht_cost)
+    .filter(e => e.paid_by === participantId && !e.is_yacht_cost && !e.is_unexpected)
     .filter(e => getExpenseDate(e) > lastCollectionDate)
     .reduce((s, e) => s + getEurAmount(e), 0)
 }

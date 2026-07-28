@@ -51,8 +51,14 @@ export default function Debts() {
     const overpay = getCollectionOverpayment(kittyCollections, p.id)
     const lastDate = getLastCollectionDate(kittyCollections, p.id)
     const postFull = getPostCollectionNet(expenses, p.id, lastDate)
+    const N = participants.length
+    const unexpectedPersonalNet = N > 0
+      ? expenses
+          .filter(e => e.paid_by === p.id && !e.is_yacht_cost && e.is_unexpected)
+          .reduce((s, e) => s + getEurAmount(e) * (N - 1) / N, 0)
+      : 0
     const refunded = getKittyPaidBack(p.id)
-    return Math.round((overpay + postFull - refunded) * 100) / 100
+    return Math.round((overpay + postFull + unexpectedPersonalNet - refunded) * 100) / 100
   }
 
   const owesKitty = participants.filter(p => getRemaining(p) > 0.5)
