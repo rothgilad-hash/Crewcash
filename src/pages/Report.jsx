@@ -1,15 +1,59 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { calculateBalances, formatCurrency, getCategoryIcon, getEurAmount, getExpenseDate, getCollectedAmount, getCollectionOverpayment, getLastCollectionDate, getPostCollectionNet } from '../lib/calculations'
 import { motion } from 'framer-motion'
 import { FileText } from 'lucide-react'
+import { supabase } from '../lib/supabase'
+import Modal from '../components/Modal'
+import SignaturePad from '../components/SignaturePad'
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316']
 
 export default function Report() {
   const { t } = useTranslation()
-  const { participants, expenses, kittyRefunds, kittyCollections, lang } = useApp()
+  const { participants, expenses, kittyRefunds, kittyCollections, lang, isAdmin, reloadRefunds } = useApp()
   const isHe = lang === 'he'
+
+  const [editRefund, setEditRefund] = useState(null) // { refund, name }
+  const [editAmount, setEditAmount] = useState('')
+  const [editSaving, setEditSaving] = useState(false)
+  const [sigOpen, setSigOpen] = useState(false)
+  const [sigTarget, setSigTarget] = useState(null)
+
+  const openEditRefund = (r, name) => {
+    setEditRefund({ refund: r, name })
+    setEditAmount(String(r.amount))
+  }
+
+  const handleDeleteRefund = async () => {
+    if (!editRefund) return
+    setEditSaving(true)
+    await supabase.from('kitty_refunds').delete().eq('id', editRefund.refund.id)
+    reloadRefunds(participants.map(p => p.id))
+    setEditRefund(null)
+    setEditSaving(false)
+  }
+
+  const handleSaveEditRefund = async () => {
+    if (!editRefund) return
+    const amt = parseFloat(editAmount) || 0
+    setEditSaving(true)
+    await supabase.from('kitty_refunds').update({ amount: amt, signature: null }).eq('id', editRefund.refund.id)
+    reloadRefunds(participants.map(p => p.id))
+    setEditRefund(null)
+    setEditSaving(false)
+    setSigTarget({ refundId: editRefund.refund.id, name: editRefund.name, amount: amt })
+    setSigOpen(true)
+  }
+
+  const handleSaveSignature = async (dataUrl) => {
+    if (!sigTarget?.refundId) return
+    await supabase.from('kitty_refunds').update({ signature: dataUrl }).eq('id', sigTarget.refundId)
+    reloadRefunds(participants.map(p => p.id))
+    setSigOpen(false)
+    setSigTarget(null)
+  }
   const balances = calculateBalances(expenses, participants)
 
   const getRefunds = (pid) => kittyRefunds.filter(r => r.participant_id === pid)
@@ -364,7 +408,7 @@ export default function Report() {
                   {refunds.length > 0 && (
                     <div className="space-y-2 pt-1">
                       {refunds.map((r, ri) => (
-                        <div key={r.id} className="space-y-1">
+                        <div key={r.id} className="space-y-1" onClick={() => isAdmin && openEditRefund(r, p.name)} style={isAdmin ? { cursor: 'pointer' } : {}}>
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-gray-500">💸 {isHe ? `החזר ${ri + 1}` : `Refund ${ri + 1}`}{r.created_at && <span className="text-gray-400 text-xs ms-2">{new Date(r.created_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}</span>}</span>
                             <span className="text-sm font-semibold text-emerald-600">{formatCurrency(r.amount, 'EUR')}</span>
@@ -461,7 +505,7 @@ export default function Report() {
                     {round2Refunds.length > 0 && (
                       <div className="space-y-2 pt-1">
                         {round2Refunds.map((r, ri) => (
-                          <div key={r.id} className="space-y-1">
+                          <div key={r.id} className="space-y-1" onClick={() => isAdmin && openEditRefund(r, p.name)} style={isAdmin ? { cursor: 'pointer' } : {}}>
                             <div className="flex items-center justify-between">
                               <span className="text-sm text-gray-500">💸 {isHe ? `החזר ${ri + 1}` : `Refund ${ri + 1}`}{r.created_at && <span className="text-gray-400 text-xs ms-2">{new Date(r.created_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}</span>}</span>
                               <span className="text-sm font-semibold text-emerald-600">{formatCurrency(r.amount, 'EUR')}</span>
@@ -479,6 +523,40 @@ export default function Report() {
           </motion.div>
         )
       })}
+
+      {/* Edit refund modal */}
+      <Modal open={!!editRefund} onClose={() => setEditRefund(null)}
+        title={isHe ? `עריכת החזר — ${editRefund?.name}` : `Edit refund — ${editRefund?.name}`}>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              {isHe ? 'סכום ההחזר (EUR)' : 'Refund amount (EUR)'}
+            </label>
+            <input type="number" inputMode="decimal"
+              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 focus:outline-none focus:border-blue-500 text-gray-900 bg-white"
+              value={editAmount} onChange={e => setEditAmount(e.target.value)} autoFocus />
+          </div>
+          <button
+            onClick={handleDeleteRefund}
+            disabled={editSaving}
+            className="w-full py-4 rounded-2xl border-2 border-red-200 text-red-600 font-semibold active:bg-red-50 disabled:opacity-40"
+          >
+            🗑 {isHe ? 'מחק החזר זה' : 'Delete this refund'}
+          </button>
+          <div className="flex gap-3">
+            <button onClick={() => setEditRefund(null)} className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold active:bg-gray-50">
+              {t('cancel')}
+            </button>
+            <button onClick={handleSaveEditRefund} disabled={editSaving || !editAmount}
+              className="flex-1 py-4 rounded-2xl bg-blue-600 text-white font-bold active:bg-blue-700 disabled:opacity-40">
+              {editSaving ? '...' : isHe ? 'שמור וחתום' : 'Save & Sign'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <SignaturePad open={sigOpen} onClose={() => { setSigOpen(false); setSigTarget(null) }}
+        onSave={handleSaveSignature} personName={sigTarget?.name || ''} amount={sigTarget?.amount || 0} lang={lang} />
     </div>
   )
 }
