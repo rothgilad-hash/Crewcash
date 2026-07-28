@@ -16,6 +16,7 @@ export default function Debts() {
 
   const [refundOpen, setRefundOpen] = useState(null)
   const [refundAmount, setRefundAmount] = useState('')
+  const [refundDate, setRefundDate] = useState('')
   const [saving, setSaving] = useState(false)
   const [sigOpen, setSigOpen] = useState(false)
   const [sigTarget, setSigTarget] = useState(null)
@@ -97,6 +98,7 @@ export default function Debts() {
 
   const openRefund = (p) => {
     setRefundAmount(String(Math.round(getKittyOwedAmount(p) * 100) / 100))
+    setRefundDate(new Date().toISOString().slice(0, 10))
     setRefundOpen(p)
   }
 
@@ -105,7 +107,7 @@ export default function Debts() {
     const amt = parseFloat(refundAmount) || 0
     setSaving(true)
     const { data: refund } = await supabase.from('kitty_refunds')
-      .insert({ participant_id: refundOpen.id, amount: amt })
+      .insert({ participant_id: refundOpen.id, amount: amt, refund_date: refundDate || null })
       .select().single()
     reloadRefunds(participants.map(x => x.id))
     setRefundAmount('')
@@ -282,6 +284,14 @@ export default function Debts() {
             <input type="number" inputMode="decimal"
               className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 focus:outline-none focus:border-blue-500 text-gray-900 bg-white"
               placeholder="0" value={refundAmount} onChange={e => setRefundAmount(e.target.value)} autoFocus />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              {isHe ? 'תאריך ההחזר' : 'Refund date'}
+            </label>
+            <input type="date"
+              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 focus:outline-none focus:border-blue-500 text-gray-900 bg-white"
+              value={refundDate} onChange={e => setRefundDate(e.target.value)} />
           </div>
           <div className="flex gap-3">
             <button onClick={() => setRefundOpen(null)} className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold active:bg-gray-50">{t('cancel')}</button>

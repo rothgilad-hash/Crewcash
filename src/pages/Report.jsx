@@ -17,6 +17,7 @@ export default function Report() {
 
   const [editRefund, setEditRefund] = useState(null) // { refund, name }
   const [editAmount, setEditAmount] = useState('')
+  const [editDate, setEditDate] = useState('')
   const [editSaving, setEditSaving] = useState(false)
   const [sigOpen, setSigOpen] = useState(false)
   const [sigTarget, setSigTarget] = useState(null)
@@ -24,6 +25,7 @@ export default function Report() {
   const openEditRefund = (r, name) => {
     setEditRefund({ refund: r, name })
     setEditAmount(String(r.amount))
+    setEditDate(r.refund_date || r.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10))
   }
 
   const handleDeleteRefund = async () => {
@@ -39,7 +41,7 @@ export default function Report() {
     if (!editRefund) return
     const amt = parseFloat(editAmount) || 0
     setEditSaving(true)
-    await supabase.from('kitty_refunds').update({ amount: amt, signature: null }).eq('id', editRefund.refund.id)
+    await supabase.from('kitty_refunds').update({ amount: amt, signature: null, refund_date: editDate || null }).eq('id', editRefund.refund.id)
     reloadRefunds(participants.map(p => p.id))
     setEditRefund(null)
     setEditSaving(false)
@@ -410,7 +412,7 @@ export default function Report() {
                       {refunds.map((r, ri) => (
                         <div key={r.id} className="space-y-1" onClick={() => isAdmin && openEditRefund(r, p.name)} style={isAdmin ? { cursor: 'pointer' } : {}}>
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-500">💸 {isHe ? `החזר ${ri + 1}` : `Refund ${ri + 1}`}{r.created_at && <span className="text-gray-400 text-xs ms-2">{new Date(r.created_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}</span>}</span>
+                            <span className="text-sm text-gray-500">💸 {isHe ? `החזר ${ri + 1}` : `Refund ${ri + 1}`}{(r.refund_date || r.created_at) && <span className="text-gray-400 text-xs ms-2">{new Date(r.refund_date || r.created_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}</span>}</span>
                             <span className="text-sm font-semibold text-emerald-600">{formatCurrency(r.amount, 'EUR')}</span>
                           </div>
                           {r.signature && <div className="border border-gray-100 rounded-xl overflow-hidden"><img src={r.signature} alt="signature" className="w-full max-h-20 object-contain" /></div>}
@@ -507,7 +509,7 @@ export default function Report() {
                         {round2Refunds.map((r, ri) => (
                           <div key={r.id} className="space-y-1" onClick={() => isAdmin && openEditRefund(r, p.name)} style={isAdmin ? { cursor: 'pointer' } : {}}>
                             <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-500">💸 {isHe ? `החזר ${ri + 1}` : `Refund ${ri + 1}`}{r.created_at && <span className="text-gray-400 text-xs ms-2">{new Date(r.created_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}</span>}</span>
+                              <span className="text-sm text-gray-500">💸 {isHe ? `החזר ${ri + 1}` : `Refund ${ri + 1}`}{(r.refund_date || r.created_at) && <span className="text-gray-400 text-xs ms-2">{new Date(r.refund_date || r.created_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}</span>}</span>
                               <span className="text-sm font-semibold text-emerald-600">{formatCurrency(r.amount, 'EUR')}</span>
                             </div>
                             {r.signature && <div className="border border-gray-100 rounded-xl overflow-hidden"><img src={r.signature} alt="signature" className="w-full max-h-20 object-contain" /></div>}
@@ -535,6 +537,14 @@ export default function Report() {
             <input type="number" inputMode="decimal"
               className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 focus:outline-none focus:border-blue-500 text-gray-900 bg-white"
               value={editAmount} onChange={e => setEditAmount(e.target.value)} autoFocus />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              {isHe ? 'תאריך ההחזר' : 'Refund date'}
+            </label>
+            <input type="date"
+              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 focus:outline-none focus:border-blue-500 text-gray-900 bg-white"
+              value={editDate} onChange={e => setEditDate(e.target.value)} />
           </div>
           <button
             onClick={handleDeleteRefund}
