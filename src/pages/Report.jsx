@@ -242,9 +242,10 @@ export default function Report() {
             </div>
 
             {/* ── סבב 1 — גיוס ראשון ── */}
-            <div className="border-t-2 border-blue-100">
-              <div className="bg-blue-50 px-4 py-2">
-                <p className="text-xs font-bold text-blue-500">📋 {isHe ? 'סבב 1 — גיוס ראשון' : 'Round 1 — First Collection'}</p>
+            <div className="border-t border-gray-100">
+              <div className="px-4 pt-3 pb-1 flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-400">📋 {isHe ? 'סבב 1 — גיוס ראשון' : 'Round 1'}</span>
+                <div className="flex-1 h-px bg-gray-100" />
               </div>
 
               {/* Expense breakdown */}
@@ -297,8 +298,8 @@ export default function Report() {
 
               {/* Collections for round 1 */}
               {myCollections.length > 0 && (
-                <div className="border-t border-blue-100 bg-blue-50/50 px-4 py-3 space-y-1.5">
-                  <p className="text-xs font-semibold text-blue-400 mb-1">💰 {isHe ? 'גיוסים' : 'Collections'}</p>
+                <div className="border-t border-gray-100 px-4 py-3 space-y-1.5">
+                  <p className="text-xs font-semibold text-gray-400 mb-1">💰 {isHe ? 'גיוסים' : 'Collections'}</p>
                   {myCollections.map(c => (
                     <div key={c.id} className="flex items-center justify-between gap-2">
                       <span className="text-sm text-gray-600 flex-shrink-0">{c.round_name}{c.collected_at ? ` · ${new Date(c.collected_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}` : ''}</span>
@@ -310,8 +311,8 @@ export default function Report() {
 
               {/* Kitty owes — round 1 (overpay + post-collection personal) */}
               {kittyOwesRound1 && (
-                <div className="border-t border-emerald-100 bg-emerald-50 px-4 py-3 space-y-1">
-                  <p className="text-xs font-semibold text-emerald-600 mb-1">✅ {isHe ? 'הקופה חייבת לו' : 'Kitty owes'}</p>
+                <div className="border-t border-gray-100 px-4 py-3 space-y-1">
+                  <p className="text-xs font-semibold text-emerald-500 mb-1">✅ {isHe ? 'הקופה חייבת לו' : 'Kitty owes'}</p>
                   {overpay > 0.5 && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">{isHe ? 'שילם יותר מהיעד' : 'Overpaid target'}</span>
@@ -355,12 +356,13 @@ export default function Report() {
 
             {/* ── סבב 2 — גיוס שני (רק אם יש הוצאות לא צפויות) ── */}
             {unexpectedTotal > 0.5 && (
-              <div className="border-t-2 border-orange-200">
-                <div className="bg-orange-50 px-4 py-2">
-                  <p className="text-xs font-bold text-orange-500">⚡ {isHe ? 'סבב 2 — גיוס שני' : 'Round 2 — Second Collection'}</p>
+              <div className="border-t-2 border-gray-100">
+                <div className="px-4 pt-3 pb-1 flex items-center gap-2">
+                  <span className="text-xs font-bold text-orange-400">⚡ {isHe ? 'סבב 2 — גיוס שני' : 'Round 2'}</span>
+                  <div className="flex-1 h-px bg-gray-100" />
                 </div>
 
-                <div className="px-4 py-3 space-y-1.5 bg-orange-50/30">
+                <div className="px-4 py-3 space-y-1.5">
                   <p className="text-xs font-semibold text-gray-400 mb-1">{isHe ? 'חלק בהוצאות הלא צפויות' : 'Share of unexpected expenses'}</p>
                   {unexpectedExpenses.map(e => (
                     <div key={e.id} className="flex items-center justify-between gap-2">
@@ -399,8 +401,8 @@ export default function Report() {
 
                 {/* Kitty owes for round 2 */}
                 {kittyOwesRound2 && (
-                  <div className="border-t border-emerald-100 bg-emerald-50 px-4 py-3 space-y-1">
-                    <p className="text-xs font-semibold text-emerald-600 mb-1">✅ {isHe ? 'הקופה חייבת לו (גיוס שני)' : 'Kitty owes (round 2)'}</p>
+                  <div className="border-t border-gray-100 px-4 py-3 space-y-1">
+                    <p className="text-xs font-semibold text-emerald-500 mb-1">✅ {isHe ? 'הקופה חייבת לו (גיוס שני)' : 'Kitty owes (round 2)'}</p>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">⚡ {isHe ? 'הוצאה לא צפויה ששילם (נטו)' : 'Unexpected expense paid (net)'}</span>
                       <span className="text-sm font-semibold text-emerald-600">{formatCurrency(unexpectedPersonalNet, 'EUR')}</span>
