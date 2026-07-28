@@ -232,9 +232,13 @@ export default function Report() {
 
         const lateJoinerNames = lateJoiners.map(x => x.name).join(', ')
 
-        // All kitty owes consolidated in round 1: overpay + post-personal + unexpected net - refunds
-        const kittyOwedRound1 = Math.round((round1Overpay + postFull + unexpectedPersonalNet - kittyPaidBack) * 100) / 100
+        // Round 1 kitty owes: overpay + post-personal expenses - refunds already given
+        const kittyOwedRound1 = Math.round((round1Overpay + postFull - kittyPaidBack) * 100) / 100
         const kittyOwesRound1 = kittyOwedRound1 > 0.5
+
+        // Round 2 kitty owes: round2 overpay + unexpected personal net
+        const kittyOwedRound2 = Math.round((round2Overpay + unexpectedPersonalNet) * 100) / 100
+        const kittyOwesRound2 = kittyOwedRound2 > 0.5
 
         return (
           <motion.div key={p.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -341,12 +345,6 @@ export default function Report() {
                       ))}
                     </>
                   )}
-                  {unexpectedPersonalNet > 0.5 && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">⚡ {isHe ? 'הוצאה לא צפויה ששילם (נטו)' : 'Unexpected expense paid (net)'}</span>
-                      <span className="text-sm font-semibold text-emerald-600">{formatCurrency(unexpectedPersonalNet, 'EUR')}</span>
-                    </div>
-                  )}
                   <div className="flex items-center justify-between border-t border-emerald-200 pt-1">
                     <span className="text-sm font-bold text-emerald-700">{isHe ? 'סה״כ להחזר' : 'Total to refund'}</span>
                     <span className="text-base font-black text-emerald-600">{formatCurrency(kittyOwedRound1, 'EUR')}</span>
@@ -429,13 +427,25 @@ export default function Report() {
                   </div>
                 )}
 
-                {/* Kitty owes — round 2 overpay only */}
-                {round2Overpay > 0.5 && (
+                {/* Kitty owes — round 2: overpay + unexpected personal net */}
+                {kittyOwesRound2 && (
                   <div className="border-t border-gray-100 px-4 py-3 space-y-1">
                     <p className="text-xs font-semibold text-emerald-500 mb-1">✅ {isHe ? 'הקופה חייבת לו' : 'Kitty owes'}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">{isHe ? 'שילם יותר מהיעד' : 'Overpaid target'}</span>
-                      <span className="text-base font-black text-emerald-600">{formatCurrency(round2Overpay, 'EUR')}</span>
+                    {round2Overpay > 0.5 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">{isHe ? 'שילם יותר מהיעד' : 'Overpaid target'}</span>
+                        <span className="text-sm font-semibold text-emerald-600">{formatCurrency(round2Overpay, 'EUR')}</span>
+                      </div>
+                    )}
+                    {unexpectedPersonalNet > 0.5 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">⚡ {isHe ? 'הוצאה לא צפויה ששילם (נטו)' : 'Unexpected expense paid (net)'}</span>
+                        <span className="text-sm font-semibold text-emerald-600">{formatCurrency(unexpectedPersonalNet, 'EUR')}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between border-t border-emerald-200 pt-1">
+                      <span className="text-sm font-bold text-emerald-700">{isHe ? 'סה״כ להחזר' : 'Total to refund'}</span>
+                      <span className="text-base font-black text-emerald-600">{formatCurrency(kittyOwedRound2, 'EUR')}</span>
                     </div>
                   </div>
                 )}
