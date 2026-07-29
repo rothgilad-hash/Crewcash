@@ -219,7 +219,7 @@ export default function Report() {
         const allRefunds = getRefunds(p.id)
         // Split refunds: after first round-2 collection date → round 2, else round 1
         const firstRound2Date = round2Collections.length > 0
-          ? round2Collections.map(c => c.collected_at).filter(Boolean).sort()[0]
+          ? round2Collections.map(c => c.collected_at || c.created_at?.slice(0, 10)).filter(Boolean).sort()[0]
           : null
         const getRefundDate = (r) => r.refund_date || r.created_at?.slice(0, 10) || ''
         const refunds = firstRound2Date
