@@ -117,6 +117,7 @@ export default function Shopping() {
   const [showTeamPanel, setShowTeamPanel] = useState(false)
   const [copiedPid, setCopiedPid] = useState(null)
   const [showRemaining, setShowRemaining] = useState(false)
+  const [confirmClearAll, setConfirmClearAll] = useState(false)
   const fileRef = useRef(null)
   const isHe = lang === 'he'
 
@@ -151,6 +152,12 @@ export default function Shopping() {
       await supabase.from('shopping_items').delete().in('id', ids)
       reloadShoppingItems(trip.id)
     }
+  }
+
+  const clearAllItems = async () => {
+    await supabase.from('shopping_items').delete().eq('trip_id', trip.id)
+    reloadShoppingItems(trip.id)
+    setConfirmClearAll(false)
   }
 
   const handleExcelFile = (e) => {
@@ -358,6 +365,12 @@ export default function Shopping() {
           >
             ⚓ Yachtness
             {showYachtness ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+          <button
+            onClick={() => setConfirmClearAll(true)}
+            className="flex items-center justify-center gap-1 px-3 py-3 rounded-2xl bg-white border border-red-200 text-red-500 font-semibold text-sm active:bg-red-50 shadow-sm"
+          >
+            <Trash2 size={16} />
           </button>
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleExcelFile} />
         </div>
@@ -771,6 +784,23 @@ export default function Shopping() {
             <button onClick={handleAdd} disabled={saving || !form.name.trim()}
               className="flex-1 py-4 rounded-2xl bg-blue-600 text-white font-bold active:bg-blue-700 disabled:opacity-40">
               {saving ? '...' : t('save')}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Confirm clear all */}
+      <Modal open={confirmClearAll} onClose={() => setConfirmClearAll(false)} title={isHe ? 'אפס רשימת קניות' : 'Reset Shopping List'}>
+        <div className="space-y-4 pt-1">
+          <p className="text-gray-700 text-sm">{isHe ? 'למחוק את כל הפריטים ברשימה? לא ניתן לשחזר.' : 'Delete all items? This cannot be undone.'}</p>
+          <div className="flex gap-3">
+            <button onClick={() => setConfirmClearAll(false)}
+              className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold active:bg-gray-50">
+              {isHe ? 'ביטול' : 'Cancel'}
+            </button>
+            <button onClick={clearAllItems}
+              className="flex-1 py-4 rounded-2xl bg-red-500 text-white font-bold active:bg-red-600">
+              {isHe ? 'מחק הכל' : 'Delete All'}
             </button>
           </div>
         </div>
