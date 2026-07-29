@@ -118,8 +118,37 @@ export default function Shopping() {
   const [copiedPid, setCopiedPid] = useState(null)
   const [showRemaining, setShowRemaining] = useState(false)
   const [confirmClearAll, setConfirmClearAll] = useState(false)
+  const [activeTab, setActiveTab] = useState('list') // 'list' | 'leftovers' | 'compare'
+  const [leftovers, setLeftovers] = useState([])
+  const [leftoverForm, setLeftoverForm] = useState({ name: '', quantity: '', category: 'other' })
+  const [expenseItems, setExpenseItems] = useState([])
+  const [loadingData, setLoadingData] = useState(false)
   const fileRef = useRef(null)
   const isHe = lang === 'he'
+
+  const loadLeftoversAndExpenseItems = async () => {
+    if (!trip?.id) return
+    setLoadingData(true)
+    const [{ data: lo }, { data: ei }] = await Promise.all([
+      supabase.from('trip_leftovers').select('*').eq('trip_id', trip.id).order('category').order('created_at'),
+      supabase.from('expense_items').select('*').eq('trip_id', trip.id).order('created_at'),
+    ])
+    setLeftovers(lo || [])
+    setExpenseItems(ei || [])
+    setLoadingData(false)
+  }
+
+  const addLeftover = async () => {
+    if (!leftoverForm.name.trim()) return
+    await supabase.from('trip_leftovers').insert({ trip_id: trip.id, ...leftoverForm })
+    setLeftoverForm({ name: '', quantity: '', category: 'other' })
+    loadLeftoversAndExpenseItems()
+  }
+
+  const deleteLeftover = async (id) => {
+    await supabase.from('trip_leftovers').delete().eq('id', id)
+    loadLeftoversAndExpenseItems()
+  }
 
   const toggleCat = (key) => setCollapsedCats(prev => {
     const next = new Set(prev)
@@ -346,8 +375,129 @@ export default function Shopping() {
     setTimeout(() => setCopiedPid(null), 2000)
   }
 
+  // Build comparison: all purchased items merged with leftovers
+  const buildComparison = () => {
+    const map = {}
+    const add = (name, qty, source, category) => {
+      const key = name.trim().toLowerCase()
+      if (!map[key]) map[key] = { name: name.trim(), category: category || 'other', bought: 0, leftover: 0, sources: [] }
+      const n = parseFloat(qty) || 1
+      if (source === 'leftover') map[key].leftover += n
+      else map[key].bought += n
+      if (source !== 'leftover' && !map[key].sources.includes(source)) map[key].sources.push(source)
+    }
+    shoppingItems.forEach(i => add(i.name, i.quantity, 'shopping', i.category))
+    expenseItems.forEach(i => add(i.name, i.quantity, 'supermarket', i.category))
+    leftovers.forEach(i => add(i.name, i.quantity, 'leftover', i.category))
+    return Object.values(map).sort((a, b) => a.name.localeCompare(b.name, 'he'))
+  }
+
   return (
     <div className="p-4 space-y-4">
+
+      {/* Tabs */}
+      <div className="flex gap-1 bg-gray-100 rounded-2xl p-1">
+        {[
+          { key: 'list', label: isHe ? '🛒 רשימה' : '🛒 List' },
+          { key: 'leftovers', label: isHe ? '📦 שאריות' : '📦 Leftovers' },
+          { key: 'compare', label: isHe ? '📊 השוואה' : '📊 Compare' },
+        ].map(tab => (
+          <button key={tab.key}
+            onClick={() => { setActiveTab(tab.key); if (tab.key !== 'list') loadLeftoversAndExpenseItems() }}
+            className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${activeTab === tab.key ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Leftovers tab */}
+      {activeTab === 'leftovers' && (
+        <div className="space-y-4">
+          <p className="text-xs text-gray-400 text-center">{isHe ? 'תעד מה נשאר ביאכטה בסוף הטיול' : 'Record what was left on the yacht at end of trip'}</p>
+          {isAdmin && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 space-y-3">
+              <input className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                placeholder={isHe ? 'שם מוצר' : 'Item name'}
+                value={leftoverForm.name} onChange={e => setLeftoverForm(f => ({ ...f, name: e.target.value }))}
+                onKeyDown={e => e.key === 'Enter' && addLeftover()} />
+              <div className="flex gap-2">
+                <input className="w-24 border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                  placeholder={isHe ? 'כמות' : 'Qty'}
+                  value={leftoverForm.quantity} onChange={e => setLeftoverForm(f => ({ ...f, quantity: e.target.value }))} />
+                <select className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500 bg-white"
+                  value={leftoverForm.category} onChange={e => setLeftoverForm(f => ({ ...f, category: e.target.value }))}>
+                  {CATS.map(c => <option key={c.key} value={c.key}>{isHe ? c.he : c.en}</option>)}
+                </select>
+                <button onClick={addLeftover} disabled={!leftoverForm.name.trim()}
+                  className="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold disabled:opacity-40 active:bg-blue-700">
+                  {isHe ? 'הוסף' : 'Add'}
+                </button>
+              </div>
+            </div>
+          )}
+          {loadingData ? <p className="text-center text-gray-400 text-sm py-8">...</p> : leftovers.length === 0 ? (
+            <p className="text-center text-gray-400 text-sm py-8">{isHe ? 'אין שאריות מתועדות' : 'No leftovers recorded'}</p>
+          ) : CATS.map(cat => {
+            const items = leftovers.filter(i => i.category === cat.key)
+            if (!items.length) return null
+            return (
+              <div key={cat.key}>
+                <p className="text-xs font-bold text-gray-400 uppercase mb-2">{isHe ? cat.he : cat.en}</p>
+                <div className="bg-white rounded-2xl border border-gray-200 divide-y divide-gray-50">
+                  {items.map(item => (
+                    <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                      <span className="flex-1 text-sm text-gray-800">{item.name}</span>
+                      {item.quantity && <span className="text-sm text-gray-400">×{item.quantity}</span>}
+                      {isAdmin && (
+                        <button onClick={() => deleteLeftover(item.id)} className="text-red-400 active:text-red-600 p-1">
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Compare tab */}
+      {activeTab === 'compare' && (
+        <div className="space-y-4">
+          {loadingData ? <p className="text-center text-gray-400 text-sm py-8">...</p> : (() => {
+            const rows = buildComparison()
+            if (!rows.length) return <p className="text-center text-gray-400 text-sm py-8">{isHe ? 'אין נתונים' : 'No data'}</p>
+            return (
+              <>
+                <p className="text-xs text-gray-400 text-center">{isHe ? 'קנינו מול נשאר — לתכנון הטיול הבא' : 'Bought vs leftover — plan the next trip'}</p>
+                <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                  <div className="grid grid-cols-4 px-4 py-2 bg-gray-50 text-xs font-bold text-gray-400 border-b border-gray-100">
+                    <span className="col-span-2">{isHe ? 'מוצר' : 'Item'}</span>
+                    <span className="text-center">{isHe ? 'קנינו' : 'Bought'}</span>
+                    <span className="text-center">{isHe ? 'נשאר' : 'Left'}</span>
+                  </div>
+                  {rows.map(row => {
+                    const consumed = Math.max(0, row.bought - row.leftover)
+                    const waste = row.leftover > 0
+                    return (
+                      <div key={row.name} className={`grid grid-cols-4 px-4 py-3 border-b border-gray-50 last:border-0 ${waste ? 'bg-orange-50' : ''}`}>
+                        <span className="col-span-2 text-sm text-gray-800">{row.name}</span>
+                        <span className="text-center text-sm text-gray-600">{row.bought || '—'}</span>
+                        <span className={`text-center text-sm font-semibold ${waste ? 'text-orange-500' : 'text-gray-400'}`}>{row.leftover || '—'}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+                <p className="text-xs text-orange-400 text-center">{isHe ? '🟠 = נשאר — שקול להפחית בטיול הבא' : '🟠 = leftover — consider reducing next trip'}</p>
+              </>
+            )
+          })()}
+        </div>
+      )}
+
+      {activeTab !== 'list' && <div />}
+      {activeTab === 'list' && <>
 
       {/* Action buttons */}
       {isAdmin && (
@@ -760,6 +910,8 @@ export default function Shopping() {
           </button>
         </div>
       )}
+
+      </> }
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={t('addItem')}>
         <div className="space-y-4">

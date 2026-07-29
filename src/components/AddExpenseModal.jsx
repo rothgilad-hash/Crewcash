@@ -56,6 +56,28 @@ const SUBCATEGORIES = {
 }
 const CURRENCIES = ['ILS', 'EUR', 'USD']
 
+const ITEM_KEYWORD_CATS = {
+  drinks:      ['מים','זירו','סודה','מיץ','קולה','ספרייט'],
+  alcohol:     ['בירה','רדלר','יין','אפרול','ויסקי','וודקה','טקילה'],
+  fruit:       ['אגס','לימון','אבטיח','מלון','תפוח','בננ','פירות'],
+  vegetables:  ['בצל','עגבני','מלפפון','פלפל','גזר','ירק'],
+  pantry:      ['לחם','טונה','מיונז','זיתים','אורז','פסטה','מלח','שמן','קפה','תה','שוקולד'],
+  dairy:       ['יוגרט','גבינ','חלב','ביצ','חמאה','שמנת','קוטג','לבנה'],
+  deli:        ['סלמי','סלמון','נקניק','שניצל','פסטרמה','עוף','קבב'],
+  disposables: ['צלחת','כוס','מגש','אלומיניום','חד פעמי','קש','מפית'],
+  cleaning:    ['נייר טואלט','שקית זבל','סבון כלים','ספוג','אקונומיקה'],
+  hygiene:     ['שמפו','סבון','משחת שיניים','קרם הגנה','דאודורנט'],
+  snacks:      ['תפוצ','קפריס','עוגי','בייגל','פצפוצ','חטיף','ביסלי','במבה'],
+}
+
+function autoDetectItemCat(name) {
+  const n = name.toLowerCase()
+  for (const [cat, kws] of Object.entries(ITEM_KEYWORD_CATS)) {
+    if (kws.some(kw => n.includes(kw.toLowerCase()))) return cat
+  }
+  return 'other'
+}
+
 const defaultForm = {
   description: '', amount: '', currency: 'EUR', category: '',
   sub_category: '', paid_by: '', is_yacht_cost: false, is_cash: false, notes: '',
@@ -166,16 +188,31 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
       is_paid: form.is_paid,
       is_unexpected: form.is_unexpected
     }
-    let error
+    let error, expenseId
     if (expense?.id) {
       ({ error } = await supabase.from('expenses').update(payload).eq('id', expense.id))
+      expenseId = expense.id
     } else {
-      ({ error } = await supabase.from('expenses').insert(payload))
+      const { data: inserted, error: insErr } = await supabase.from('expenses').insert(payload).select('id').single()
+      error = insErr
+      expenseId = inserted?.id
     }
     setSaving(false)
     if (error) {
       alert('שגיאה: ' + error.message)
       return
+    }
+    // Save supermarket cart items
+    if (form.category === 'supermarket' && expenseId && Object.keys(cartItems).length > 0) {
+      const items = Object.entries(cartItems).map(([name, quantity]) => ({
+        expense_id: expenseId,
+        trip_id: trip.id,
+        name,
+        quantity,
+        category: autoDetectItemCat(name),
+      }))
+      await supabase.from('expense_items').delete().eq('expense_id', expenseId)
+      await supabase.from('expense_items').insert(items)
     }
     reloadExpenses(trip.id)
     onClose()
