@@ -183,6 +183,11 @@ export default function Shopping() {
     }
   }
 
+  const saveNameHe = async (id, value) => {
+    await supabase.from('shopping_items').update({ name_he: value || null }).eq('id', id)
+    reloadShoppingItems(trip.id)
+  }
+
   const clearAllItems = async () => {
     await supabase.from('shopping_items').delete().eq('trip_id', trip.id)
     reloadShoppingItems(trip.id)
@@ -378,17 +383,18 @@ export default function Shopping() {
   // Build comparison: all purchased items merged with leftovers
   const buildComparison = () => {
     const map = {}
-    const add = (name, qty, source, category) => {
-      const key = name.trim().toLowerCase()
-      if (!map[key]) map[key] = { name: name.trim(), category: category || 'other', bought: 0, leftover: 0, sources: [] }
+    const add = (name, nameHe, qty, source, category) => {
+      const displayName = nameHe?.trim() || name.trim()
+      const key = displayName.toLowerCase()
+      if (!map[key]) map[key] = { name: displayName, category: category || 'other', bought: 0, leftover: 0, sources: [] }
       const n = parseFloat(qty) || 1
       if (source === 'leftover') map[key].leftover += n
       else map[key].bought += n
       if (source !== 'leftover' && !map[key].sources.includes(source)) map[key].sources.push(source)
     }
-    shoppingItems.forEach(i => add(i.name, i.quantity, 'shopping', i.category))
-    expenseItems.forEach(i => add(i.name, i.quantity, 'supermarket', i.category))
-    leftovers.forEach(i => add(i.name, i.quantity, 'leftover', i.category))
+    shoppingItems.forEach(i => add(i.name, i.name_he, i.quantity, 'shopping', i.category))
+    expenseItems.forEach(i => add(i.name, i.name_he, i.quantity, 'supermarket', i.category))
+    leftovers.forEach(i => add(i.name, null, i.quantity, 'leftover', i.category))
     return Object.values(map).sort((a, b) => a.name.localeCompare(b.name, 'he'))
   }
 
@@ -792,6 +798,15 @@ export default function Shopping() {
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-gray-900">{item.name}</p>
                           {item.quantity && <p className="text-sm text-gray-400 mt-0.5">{item.quantity}</p>}
+                          {isAdmin && (
+                            <input
+                              className="mt-1 text-xs text-blue-500 border-0 border-b border-blue-200 focus:outline-none focus:border-blue-400 bg-transparent w-full placeholder-blue-200"
+                              placeholder={isHe ? '+ שם בעברית' : '+ Hebrew name'}
+                              defaultValue={item.name_he || ''}
+                              onBlur={e => { if (e.target.value !== (item.name_he || '')) saveNameHe(item.id, e.target.value) }}
+                            />
+                          )}
+                          {!isAdmin && item.name_he && <p className="text-xs text-blue-400 mt-0.5">{item.name_he}</p>}
                         </div>
                         {isAdmin && (
                           <button onClick={() => deleteItem(item.id)}
