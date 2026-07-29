@@ -17,6 +17,7 @@ export default function Debts() {
   const [refundOpen, setRefundOpen] = useState(null)
   const [refundAmount, setRefundAmount] = useState('')
   const [refundDate, setRefundDate] = useState('')
+  const [refundRound, setRefundRound] = useState(1)
   const [saving, setSaving] = useState(false)
   const [sigOpen, setSigOpen] = useState(false)
   const [sigTarget, setSigTarget] = useState(null)
@@ -99,6 +100,7 @@ export default function Debts() {
   const openRefund = (p) => {
     setRefundAmount(String(Math.round(getKittyOwedAmount(p) * 100) / 100))
     setRefundDate(new Date().toISOString().slice(0, 10))
+    setRefundRound(1)
     setRefundOpen(p)
   }
 
@@ -107,7 +109,7 @@ export default function Debts() {
     const amt = parseFloat(refundAmount) || 0
     setSaving(true)
     const { data: refund } = await supabase.from('kitty_refunds')
-      .insert({ participant_id: refundOpen.id, amount: amt, refund_date: refundDate || null })
+      .insert({ participant_id: refundOpen.id, amount: amt, refund_date: refundDate || null, refund_round: refundRound })
       .select().single()
     reloadRefunds(participants.map(x => x.id))
     setRefundAmount('')
@@ -292,6 +294,19 @@ export default function Debts() {
             <input type="date"
               className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 focus:outline-none focus:border-blue-500 text-gray-900 bg-white"
               value={refundDate} onChange={e => setRefundDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              {isHe ? 'סבב גיוס' : 'Collection round'}
+            </label>
+            <div className="flex gap-2">
+              {[1, 2].map(r => (
+                <button key={r} onClick={() => setRefundRound(r)}
+                  className={`flex-1 py-3 rounded-2xl text-sm font-semibold border-2 transition-all ${refundRound === r ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 bg-white'}`}>
+                  {isHe ? `סבב ${r}` : `Round ${r}`}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex gap-3">
             <button onClick={() => setRefundOpen(null)} className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold active:bg-gray-50">{t('cancel')}</button>

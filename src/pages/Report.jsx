@@ -18,6 +18,7 @@ export default function Report() {
   const [editRefund, setEditRefund] = useState(null) // { refund, name }
   const [editAmount, setEditAmount] = useState('')
   const [editDate, setEditDate] = useState('')
+  const [editRound, setEditRound] = useState(1)
   const [editSaving, setEditSaving] = useState(false)
   const [sigOpen, setSigOpen] = useState(false)
   const [sigTarget, setSigTarget] = useState(null)
@@ -26,6 +27,7 @@ export default function Report() {
     setEditRefund({ refund: r, name })
     setEditAmount(String(r.amount))
     setEditDate(r.refund_date || r.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10))
+    setEditRound(r.refund_round || 1)
   }
 
   const handleDeleteRefund = async () => {
@@ -41,7 +43,7 @@ export default function Report() {
     if (!editRefund) return
     const amt = parseFloat(editAmount) || 0
     setEditSaving(true)
-    await supabase.from('kitty_refunds').update({ amount: amt, signature: null, refund_date: editDate || null }).eq('id', editRefund.refund.id)
+    await supabase.from('kitty_refunds').update({ amount: amt, signature: null, refund_date: editDate || null, refund_round: editRound }).eq('id', editRefund.refund.id)
     reloadRefunds(participants.map(p => p.id))
     setEditRefund(null)
     setEditSaving(false)
@@ -218,16 +220,8 @@ export default function Report() {
         const kittyPaidBack = getKittyPaidBack(p.id)
         const allRefunds = getRefunds(p.id)
         // Split refunds: after first round-2 collection date → round 2, else round 1
-        const firstRound2Date = round2Collections.length > 0
-          ? round2Collections.map(c => c.collected_at || c.created_at?.slice(0, 10)).filter(Boolean).sort()[0]
-          : null
-        const getRefundDate = (r) => r.refund_date || r.created_at?.slice(0, 10) || ''
-        const refunds = firstRound2Date
-          ? allRefunds.filter(r => !getRefundDate(r) || getRefundDate(r) < firstRound2Date)
-          : allRefunds
-        const round2Refunds = firstRound2Date
-          ? allRefunds.filter(r => getRefundDate(r) >= firstRound2Date)
-          : []
+        const refunds = allRefunds.filter(r => (r.refund_round || 1) === 1)
+        const round2Refunds = allRefunds.filter(r => r.refund_round === 2)
         const lastDate = getLastCollectionDate(kittyCollections, p.id)
         const N = participants.length
 
@@ -546,6 +540,19 @@ export default function Report() {
             <input type="date"
               className="w-full border-2 border-gray-200 rounded-2xl px-4 py-4 focus:outline-none focus:border-blue-500 text-gray-900 bg-white"
               value={editDate} onChange={e => setEditDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              {isHe ? 'סבב גיוס' : 'Collection round'}
+            </label>
+            <div className="flex gap-2">
+              {[1, 2].map(r => (
+                <button key={r} onClick={() => setEditRound(r)}
+                  className={`flex-1 py-3 rounded-2xl text-sm font-semibold border-2 transition-all ${editRound === r ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 bg-white'}`}>
+                  {isHe ? `סבב ${r}` : `Round ${r}`}
+                </button>
+              ))}
+            </div>
           </div>
           <button
             onClick={handleDeleteRefund}
