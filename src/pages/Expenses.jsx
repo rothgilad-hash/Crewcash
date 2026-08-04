@@ -38,7 +38,8 @@ export default function Expenses() {
         const paidStr = paid ? ` (${paid})` : ''
         const dateStr = date ? ` | ${date}` : ''
         const notesStr = e.notes ? ` — ${e.notes}` : ''
-        lines.push(`  • ${e.description}${notesStr}: ${formatCurrency(e.amount, e.currency)}${e.currency !== 'EUR' && e.eur_rate ? ` ≈ €${Math.round(getEurAmount(e))}` : ''}${paidStr}${dateStr}`)
+        const subStr = e.sub_category ? ` [${t('subcat_' + e.sub_category)}]` : ''
+        lines.push(`  • ${e.description}${subStr}${notesStr}: ${formatCurrency(e.amount, e.currency)}${e.currency !== 'EUR' && e.eur_rate ? ` ≈ €${Math.round(getEurAmount(e))}` : ''}${paidStr}${dateStr}`)
       })
       const catTotal = exps.reduce((s, e) => s + getEurAmount(e), 0)
       lines.push(`  סה״כ: €${Math.round(catTotal)}`)
