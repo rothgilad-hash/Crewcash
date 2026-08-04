@@ -344,8 +344,14 @@ export default function Shopping() {
     : teamList
   // Sort categories largest-first so greedy works well
   const activeCatsWithCount = CATS
-    .filter(c => unchecked.some(i => i.category === c.key))
     .map(c => ({ key: c.key, count: unchecked.filter(i => i.category === c.key).length }))
+    .concat(uncat.length > 0 ? [{ key: 'other', count: uncat.length }] : [])
+    .filter(c => c.count > 0)
+    .reduce((acc, c) => {
+      const existing = acc.find(x => x.key === c.key)
+      if (existing) { existing.count += c.count; return acc }
+      return [...acc, c]
+    }, [])
     .sort((a, b) => b.count - a.count)
   const activeCatKeys = activeCatsWithCount.map(c => c.key)
   const catAssignments = {}
