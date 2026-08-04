@@ -91,6 +91,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
   const [form, setForm] = useState(defaultForm)
   const [saving, setSaving] = useState(false)
   const [cartItems, setCartItems] = useState({})
+  const [excludedIds, setExcludedIds] = useState([])
   const [eurRate, setEurRate] = useState(null) // EUR per 1 unit of selected currency
   const autoFilledDesc = useRef(false)
 
@@ -107,9 +108,11 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
   useEffect(() => {
     if (expense) {
       setForm({ ...defaultForm, ...expense, amount: expense.amount?.toString() || '', paid_by: expense.paid_by || '' })
+      setExcludedIds(expense.excluded_ids || [])
       autoFilledDesc.current = true
     } else {
       setForm(defaultForm)
+      setExcludedIds([])
       autoFilledDesc.current = false
     }
     setCartItems({})
@@ -186,7 +189,8 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
       notes: form.notes,
       planned_date: form.planned_date || null,
       is_paid: form.is_paid,
-      is_unexpected: form.is_unexpected
+      is_unexpected: form.is_unexpected,
+      excluded_ids: excludedIds.length > 0 ? excludedIds : null
     }
     let error, expenseId
     if (expense?.id) {
@@ -420,7 +424,41 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
           </div>
         </div>
 
-        {/* 6. Planned date */}
+        {/* 6. Excluded participants */}
+        {participants.length > 1 && (
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              🚫 {isHe ? 'לא משתתפים בהוצאה זו' : 'Not sharing this expense'}
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {participants.map(p => {
+                const excluded = excludedIds.includes(p.id)
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => setExcludedIds(prev =>
+                      excluded ? prev.filter(id => id !== p.id) : [...prev, p.id]
+                    )}
+                    className={`px-4 py-2.5 rounded-2xl border-2 text-sm font-semibold transition-all active:scale-95 ${
+                      excluded ? 'border-red-400 bg-red-50 text-red-600' : 'border-gray-200 bg-white text-gray-500'
+                    }`}
+                  >
+                    {excluded ? '🚫 ' : ''}{p.name}
+                  </button>
+                )
+              })}
+            </div>
+            {excludedIds.length > 0 && (
+              <p className="text-xs text-red-400 mt-1">
+                {isHe
+                  ? `מחולק בין ${participants.length - excludedIds.length} מתוך ${participants.length} משתתפים`
+                  : `Split among ${participants.length - excludedIds.length} of ${participants.length} participants`}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* 7. Planned date */}
         {form.is_cash && (
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">

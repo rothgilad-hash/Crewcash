@@ -54,20 +54,20 @@ export function calculateBalances(expenses, participants) {
   const balances = {}
   participants.forEach(p => { balances[p.id] = { paid: 0, owes: 0, net: 0, name: p.name, is_gil: p.is_gil, joined_late: p.joined_late } })
 
-  // Running expenses — split equally among all participants
+  // Running expenses — split among active participants (respects excluded_ids)
   const runningExpenses = expenses.filter(e => !e.is_yacht_cost)
-  const totalParts = participants.length
-  if (totalParts > 0) {
-    runningExpenses.forEach(exp => {
-      const eurAmt = getEurAmount(exp)
-      const partValue = eurAmt / totalParts
-      participants.forEach(p => { balances[p.id].owes += partValue })
-      // Credit personal payer — they fronted this expense from their own pocket
-      if (exp.paid_by && balances[exp.paid_by]) {
-        balances[exp.paid_by].paid += eurAmt
-      }
-    })
-  }
+  runningExpenses.forEach(exp => {
+    const eurAmt = getEurAmount(exp)
+    const excluded = exp.excluded_ids || []
+    const active = participants.filter(p => !excluded.includes(p.id))
+    const parts = active.length
+    if (parts === 0) return
+    const partValue = eurAmt / parts
+    active.forEach(p => { balances[p.id].owes += partValue })
+    if (exp.paid_by && balances[exp.paid_by]) {
+      balances[exp.paid_by].paid += eurAmt
+    }
+  })
 
   // Yacht adjustments for late joiners
   const yachtTotal = expenses.filter(e => e.is_yacht_cost).reduce((s, e) => s + getEurAmount(e), 0)
