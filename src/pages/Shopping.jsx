@@ -577,9 +577,16 @@ export default function Shopping() {
                       <div key={pid} className="flex items-start gap-2 bg-gray-50 rounded-xl p-3">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-gray-800 mb-1">{p?.name}{p?.is_gil ? ' ⭐' : ''}</p>
-                          <p className="text-xs text-gray-500 leading-relaxed">
-                            {cats.map(key => CATS.find(c => c.key === key)?.he || key).join(' · ')}
-                          </p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {cats.map(key => {
+                              const cat = CATS.find(c => c.key === key)
+                              return (
+                                <span key={key} className="bg-purple-100 text-purple-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+                                  {isHe ? cat?.he : cat?.en}
+                                </span>
+                              )
+                            })}
+                          </div>
                         </div>
                         <button onClick={() => copyAssignment(pid)}
                           className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors flex-shrink-0 ${
