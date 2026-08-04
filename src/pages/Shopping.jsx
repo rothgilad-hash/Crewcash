@@ -575,7 +575,7 @@ export default function Shopping() {
               </div>
               {sortedTeam.length > 0 && activeCatKeys.length > 0 && (
                 <div className="space-y-2 pt-2 border-t border-gray-100">
-                  <p className="text-xs font-semibold text-gray-500">{isHe ? 'חלוקת קטגוריות:' : 'Category assignments:'}</p>
+                  <p className="text-xs font-semibold text-gray-500">{isHe ? 'חלוקת קטגוריות:' : 'Category assignments:'} <span className="text-gray-300">({activeCatKeys.length} קטג׳, {sortedTeam.length} אנשים: {sortedTeam.map(id => catAssignments[id]?.length||0).join('+')})</span></p>
                   {sortedTeam.map(pid => {
                     const p = participants.find(x => x.id === pid)
                     const cats = catAssignments[pid] || []
