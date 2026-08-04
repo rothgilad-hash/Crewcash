@@ -251,11 +251,19 @@ export default function Report() {
           ? Math.round(yachtTotal * myParts * (1 / oldParts - 1 / newParts) * 100) / 100
           : 0
 
-        const runningShare = Math.round(runningExpenses.reduce((s, e) => s + getEurAmount(e), 0) / N * 100) / 100
+        const runningShare = Math.round(runningExpenses.reduce((s, e) => {
+          const excluded = e.excluded_ids || []
+          if (excluded.includes(p.id)) return s
+          const active = participants.filter(x => !excluded.includes(x.id)).length
+          return s + getEurAmount(e) / (active || N)
+        }, 0) * 100) / 100
         const displayOwes = Math.round((b.owes - unexpectedShare) * 100) / 100
 
         const categoryBreakdown = runningExpenses.reduce((acc, e) => {
-          acc[e.category] = (acc[e.category] || 0) + getEurAmount(e) / N
+          const excluded = e.excluded_ids || []
+          if (excluded.includes(p.id)) return acc
+          const active = participants.filter(x => !excluded.includes(x.id)).length
+          acc[e.category] = (acc[e.category] || 0) + getEurAmount(e) / (active || N)
           return acc
         }, {})
 
