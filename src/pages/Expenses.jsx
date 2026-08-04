@@ -4,7 +4,7 @@ import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabase'
 import { formatCurrency, getCategoryIcon, getEurAmount } from '../lib/calculations'
 import AddExpenseModal from '../components/AddExpenseModal'
-import { Plus, Banknote, CheckCircle2, Circle, Camera, Receipt } from 'lucide-react'
+import { Plus, Banknote, CheckCircle2, Circle, Camera, Receipt, Copy, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const CATEGORIES = ['all', 'yacht', 'fuel', 'food', 'supermarket', 'alcohol', 'transport', 'activities', 'gear', 'insurance', 'yacht_services', 'other']
@@ -17,8 +17,42 @@ export default function Expenses() {
   const [filter, setFilter] = useState('all')
   const [receiptExp, setReceiptExp] = useState(null)
   const [uploading, setUploading] = useState(null)
+  const [copied, setCopied] = useState(false)
   const fileInputRef = useRef(null)
   const isHe = lang === 'he'
+
+  const buildCopyText = () => {
+    const catLabel = filter === 'all' ? (isHe ? 'כל ההוצאות' : 'All Expenses') : t('cat_' + filter)
+    const lines = [`🧾 ${trip?.name || 'CrewCash'} — ${catLabel}`, '']
+    const byCategory = {}
+    filtered.forEach(e => {
+      const cat = e.category || 'other'
+      if (!byCategory[cat]) byCategory[cat] = []
+      byCategory[cat].push(e)
+    })
+    Object.entries(byCategory).forEach(([cat, exps]) => {
+      lines.push(`${getCategoryIcon(cat)} ${t('cat_' + cat)}`)
+      exps.forEach(e => {
+        const paid = e.paid_by ? (participants.find(p => p.id === e.paid_by)?.name || '') : ''
+        const date = e.planned_date ? new Date(e.planned_date).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' }) : ''
+        const paidStr = paid ? ` (${paid})` : ''
+        const dateStr = date ? ` | ${date}` : ''
+        const notesStr = e.notes ? ` — ${e.notes}` : ''
+        lines.push(`  • ${e.description}${notesStr}: ${formatCurrency(e.amount, e.currency)}${e.currency !== 'EUR' && e.eur_rate ? ` ≈ €${Math.round(getEurAmount(e))}` : ''}${paidStr}${dateStr}`)
+      })
+      const catTotal = exps.reduce((s, e) => s + getEurAmount(e), 0)
+      lines.push(`  סה״כ: €${Math.round(catTotal)}`)
+      lines.push('')
+    })
+    lines.push(`💰 סה״כ כולל: €${Math.round(total)}`)
+    return lines.join('\n')
+  }
+
+  const copyAll = () => {
+    navigator.clipboard.writeText(buildCopyText())
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const filtered = filter === 'all' ? expenses : expenses.filter(e => e.category === filter)
   const total = filtered.reduce((s, e) => s + getEurAmount(e), 0)
@@ -91,18 +125,29 @@ export default function Expenses() {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
 
-        {/* Add button */}
-        {isAdmin && (
-          <div className="p-3 pb-0">
+        {/* Add + Copy buttons */}
+        <div className="p-3 pb-0 flex gap-2">
+          {isAdmin && (
             <button
               onClick={openAdd}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-blue-200 text-blue-600 font-semibold text-sm bg-blue-50 active:bg-blue-100 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-blue-200 text-blue-600 font-semibold text-sm bg-blue-50 active:bg-blue-100 transition-colors"
             >
               <Plus size={18} />
               {isHe ? 'הוסף הוצאה' : 'Add Expense'}
             </button>
-          </div>
-        )}
+          )}
+          {filtered.length > 0 && (
+            <button
+              onClick={copyAll}
+              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border-2 font-semibold text-sm transition-colors ${
+                copied ? 'border-emerald-400 bg-emerald-50 text-emerald-600' : 'border-gray-200 bg-white text-gray-600 active:bg-gray-50'
+              }`}
+            >
+              {copied ? <Check size={16} /> : <Copy size={16} />}
+              {copied ? (isHe ? 'הועתק' : 'Copied') : (isHe ? 'העתק' : 'Copy')}
+            </button>
+          )}
+        </div>
 
         {/* List */}
         <div className="flex-1 p-3 space-y-2">
