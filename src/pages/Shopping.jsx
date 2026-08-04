@@ -338,7 +338,7 @@ export default function Shopping() {
 
   // Supermarket team assignments — greedy by item count for fairness
   const gilId = participants.find(p => p.is_gil)?.id
-  const teamList = [...supermarketTeam]
+  const teamList = [...supermarketTeam].filter(id => participants.some(p => p.id === id))
   const sortedTeam = gilId && teamList.includes(gilId)
     ? [gilId, ...teamList.filter(id => id !== gilId)]
     : teamList
