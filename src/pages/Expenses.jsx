@@ -32,14 +32,23 @@ export default function Expenses() {
     })
     Object.entries(byCategory).forEach(([cat, exps]) => {
       lines.push(`${getCategoryIcon(cat)} ${t('cat_' + cat)}`)
+      const bySub = {}
       exps.forEach(e => {
-        const paid = e.paid_by ? (participants.find(p => p.id === e.paid_by)?.name || '') : ''
-        const date = e.planned_date ? new Date(e.planned_date).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' }) : ''
-        const paidStr = paid ? ` (${paid})` : ''
-        const dateStr = date ? ` | ${date}` : ''
-        const notesStr = e.notes ? ` — ${e.notes}` : ''
-        const subStr = e.sub_category ? ` [${t('subcat_' + e.sub_category)}]` : ''
-        lines.push(`  • ${e.description}${subStr}${notesStr}: ${formatCurrency(e.amount, e.currency)}${e.currency !== 'EUR' && e.eur_rate ? ` ≈ €${Math.round(getEurAmount(e))}` : ''}${paidStr}${dateStr}`)
+        const sub = e.sub_category || ''
+        if (!bySub[sub]) bySub[sub] = []
+        bySub[sub].push(e)
+      })
+      Object.entries(bySub).forEach(([sub, subExps]) => {
+        if (sub) lines.push(`  ${t('subcat_' + sub)}:`)
+        subExps.forEach(e => {
+          const paid = e.paid_by ? (participants.find(p => p.id === e.paid_by)?.name || '') : ''
+          const date = e.planned_date ? new Date(e.planned_date).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' }) : ''
+          const paidStr = paid ? ` (${paid})` : ''
+          const dateStr = date ? ` | ${date}` : ''
+          const notesStr = e.notes ? ` — ${e.notes}` : ''
+          const indent = sub ? '    ' : '  '
+          lines.push(`${indent}• ${e.description}${notesStr}: ${formatCurrency(e.amount, e.currency)}${e.currency !== 'EUR' && e.eur_rate ? ` ≈ €${Math.round(getEurAmount(e))}` : ''}${paidStr}${dateStr}`)
+        })
       })
       const catTotal = exps.reduce((s, e) => s + getEurAmount(e), 0)
       lines.push(`  סה״כ: €${Math.round(catTotal)}`)
