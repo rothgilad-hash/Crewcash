@@ -132,9 +132,9 @@ export default function Landing() {
               className="w-full border-2 border-gray-200 rounded-2xl px-5 py-5 text-center text-3xl font-mono tracking-widest focus:outline-none focus:border-blue-500 uppercase bg-white"
               placeholder="ABCD1234"
               value={code}
-              onChange={e => setCode(e.target.value.toUpperCase())}
+              onChange={e => setCode(e.target.value)}
               maxLength={64}
-              autoCapitalize="characters"
+              autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
             />

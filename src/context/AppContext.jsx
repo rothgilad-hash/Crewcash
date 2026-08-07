@@ -105,13 +105,17 @@ export function AppProvider({ children }) {
     const code = inviteCode.toLowerCase()
     let { data } = await supabase.from('trips').select('*').eq('invite_token', code).single()
     if (!data) {
-      // Try as admin_token
+      // Try as admin_token (case-insensitive)
       const res = await supabase.from('trips').select('*').eq('admin_token', inviteCode).single()
+      data = res.data
+    }
+    if (!data) {
+      const res = await supabase.from('trips').select('*').eq('admin_token', inviteCode.toLowerCase()).single()
       data = res.data
     }
     if (!data) throw new Error('Trip not found')
     localStorage.setItem('crewcash_trip_id', data.id)
-    if (data.admin_token === inviteCode) {
+    if (data.admin_token === inviteCode || data.admin_token === inviteCode.toLowerCase()) {
       localStorage.setItem('crewcash_admin_' + data.id, data.admin_token)
     }
     await loadTrip(data.id)
