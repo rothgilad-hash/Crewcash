@@ -80,11 +80,22 @@ export default function Settings() {
     window.location.href = window.location.href + '?v=' + Date.now()
   }
 
+  const [copiedAdmin, setCopiedAdmin] = useState(false)
+
   const copyCode = () => {
     navigator.clipboard.writeText(trip?.invite_token || '')
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+
+  const copyAdminToken = () => {
+    const token = trip?.id ? localStorage.getItem('crewcash_admin_' + trip.id) : ''
+    navigator.clipboard.writeText(token || '')
+    setCopiedAdmin(true)
+    setTimeout(() => setCopiedAdmin(false), 2000)
+  }
+
+  const adminTokenValue = trip?.id ? localStorage.getItem('crewcash_admin_' + trip.id) : null
 
   const openEdit = () => {
     setForm({
@@ -147,6 +158,17 @@ export default function Settings() {
                 </button>
               </div>
             </div>
+            {isAdmin && adminTokenValue && (
+              <div className="flex justify-between items-center py-2 border-b border-gray-50">
+                <span className="text-gray-400 text-sm">{isHe ? 'קוד אדמין' : 'Admin code'}</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-blue-600 text-sm">{adminTokenValue}</span>
+                  <button onClick={copyAdminToken} className="p-1 text-gray-400 hover:text-blue-600 transition-colors">
+                    {copiedAdmin ? <Check size={15} className="text-emerald-500" /> : <Copy size={15} />}
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="flex justify-between py-2">
               <span className="text-gray-400 text-sm">{isHe ? 'סוג גישה' : 'Access type'}</span>
               <span className={`font-semibold text-sm ${isAdmin ? 'text-blue-600' : 'text-gray-500'}`}>

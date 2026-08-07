@@ -102,9 +102,18 @@ export function AppProvider({ children }) {
   }, [trip, reloadRefunds, reloadCollections])
 
   const joinTrip = async (inviteCode) => {
-    const { data } = await supabase.from('trips').select('*').eq('invite_token', inviteCode.toLowerCase()).single()
+    const code = inviteCode.toLowerCase()
+    let { data } = await supabase.from('trips').select('*').eq('invite_token', code).single()
+    if (!data) {
+      // Try as admin_token
+      const res = await supabase.from('trips').select('*').eq('admin_token', inviteCode).single()
+      data = res.data
+    }
     if (!data) throw new Error('Trip not found')
     localStorage.setItem('crewcash_trip_id', data.id)
+    if (data.admin_token === inviteCode) {
+      localStorage.setItem('crewcash_admin_' + data.id, data.admin_token)
+    }
     await loadTrip(data.id)
     return data
   }
