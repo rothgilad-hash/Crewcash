@@ -81,7 +81,7 @@ export default function Settings() {
   }
 
   const copyCode = () => {
-    navigator.clipboard.writeText(trip?.invite_token?.toUpperCase() || '')
+    navigator.clipboard.writeText(trip?.invite_token || '')
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -141,7 +141,7 @@ export default function Settings() {
             <div className="flex justify-between items-center py-2 border-b border-gray-50">
               <span className="text-gray-400 text-sm">{t('tripCode')}</span>
               <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-gray-900 text-sm">{trip.invite_token?.toUpperCase()}</span>
+                <span className="font-mono font-bold text-gray-900 text-sm">{trip.invite_token}</span>
                 <button onClick={copyCode} className="p-1 text-gray-400 hover:text-blue-600 transition-colors">
                   {copied ? <Check size={15} className="text-emerald-500" /> : <Copy size={15} />}
                 </button>

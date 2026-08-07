@@ -259,7 +259,7 @@ export default function Dashboard() {
           className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
           <h3 className="font-bold text-gray-900 mb-0.5">{t('inviteLink')}</h3>
           <p className="text-gray-400 text-sm mb-4">
-            {t('tripCode')}: <span className="font-mono font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded-lg">{trip.invite_token?.toUpperCase()}</span>
+            {t('tripCode')}: <span className="font-mono font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded-lg">{trip.invite_token}</span>
           </p>
           <button
             onClick={copyLink}
