@@ -133,7 +133,7 @@ export default function Landing() {
               placeholder="ABCD1234"
               value={code}
               onChange={e => setCode(e.target.value.toUpperCase())}
-              maxLength={8}
+              maxLength={64}
               autoCapitalize="characters"
               autoCorrect="off"
               spellCheck={false}
