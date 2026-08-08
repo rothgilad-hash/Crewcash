@@ -471,8 +471,7 @@ export default function Report() {
                             <span className="text-sm text-gray-500">💸 {isHe ? `החזר ${ri + 1}` : `Refund ${ri + 1}`}{(r.refund_date || r.created_at) && <span className="text-gray-400 text-xs ms-2">{new Date(r.refund_date || r.created_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}</span>}</span>
                             <span className="text-sm font-semibold text-emerald-600">{formatCurrency(r.amount, 'EUR')}</span>
                           </div>
-                          {r.signature && <div className="border border-gray-100 rounded-xl overflow-hidden"><img src={r.signature} alt="signature" className="w-full max-h-20 object-contain" /></div>}
-                        </div>
+                          </div>
                       ))}
                     </div>
                   )}
@@ -663,8 +662,7 @@ export default function Report() {
                               <span className="text-sm text-gray-500">💸 {isHe ? `החזר ${ri + 1}` : `Refund ${ri + 1}`}{(r.refund_date || r.created_at) && <span className="text-gray-400 text-xs ms-2">{new Date(r.refund_date || r.created_at).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}</span>}</span>
                               <span className="text-sm font-semibold text-emerald-600">{formatCurrency(r.amount, 'EUR')}</span>
                             </div>
-                            {r.signature && <div className="border border-gray-100 rounded-xl overflow-hidden"><img src={r.signature} alt="signature" className="w-full max-h-20 object-contain" /></div>}
-                          </div>
+                              </div>
                         ))}
                       </div>
                     )}
