@@ -13,7 +13,7 @@ const ROUND_NAMES_EN = ['Round 1', 'Round 2', 'Round 3', 'Round 4', 'Round 5']
 
 export default function Participants() {
   const { t } = useTranslation()
-  const { trip, participants, expenses, kittyRefunds, kittyCollections, isAdmin, lang, reloadCollections } = useApp()
+  const { trip, participants, expenses, kittyRefunds, kittyCollections, isAdmin, lang, reloadCollections, reloadRefunds } = useApp()
   const [addOpen, setAddOpen] = useState(false)
   const [collectOpen, setCollectOpen] = useState(null)
   const [groupCollectOpen, setGroupCollectOpen] = useState(false)
@@ -61,6 +61,16 @@ export default function Participants() {
   const handleDelete = async (id, name) => {
     if (!window.confirm(isHe ? `למחוק את ${name}?` : `Delete ${name}?`)) return
     await supabase.from('participants').delete().eq('id', id)
+  }
+
+  const handleClearAllCollections = async () => {
+    if (!window.confirm(isHe ? 'למחוק את כל הגיוסים של כולם?' : 'Delete all collections for everyone?')) return
+    const ids = participants.map(p => p.id)
+    if (ids.length === 0) return
+    await supabase.from('kitty_collections').delete().in('participant_id', ids)
+    await supabase.from('kitty_refunds').delete().in('participant_id', ids)
+    reloadCollections(ids)
+    reloadRefunds(ids)
   }
 
   const getPersonDebt = (p) => {
@@ -292,6 +302,13 @@ export default function Participants() {
             <button onClick={openGroupCollect}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-purple-600 text-white font-semibold text-sm active:bg-purple-700">
               💰 {isHe ? 'גיוס קבוצתי' : 'Group Collection'}
+            </button>
+          )}
+          {kittyCollections.length > 0 && (
+            <button onClick={handleClearAllCollections}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-red-200 text-red-500 font-semibold text-sm active:bg-red-50">
+              <Trash2 size={16} />
+              {isHe ? 'מחק את כל הגיוסים' : 'Clear All Collections'}
             </button>
           )}
           <button onClick={() => setAddOpen(true)}

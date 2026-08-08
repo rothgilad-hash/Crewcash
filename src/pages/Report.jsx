@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { calculateBalances, formatCurrency, getCategoryIcon, getEurAmount, getExpenseDate, getCollectedAmount, getCollectionOverpayment, getLastCollectionDate, getPostCollectionNet } from '../lib/calculations'
 import { motion } from 'framer-motion'
-import { FileText } from 'lucide-react'
+import { FileText, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
 import SignaturePad from '../components/SignaturePad'
@@ -12,7 +12,7 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'
 
 export default function Report() {
   const { t } = useTranslation()
-  const { participants, expenses, kittyRefunds, kittyCollections, lang, isAdmin, reloadRefunds } = useApp()
+  const { participants, expenses, kittyRefunds, kittyCollections, lang, isAdmin, reloadRefunds, reloadCollections, reloadExpenses, trip, setExpenses } = useApp()
   const isHe = lang === 'he'
 
   const [editRefund, setEditRefund] = useState(null) // { refund, name }
@@ -22,6 +22,20 @@ export default function Report() {
   const [editSaving, setEditSaving] = useState(false)
   const [sigOpen, setSigOpen] = useState(false)
   const [sigTarget, setSigTarget] = useState(null)
+
+  const handleDeleteAll = async () => {
+    if (!window.confirm(isHe ? 'למחוק את כל הנתונים? (הוצאות, גיוסים, החזרים)' : 'Delete all data? (expenses, collections, refunds)')) return
+    if (!window.confirm(isHe ? 'אתה בטוח לגמרי? פעולה זו בלתי הפיכה!' : 'Are you absolutely sure? This cannot be undone!')) return
+    const ids = participants.map(p => p.id)
+    await Promise.all([
+      supabase.from('expenses').delete().eq('trip_id', trip.id),
+      ids.length > 0 ? supabase.from('kitty_collections').delete().in('participant_id', ids) : Promise.resolve(),
+      ids.length > 0 ? supabase.from('kitty_refunds').delete().in('participant_id', ids) : Promise.resolve(),
+    ])
+    setExpenses([])
+    reloadCollections(ids)
+    reloadRefunds(ids)
+  }
 
   const openEditRefund = (r, name) => {
     setEditRefund({ refund: r, name })
@@ -200,6 +214,16 @@ export default function Report() {
         <FileText size={18} />
         {isHe ? 'הורד דוח PDF' : 'Export PDF Report'}
       </button>
+
+      {isAdmin && (expenses.length > 0 || kittyCollections.length > 0 || kittyRefunds.length > 0) && (
+        <button
+          onClick={handleDeleteAll}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-red-200 text-red-500 font-semibold text-sm active:bg-red-50"
+        >
+          <Trash2 size={16} />
+          {isHe ? 'מחק את כל הנתונים' : 'Delete All Data'}
+        </button>
+      )}
 
       {/* Summary header */}
       <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">

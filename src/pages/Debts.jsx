@@ -63,7 +63,15 @@ export default function Debts() {
     return Math.round((overpay + postFull + unexpectedPersonalNet - refunded) * 100) / 100
   }
 
-  const owesKitty = participants.filter(p => getRemaining(p) > 0.5)
+  const getNetOwedToKitty = (p) => {
+    const remaining = getRemaining(p)
+    const kittyOwed = getKittyOwedAmount(p)
+    if (remaining > 0.5) return remaining
+    if (kittyOwed < -0.5) return Math.abs(kittyOwed) // over-refunded — now owes kitty
+    return 0
+  }
+
+  const owesKitty = participants.filter(p => getNetOwedToKitty(p) > 0.5)
   const kittyOwes = participants.filter(p => getKittyOwedAmount(p) > 0.5)
 
   const allSettled = owesKitty.length === 0 && kittyOwes.length === 0
@@ -82,6 +90,7 @@ export default function Debts() {
     const shortfallRows = kittyCollections
       .filter(c => c.participant_id === receivedOpen.id && c.target_amount > c.amount)
       .sort((a, b) => (a.collected_at || '').localeCompare(b.collected_at || ''))
+    let lastUpdatedRow = null
     for (const row of shortfallRows) {
       if (remaining <= 0) break
       const gap = row.target_amount - row.amount
@@ -89,7 +98,14 @@ export default function Debts() {
       await supabase.from('kitty_collections')
         .update({ amount: row.amount + toAdd, round_name: receivedReason })
         .eq('id', row.id)
+      lastUpdatedRow = { ...row, newAmount: row.amount + toAdd }
       remaining -= toAdd
+    }
+    // If overpaid: push the excess onto the last row so amount > target_amount
+    if (remaining > 0.01 && lastUpdatedRow) {
+      await supabase.from('kitty_collections')
+        .update({ amount: lastUpdatedRow.newAmount + remaining })
+        .eq('id', lastUpdatedRow.id)
     }
     reloadCollections(participants.map(x => x.id))
     setReceivedOpen(null)
@@ -148,7 +164,7 @@ export default function Debts() {
                   const remaining = getRemaining(p)
                   const collDebt = getCollDebt(p)
                   const idx = participants.indexOf(p)
-                  const totalDebt = Math.round(Math.max(remaining, 0) * 100) / 100
+                  const totalDebt = Math.round(getNetOwedToKitty(p) * 100) / 100
                   return (
                     <motion.div
                       key={p.id}
