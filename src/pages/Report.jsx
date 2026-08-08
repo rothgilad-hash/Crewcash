@@ -323,6 +323,28 @@ export default function Report() {
         const kittyOwedRound2 = Math.round((round2Overpay + unexpectedPersonalNet) * 100) / 100
         const kittyOwesRound2 = kittyOwedRound2 > 0.5
 
+        // Chronological debt ledger
+        const ledgerEvents = [
+          ...myCollections.map(c => ({
+            date: c.collected_at || '',
+            type: 'collection',
+            amount: c.amount,
+            label: c.round_name || (isHe ? 'גיוס' : 'Collection'),
+          })),
+          ...allRefunds.map(r => ({
+            date: r.refund_date || (r.created_at || '').slice(0, 10),
+            type: 'refund',
+            amount: r.amount,
+            label: isHe ? 'החזר מהקופה' : 'Kitty refund',
+          })),
+        ].sort((a, b) => a.date.localeCompare(b.date))
+        let runningBalance = netToCollect
+        const ledger = ledgerEvents.map(event => {
+          if (event.type === 'collection') runningBalance -= event.amount
+          else runningBalance += event.amount
+          return { ...event, balance: Math.round(runningBalance * 100) / 100 }
+        })
+
         return (
           <motion.div key={p.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
@@ -450,6 +472,52 @@ export default function Report() {
                 </div>
               )}
             </div>
+
+            {/* ── פנקס חוב כרונולוגי ── */}
+            {ledger.length > 0 && (
+              <div className="border-t-2 border-dashed border-gray-100">
+                <div className="px-4 pt-3 pb-1 flex items-center gap-2">
+                  <span className="text-xs font-bold text-gray-400">📒 {isHe ? 'היסטוריית חוב' : 'Debt History'}</span>
+                  <div className="flex-1 h-px bg-gray-100" />
+                </div>
+                <div className="px-4 pb-3 space-y-0">
+                  {/* Opening balance */}
+                  <div className="flex items-center justify-between py-1.5 border-b border-gray-50">
+                    <span className="text-xs text-gray-400">{isHe ? 'יתרה פותחת' : 'Opening balance'}</span>
+                    <span className={`text-xs font-bold ${netToCollect > 0.5 ? 'text-red-400' : 'text-emerald-400'}`}>
+                      {netToCollect > 0.5
+                        ? (isHe ? `חייב לקופה ${formatCurrency(netToCollect, 'EUR')}` : `Owes kitty ${formatCurrency(netToCollect, 'EUR')}`)
+                        : (isHe ? 'מסולק ✓' : 'Settled ✓')}
+                    </span>
+                  </div>
+                  {/* Events */}
+                  {ledger.map((event, idx) => (
+                    <div key={idx} className="flex items-center justify-between gap-2 py-1.5 border-b border-gray-50 last:border-0">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs text-gray-600">
+                          {event.type === 'collection' ? '💰' : '↩'} {event.label}
+                          {event.date && (
+                            <span className="text-gray-300 ms-1.5">
+                              · {new Date(event.date).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}
+                            </span>
+                          )}
+                        </span>
+                        <span className={`text-xs font-semibold ms-1.5 ${event.type === 'collection' ? 'text-blue-500' : 'text-orange-500'}`}>
+                          {event.type === 'collection' ? `−${formatCurrency(event.amount, 'EUR')}` : `+${formatCurrency(event.amount, 'EUR')}`}
+                        </span>
+                      </div>
+                      <span className={`text-xs font-bold flex-shrink-0 ${event.balance > 0.5 ? 'text-red-500' : event.balance < -0.5 ? 'text-emerald-500' : 'text-gray-400'}`}>
+                        {event.balance > 0.5
+                          ? (isHe ? `חייב ${formatCurrency(event.balance, 'EUR')}` : `Owes ${formatCurrency(event.balance, 'EUR')}`)
+                          : event.balance < -0.5
+                          ? (isHe ? `קופה חייבת ${formatCurrency(Math.abs(event.balance), 'EUR')}` : `Kitty owes ${formatCurrency(Math.abs(event.balance), 'EUR')}`)
+                          : (isHe ? 'מסולק ✓' : 'Settled ✓')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* ── סבב 2 — גיוס שני (רק אם יש הוצאות לא צפויות) ── */}
             {unexpectedTotal > 0.5 && (
