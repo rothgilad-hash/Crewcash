@@ -336,13 +336,16 @@ export default function Report() {
             type: 'refund',
             amount: r.amount,
             label: isHe ? 'החזר מהקופה' : 'Kitty refund',
+            signature: r.signature,
           })),
         ].sort((a, b) => a.date.localeCompare(b.date))
-        let runningBalance = netToCollect
+        let bal = netToCollect
         const ledger = ledgerEvents.map(event => {
-          if (event.type === 'collection') runningBalance -= event.amount
-          else runningBalance += event.amount
-          return { ...event, balance: Math.round(runningBalance * 100) / 100 }
+          const balBefore = Math.round(bal * 100) / 100
+          if (event.type === 'collection') bal -= event.amount
+          else bal += event.amount
+          const balAfter = Math.round(bal * 100) / 100
+          return { ...event, balBefore, balAfter }
         })
 
         return (
@@ -480,41 +483,90 @@ export default function Report() {
                   <span className="text-xs font-bold text-gray-400">📒 {isHe ? 'היסטוריית חוב' : 'Debt History'}</span>
                   <div className="flex-1 h-px bg-gray-100" />
                 </div>
-                <div className="px-4 pb-3 space-y-0">
-                  {/* Opening balance */}
-                  <div className="flex items-center justify-between py-1.5 border-b border-gray-50">
-                    <span className="text-xs text-gray-400">{isHe ? 'יתרה פותחת' : 'Opening balance'}</span>
-                    <span className={`text-xs font-bold ${netToCollect > 0.5 ? 'text-red-400' : 'text-emerald-400'}`}>
-                      {netToCollect > 0.5
-                        ? (isHe ? `חייב לקופה ${formatCurrency(netToCollect, 'EUR')}` : `Owes kitty ${formatCurrency(netToCollect, 'EUR')}`)
-                        : (isHe ? 'מסולק ✓' : 'Settled ✓')}
-                    </span>
+                <div className="px-4 pb-3 space-y-2">
+
+                  {/* Opening */}
+                  <div className="flex items-center justify-between py-1 border-b border-gray-100">
+                    <span className="text-xs font-semibold text-gray-500">{isHe ? 'נטו לגיוס' : 'Net to collect'}</span>
+                    <span className="text-xs font-black text-red-500">{formatCurrency(netToCollect, 'EUR')}</span>
                   </div>
-                  {/* Events */}
-                  {ledger.map((event, idx) => (
-                    <div key={idx} className="flex items-center justify-between gap-2 py-1.5 border-b border-gray-50 last:border-0">
-                      <div className="flex-1 min-w-0">
-                        <span className="text-xs text-gray-600">
-                          {event.type === 'collection' ? '💰' : '↩'} {event.label}
-                          {event.date && (
-                            <span className="text-gray-300 ms-1.5">
-                              · {new Date(event.date).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })}
-                            </span>
-                          )}
-                        </span>
-                        <span className={`text-xs font-semibold ms-1.5 ${event.type === 'collection' ? 'text-blue-500' : 'text-orange-500'}`}>
-                          {event.type === 'collection' ? `−${formatCurrency(event.amount, 'EUR')}` : `+${formatCurrency(event.amount, 'EUR')}`}
-                        </span>
+
+                  {ledger.map((event, idx) => {
+                    const dateStr = event.date
+                      ? new Date(event.date).toLocaleDateString(isHe ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' })
+                      : ''
+                    const overpaidCollection = event.type === 'collection' && event.balBefore > 0.5 && event.amount > event.balBefore + 0.5
+                    const exactCollection    = event.type === 'collection' && event.balBefore > 0.5 && Math.abs(event.amount - event.balBefore) <= 0.5
+                    const partialCollection  = event.type === 'collection' && event.balBefore > 0.5 && event.amount < event.balBefore - 0.5
+                    const overRefund         = event.type === 'refund' && event.balBefore < -0.5 && event.amount > Math.abs(event.balBefore) + 0.5
+                    const exactRefund        = event.type === 'refund' && event.balBefore < -0.5 && Math.abs(event.amount - Math.abs(event.balBefore)) <= 0.5
+                    const partialRefund      = event.type === 'refund' && event.balBefore < -0.5 && event.amount < Math.abs(event.balBefore) - 0.5
+
+                    return (
+                      <div key={idx} className="space-y-1 border-b border-gray-50 pb-2 last:border-0 last:pb-0">
+
+                        {/* Event header */}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-semibold text-gray-600">
+                            {event.type === 'collection' ? '💰' : '↩'} {event.label}
+                            {dateStr && <span className="text-gray-300 font-normal ms-1.5">· {dateStr}</span>}
+                          </span>
+                          <span className={`text-xs font-bold flex-shrink-0 ${event.type === 'collection' ? 'text-blue-600' : 'text-orange-500'}`}>
+                            {formatCurrency(event.amount, 'EUR')}
+                          </span>
+                        </div>
+
+                        {/* Collection statuses */}
+                        {exactCollection && (
+                          <div className="text-xs text-emerald-500 font-semibold">✓ {isHe ? 'שולם בדיוק — מסולק' : 'Paid exactly — settled'}</div>
+                        )}
+                        {overpaidCollection && (
+                          <div className="space-y-0.5">
+                            <div className="text-xs text-orange-500">
+                              {isHe
+                                ? `שילם יותר מהיעד — עודף ${formatCurrency(event.amount - event.balBefore, 'EUR')}`
+                                : `Overpaid — excess ${formatCurrency(event.amount - event.balBefore, 'EUR')}`}
+                            </div>
+                            <div className="text-xs font-semibold text-emerald-500">
+                              {isHe ? `קופה חייבת לו: ${formatCurrency(Math.abs(event.balAfter), 'EUR')}` : `Kitty owes: ${formatCurrency(Math.abs(event.balAfter), 'EUR')}`}
+                            </div>
+                          </div>
+                        )}
+                        {partialCollection && (
+                          <div className="text-xs text-red-400">
+                            {isHe ? `נשאר חייב לקופה: ${formatCurrency(event.balAfter, 'EUR')}` : `Still owes kitty: ${formatCurrency(event.balAfter, 'EUR')}`}
+                          </div>
+                        )}
+
+                        {/* Refund statuses */}
+                        {exactRefund && (
+                          <div className="space-y-1">
+                            <div className="text-xs text-emerald-500 font-semibold">✓ {isHe ? 'חוב הקופה סולק' : 'Kitty debt settled'}</div>
+                            {event.signature && <img src={event.signature} alt="sig" className="max-h-14 rounded-lg border border-gray-100 mt-1" />}
+                          </div>
+                        )}
+                        {overRefund && (
+                          <div className="space-y-0.5">
+                            <div className="text-xs text-orange-500">
+                              {isHe
+                                ? `שולם יותר מהחוב — חוב הקופה היה ${formatCurrency(Math.abs(event.balBefore), 'EUR')}`
+                                : `Over-refunded — kitty owed ${formatCurrency(Math.abs(event.balBefore), 'EUR')}`}
+                            </div>
+                            <div className="text-xs font-semibold text-red-500">
+                              {isHe ? `כעת חייב לקופה: ${formatCurrency(event.balAfter, 'EUR')}` : `Now owes kitty: ${formatCurrency(event.balAfter, 'EUR')}`}
+                            </div>
+                            {event.signature && <img src={event.signature} alt="sig" className="max-h-14 rounded-lg border border-gray-100 mt-1" />}
+                          </div>
+                        )}
+                        {partialRefund && (
+                          <div className="text-xs text-emerald-400">
+                            {isHe ? `נשאר חוב הקופה: ${formatCurrency(Math.abs(event.balAfter), 'EUR')}` : `Kitty still owes: ${formatCurrency(Math.abs(event.balAfter), 'EUR')}`}
+                          </div>
+                        )}
+
                       </div>
-                      <span className={`text-xs font-bold flex-shrink-0 ${event.balance > 0.5 ? 'text-red-500' : event.balance < -0.5 ? 'text-emerald-500' : 'text-gray-400'}`}>
-                        {event.balance > 0.5
-                          ? (isHe ? `חייב ${formatCurrency(event.balance, 'EUR')}` : `Owes ${formatCurrency(event.balance, 'EUR')}`)
-                          : event.balance < -0.5
-                          ? (isHe ? `קופה חייבת ${formatCurrency(Math.abs(event.balance), 'EUR')}` : `Kitty owes ${formatCurrency(Math.abs(event.balance), 'EUR')}`)
-                          : (isHe ? 'מסולק ✓' : 'Settled ✓')}
-                      </span>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
