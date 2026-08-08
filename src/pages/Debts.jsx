@@ -77,7 +77,7 @@ export default function Debts() {
   const allSettled = owesKitty.length === 0 && kittyOwes.length === 0
 
   const openReceived = (p) => {
-    setReceivedAmount(String(Math.abs(getRemaining(p))))
+    setReceivedAmount(String(Math.abs(getNetOwedToKitty(p))))
     setReceivedReason('יתרת גיוס')
     setReceivedDate(new Date().toISOString().slice(0, 10))
     setReceivedOpen(p)
@@ -101,11 +101,22 @@ export default function Debts() {
       lastUpdatedRow = { ...row, newAmount: row.amount + toAdd }
       remaining -= toAdd
     }
-    // If overpaid: push the excess onto the last row so amount > target_amount
-    if (remaining > 0.01 && lastUpdatedRow) {
-      await supabase.from('kitty_collections')
-        .update({ amount: lastUpdatedRow.newAmount + remaining })
-        .eq('id', lastUpdatedRow.id)
+    if (remaining > 0.01) {
+      if (lastUpdatedRow) {
+        // Overpayment on top of collection debt: push excess onto last row (amount > target = overpay)
+        await supabase.from('kitty_collections')
+          .update({ amount: lastUpdatedRow.newAmount + remaining })
+          .eq('id', lastUpdatedRow.id)
+      } else {
+        // Debt comes from over-refund (no shortfall rows): record as new collection overpay row
+        await supabase.from('kitty_collections').insert({
+          participant_id: receivedOpen.id,
+          amount: remaining,
+          target_amount: 0,
+          round_name: receivedReason,
+          collected_at: receivedDate || new Date().toISOString().slice(0, 10),
+        })
+      }
     }
     reloadCollections(participants.map(x => x.id))
     setReceivedOpen(null)
