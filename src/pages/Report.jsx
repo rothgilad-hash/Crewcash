@@ -323,14 +323,18 @@ export default function Report() {
         const kittyOwedRound2 = Math.round((round2Overpay + unexpectedPersonalNet) * 100) / 100
         const kittyOwesRound2 = kittyOwedRound2 > 0.5
 
-        // Chronological debt ledger
+        // Chronological debt ledger — group collections by date so split rows appear as one payment
+        const collectionsByDate = {}
+        myCollections.forEach(c => {
+          const key = c.collected_at || 'no-date'
+          if (!collectionsByDate[key]) {
+            collectionsByDate[key] = { date: c.collected_at || '', type: 'collection', label: '', amount: 0 }
+          }
+          collectionsByDate[key].amount += c.amount
+          if (c.round_name && !collectionsByDate[key].label) collectionsByDate[key].label = c.round_name
+        })
         const ledgerEvents = [
-          ...myCollections.map(c => ({
-            date: c.collected_at || '',
-            type: 'collection',
-            amount: c.amount,
-            label: c.round_name || (isHe ? 'גיוס' : 'Collection'),
-          })),
+          ...Object.values(collectionsByDate).map(e => ({ ...e, amount: Math.round(e.amount * 100) / 100, label: e.label || (isHe ? 'גיוס' : 'Collection') })),
           ...allRefunds.map(r => ({
             date: r.refund_date || (r.created_at || '').slice(0, 10),
             type: 'refund',
@@ -338,7 +342,7 @@ export default function Report() {
             label: isHe ? 'החזר מהקופה' : 'Kitty refund',
             signature: r.signature,
           })),
-        ].sort((a, b) => a.date.localeCompare(b.date))
+        ].sort((a, b) => (a.date || '').localeCompare(b.date || ''))
         let bal = netToCollect
         const ledger = ledgerEvents.map(event => {
           const balBefore = Math.round(bal * 100) / 100
