@@ -81,7 +81,7 @@ function autoDetectItemCat(name) {
 const defaultForm = {
   description: '', amount: '', currency: 'EUR', category: '',
   sub_category: '', paid_by: '', is_yacht_cost: false, is_cash: false, notes: '',
-  planned_date: '', is_paid: false, is_unexpected: false
+  planned_date: '', is_paid: false, is_unexpected: false, is_estimate: false, actual_amount: ''
 }
 
 export default function AddExpenseModal({ open, onClose, expense = null }) {
@@ -107,7 +107,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
 
   useEffect(() => {
     if (expense) {
-      setForm({ ...defaultForm, ...expense, amount: expense.amount?.toString() || '', paid_by: expense.paid_by || '' })
+      setForm({ ...defaultForm, ...expense, amount: expense.amount?.toString() || '', actual_amount: expense.actual_amount?.toString() || '', paid_by: expense.paid_by || '' })
       setExcludedIds(expense.excluded_ids || [])
       autoFilledDesc.current = true
     } else {
@@ -190,6 +190,8 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
       planned_date: form.planned_date || null,
       is_paid: form.is_paid,
       is_unexpected: form.is_unexpected,
+      is_estimate: form.is_estimate,
+      actual_amount: form.is_estimate && form.actual_amount ? parseFloat(form.actual_amount) : null,
       excluded_ids: excludedIds.length > 0 ? excludedIds : null
     }
     let error, expenseId
@@ -394,7 +396,45 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
               <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.is_unexpected ? 'translate-x-5' : ''}`} />
             </div>
           </label>
+          <label className="flex items-center justify-between py-3.5 px-4 bg-amber-50 rounded-2xl cursor-pointer active:bg-amber-100 transition-colors">
+            <span className="text-sm font-medium text-gray-800">〜 {isHe ? 'הוצאה משוערת' : 'Estimated expense'}</span>
+            <div className="relative">
+              <input type="checkbox" className="sr-only" checked={form.is_estimate} onChange={e => set('is_estimate', e.target.checked)} />
+              <div className={`w-11 h-6 rounded-full transition-colors ${form.is_estimate ? 'bg-amber-500' : 'bg-gray-200'}`} />
+              <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.is_estimate ? 'translate-x-5' : ''}`} />
+            </div>
+          </label>
         </div>
+
+        {/* Actual amount — only when editing an estimate */}
+        {form.is_estimate && expense?.id && (
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              ✅ {isHe ? 'סכום בפועל (אם ידוע)' : 'Actual amount (if known)'}
+            </label>
+            <input
+              type="number"
+              inputMode="decimal"
+              className="w-full border-2 border-amber-200 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-amber-500 text-gray-900 bg-amber-50 transition-colors"
+              placeholder={isHe ? 'הזן את הסכום שנשלם בפועל' : 'Enter actual amount paid'}
+              value={form.actual_amount}
+              onChange={e => set('actual_amount', e.target.value)}
+            />
+            {form.actual_amount && form.amount && (
+              (() => {
+                const diff = parseFloat(form.actual_amount) - parseFloat(form.amount)
+                const absDiff = Math.abs(diff).toFixed(2)
+                return diff === 0 ? null : (
+                  <p className={`text-xs mt-1.5 font-semibold ${diff < 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {diff < 0
+                      ? (isHe ? `✅ עודף של ${absDiff} ${form.currency} בקופה` : `✅ Surplus of ${absDiff} ${form.currency} in kitty`)
+                      : (isHe ? `⚠️ חוסר של ${absDiff} ${form.currency} לגיוס` : `⚠️ Shortfall of ${absDiff} ${form.currency} to collect`)}
+                  </p>
+                )
+              })()
+            )}
+          </div>
+        )}
 
         {/* 5. Paid by (personal payment) */}
         <div>

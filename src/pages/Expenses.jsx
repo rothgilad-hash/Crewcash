@@ -67,6 +67,13 @@ export default function Expenses() {
   const filtered = filter === 'all' ? expenses : expenses.filter(e => e.category === filter)
   const total = filtered.reduce((s, e) => s + getEurAmount(e), 0)
 
+  const estimateSummary = expenses
+    .filter(e => e.is_estimate && e.actual_amount != null)
+    .reduce((s, e) => {
+      const diff = e.actual_amount - e.amount // positive = overage, negative = surplus
+      return s + diff
+    }, 0)
+
   const openEdit = (exp) => {
     if (!isAdmin) return
     setSelected(exp); setModalOpen(true)
@@ -159,6 +166,20 @@ export default function Expenses() {
           )}
         </div>
 
+        {/* Estimate surplus/deficit banner */}
+        {estimateSummary !== 0 && (
+          <div className={`mx-3 mt-3 px-4 py-2.5 rounded-2xl flex items-center justify-between ${estimateSummary < 0 ? 'bg-emerald-50 border border-emerald-100' : 'bg-red-50 border border-red-100'}`}>
+            <span className={`text-sm font-semibold ${estimateSummary < 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+              {estimateSummary < 0
+                ? (isHe ? `✅ עודף מהערכות בקופה` : 'Estimate surplus in kitty')
+                : (isHe ? `⚠️ חוסר מהערכות לגיוס` : 'Estimate shortfall to collect')}
+            </span>
+            <span className={`text-sm font-bold ${estimateSummary < 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+              {estimateSummary < 0 ? '+' : '-'}€{Math.abs(estimateSummary).toFixed(0)}
+            </span>
+          </div>
+        )}
+
         {/* List */}
         <div className="flex-1 p-3 space-y-2">
           {filtered.length === 0 ? (
@@ -189,6 +210,11 @@ export default function Expenses() {
                     <p className="font-semibold text-gray-900 truncate text-sm">{exp.description}</p>
                     {exp.is_yacht_cost && (
                       <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">×2</span>
+                    )}
+                    {exp.is_estimate && (
+                      <span className="text-[10px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">
+                        {exp.actual_amount != null ? '✓ הוסדר' : '〜 הערכה'}
+                      </span>
                     )}
                   </div>
                   <div className="text-xs text-gray-400 space-y-0.5">
