@@ -55,6 +55,13 @@ export default function CashFlow() {
     reloadExpenses(trip.id)
   }
 
+  const estimateShortfall = expenses
+    .filter(e => e.is_estimate && e.actual_amount != null && e.actual_amount > e.amount)
+    .reduce((s, e) => s + (e.actual_amount - e.amount), 0)
+
+  const totalNeeded = totalUpcoming + estimateShortfall
+  const fundraiseNeeded = totalNeeded > cashBalance ? totalNeeded - cashBalance : 0
+
   const alertLevel = pct <= 0.25 ? 'critical' : pct <= 0.5 ? 'warning' : null
 
   const formatDateLabel = (dateStr) => {
@@ -118,6 +125,18 @@ export default function CashFlow() {
           <p className="text-sm font-semibold text-amber-600 mt-2">
             ⚠️ {isHe ? 'נשאר פחות מחצי מהקופה' : 'Less than 50% of kitty remaining'}
           </p>
+        )}
+        {fundraiseNeeded > 0 && (
+          <div className="mt-3 bg-red-100 border border-red-200 rounded-2xl px-4 py-3">
+            <p className="text-sm font-black text-red-700">
+              🚨 {isHe ? `נדרש גיוס: ${formatCurrency(fundraiseNeeded, 'EUR')}` : `Fundraise needed: ${formatCurrency(fundraiseNeeded, 'EUR')}`}
+            </p>
+            <p className="text-xs text-red-500 mt-0.5">
+              {isHe
+                ? `יתרה (${formatCurrency(cashBalance, 'EUR')}) נמוכה מההוצאות הצפויות (${formatCurrency(totalNeeded, 'EUR')})`
+                : `Balance (${formatCurrency(cashBalance, 'EUR')}) is below expected expenses (${formatCurrency(totalNeeded, 'EUR')})`}
+            </p>
+          </div>
         )}
 
         {/* Breakdown */}
