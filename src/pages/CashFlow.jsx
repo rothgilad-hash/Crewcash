@@ -11,6 +11,7 @@ export default function CashFlow() {
   const { participants, expenses, kittyRefunds, kittyCollections, isAdmin, lang, reloadExpenses, trip } = useApp()
   const [showPaid, setShowPaid] = useState(false)
   const [showUnpaid, setShowUnpaid] = useState(true)
+  const [showEstimates, setShowEstimates] = useState(true)
   const isHe = lang === 'he'
 
   const totalCollected = participants.reduce((s, p) => s + getCollectedAmount(kittyCollections, p.id, p), 0)
@@ -258,6 +259,87 @@ export default function CashFlow() {
               )}
             </div>
           ))}
+        </motion.div>
+      )}
+      {/* Estimates report */}
+      {expenses.some(e => e.is_estimate) && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="bg-white rounded-3xl shadow-sm border border-amber-100 overflow-hidden"
+        >
+          <button
+            onClick={() => setShowEstimates(v => !v)}
+            className="w-full p-4 flex justify-between items-center active:bg-amber-50 transition-colors"
+          >
+            <span className="font-bold text-gray-900 text-base">
+              〜 {isHe ? `הוצאות משוערות (${expenses.filter(e => e.is_estimate).length})` : `Estimates (${expenses.filter(e => e.is_estimate).length})`}
+            </span>
+            {showEstimates ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+          </button>
+
+          {showEstimates && (
+            <div className="border-t border-amber-50">
+              {expenses.filter(e => e.is_estimate).map(exp => {
+                const hasActual = exp.actual_amount != null
+                const diff = hasActual ? exp.actual_amount - exp.amount : null
+                return (
+                  <div key={exp.id} className="px-4 py-3 border-b border-gray-50 last:border-0">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <p className="text-sm font-semibold text-gray-900 truncate flex-1">{exp.description}</p>
+                      {!hasActual && (
+                        <span className="text-[10px] bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full font-bold flex-shrink-0">
+                          {isHe ? 'ממתין' : 'Pending'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 text-xs">
+                      <span className="text-gray-400">
+                        {isHe ? 'הוערך: ' : 'Est: '}
+                        <span className="font-semibold text-gray-700">{formatCurrency(exp.amount, exp.currency)}</span>
+                      </span>
+                      {hasActual ? (
+                        <>
+                          <span className="text-gray-400">
+                            {isHe ? 'בפועל: ' : 'Actual: '}
+                            <span className="font-semibold text-gray-700">{formatCurrency(exp.actual_amount, exp.currency)}</span>
+                          </span>
+                          {diff !== 0 && (
+                            <span className={`font-bold ${diff < 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                              {diff < 0 ? `+${formatCurrency(Math.abs(diff), exp.currency)} עודף` : `−${formatCurrency(diff, exp.currency)} חוסר`}
+                            </span>
+                          )}
+                          {diff === 0 && <span className="text-emerald-500 font-semibold">✓ {isHe ? 'מדויק' : 'Exact'}</span>}
+                        </>
+                      ) : (
+                        <span className="text-gray-300 italic">{isHe ? 'טרם הוזן סכום בפועל' : 'Actual not entered yet'}</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+
+              {/* Summary row */}
+              {(() => {
+                const settled = expenses.filter(e => e.is_estimate && e.actual_amount != null)
+                if (settled.length === 0) return null
+                const totalDiff = settled.reduce((s, e) => s + (e.actual_amount - e.amount), 0)
+                return (
+                  <div className={`px-4 py-3 flex items-center justify-between ${totalDiff <= 0 ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                    <span className={`text-sm font-bold ${totalDiff <= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                      {isHe ? 'סה״כ הפרש' : 'Net difference'}
+                    </span>
+                    <span className={`text-sm font-black ${totalDiff <= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                      {totalDiff <= 0
+                        ? `+${formatCurrency(Math.abs(totalDiff), 'EUR')} ${isHe ? 'בקופה' : 'surplus'}`
+                        : `−${formatCurrency(totalDiff, 'EUR')} ${isHe ? 'לגיוס' : 'to collect'}`}
+                    </span>
+                  </div>
+                )
+              })()}
+            </div>
+          )}
         </motion.div>
       )}
     </div>
