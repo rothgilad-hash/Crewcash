@@ -15,7 +15,7 @@ export default function CashFlow() {
   const isHe = lang === 'he'
 
   const totalCollected = participants.reduce((s, p) => s + getCollectedAmount(kittyCollections, p.id, p), 0)
-  const cashSpent = expenses.filter(e => e.is_cash && e.is_paid).reduce((s, e) => s + e.amount, 0)
+  const cashSpent = expenses.filter(e => e.is_cash && e.is_paid).reduce((s, e) => s + (e.is_estimate && e.actual_amount != null ? e.actual_amount : e.amount), 0)
   const kittyRefundsFromTable = kittyRefunds.reduce((s, r) => s + r.amount, 0)
   const kittyRefundsLegacy = participants.reduce((s, p) => {
     const hasNewRefunds = kittyRefunds.some(r => r.participant_id === p.id)
