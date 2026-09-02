@@ -265,7 +265,7 @@ export default function Shopping() {
     reloadShoppingItems(trip.id)
     setPreviewItems(null)
     if (previewIsYachtness) {
-      setCostModal({ open: true, source: 'yachtness', amount: previewTotal ? String(previewTotal) : '', is_cash: true })
+      setCostModal({ open: true, source: 'yachtness', amount: '', is_cash: true })
     }
     setPreviewIsYachtness(false)
     setPreviewTotal(null)
@@ -751,7 +751,7 @@ export default function Shopping() {
         <div className="space-y-4">
           <p className="text-sm text-gray-500">
             {costModal.source === 'yachtness'
-              ? (isHe ? 'הזן את סכום ההזמנה. יירשם כהוצאה בקטגוריה "שירותי יאכטה".' : 'Enter the order total. Will be recorded as a "Yacht Services" expense.')
+              ? (isHe ? 'הזן את סכום ההזמנה. יירשם כהוצאה בקטגוריה "סופרמרקט".' : 'Enter the order total. Will be recorded as a "Supermarket" expense.')
               : (isHe ? 'הזן את הסכום הסופי ששולם. יירשם כהוצאה בקטגוריה "סופרמרקט".' : 'Enter the total paid. Will be recorded as a "Supermarket" expense.')}
           </p>
           <div className="relative">
