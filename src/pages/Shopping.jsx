@@ -1004,10 +1004,21 @@ export default function Shopping() {
             {checked.map(item => (
               <div key={item.id} className="flex items-center gap-3 px-4 py-3.5">
                 <button onClick={() => toggleItem(item)}
-                  className="text-emerald-500 min-w-[44px] min-h-[44px] flex items-center justify-center">
+                  className="text-emerald-500 min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0">
                   <CheckSquare2 size={24} />
                 </button>
-                <p className="flex-1 text-gray-400 line-through text-sm">{item.name}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-gray-400 line-through text-sm">{item.name}</p>
+                  {isAdmin && (
+                    <input
+                      className="mt-1 text-xs text-blue-500 border-0 border-b border-blue-200 focus:outline-none focus:border-blue-400 bg-transparent w-full placeholder-blue-200"
+                      placeholder={isHe ? '+ שם בעברית' : '+ Hebrew name'}
+                      defaultValue={item.name_he || ''}
+                      onBlur={e => { if (e.target.value !== (item.name_he || '')) saveNameHe(item.id, e.target.value) }}
+                    />
+                  )}
+                  {!isAdmin && item.name_he && <p className="text-xs text-blue-400 mt-0.5">{item.name_he}</p>}
+                </div>
               </div>
             ))}
           </div>
