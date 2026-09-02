@@ -58,11 +58,10 @@ function parseYachtnessEmail(html) {
     // detect total row
     const allText = [...cells].map(c => c.textContent.trim()).join(' ')
     if (/total|grand total|סה"כ|סך הכל|order total/i.test(allText)) {
-      const priceCell = cells.find(c => /[\d]+[.,]\d{2}/.test(c.textContent.trim()))
-      if (priceCell) {
-        const m = priceCell.textContent.match(/([\d,]+\.?\d*)/)
-        if (m) total = parseFloat(m[1].replace(',', ''))
-      }
+      // find all price-like numbers in the row and take the largest
+      const allNums = allText.match(/\d[\d,]*\.\d{2}/g) || []
+      const nums = allNums.map(n => parseFloat(n.replace(',', ''))).filter(n => n > 1)
+      if (nums.length) total = Math.max(...nums)
       continue
     }
 
@@ -331,7 +330,7 @@ export default function Shopping() {
         : (isHe ? 'קניות ראשוניות' : 'Initial Shopping'),
       amount: amt,
       currency: 'EUR',
-      category: isYachtness ? 'yacht_services' : 'supermarket',
+      category: 'supermarket',
       is_cash: costModal.is_cash,
       is_paid: true,
       is_yacht_cost: false,
