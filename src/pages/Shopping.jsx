@@ -1010,7 +1010,24 @@ export default function Shopping() {
                   <CheckSquare2 size={24} />
                 </button>
                 <div className="flex-1 min-w-0">
-                  <p className="text-gray-400 line-through text-sm">{item.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-gray-400 line-through text-sm flex-1">{item.name}</p>
+                    {isAdmin ? (
+                      <input
+                        className="w-12 text-xs text-gray-500 border-0 border-b border-gray-200 focus:outline-none focus:border-blue-400 bg-transparent text-center placeholder-gray-300"
+                        placeholder="כמות"
+                        defaultValue={item.quantity || ''}
+                        onBlur={async e => {
+                          if (e.target.value !== (item.quantity || '')) {
+                            await supabase.from('shopping_items').update({ quantity: e.target.value || null }).eq('id', item.id)
+                            reloadShoppingItems(trip.id)
+                          }
+                        }}
+                      />
+                    ) : item.quantity ? (
+                      <span className="text-xs text-gray-400">×{item.quantity}</span>
+                    ) : null}
+                  </div>
                   {isAdmin && (
                     <input
                       className="mt-1 text-xs text-blue-500 border-0 border-b border-blue-200 focus:outline-none focus:border-blue-400 bg-transparent w-full placeholder-blue-200"
