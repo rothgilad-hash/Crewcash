@@ -321,7 +321,6 @@ export default function Shopping() {
     setSavingCost(true)
 
     const isYachtness = costModal.source === 'yachtness'
-    const gilPart = participants.find(p => p.is_gil)
 
     const { data: newExp, error } = await supabase.from('expenses').insert({
       trip_id: trip.id,
@@ -332,9 +331,9 @@ export default function Shopping() {
       currency: 'EUR',
       category: 'supermarket',
       is_cash: costModal.is_cash,
-      is_paid: true,
+      is_paid: false,
       is_yacht_cost: false,
-      paid_by: gilPart?.id || null,
+      paid_by: null,
     }).select('id').single()
 
     if (!error) {
