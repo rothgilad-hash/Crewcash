@@ -47,17 +47,30 @@ function parseYachtnessEmail(html) {
   const doc = new DOMParser().parseFromString(html, 'text/html')
   const rows = [...doc.querySelectorAll('table tr')]
   const items = []
+  let total = null
+
   for (const row of rows) {
     const cells = [...row.querySelectorAll('td')]
     if (cells.length < 2) continue
     const name = cells[0]?.textContent?.trim()
     if (!name || name.length < 2) continue
-    // find qty cell — first cell that looks like a number
+
+    // detect total row
+    const allText = [...cells].map(c => c.textContent.trim()).join(' ')
+    if (/total|grand total|סה"כ|סך הכל|order total/i.test(allText)) {
+      const priceCell = cells.find(c => /[\d]+[.,]\d{2}/.test(c.textContent.trim()))
+      if (priceCell) {
+        const m = priceCell.textContent.match(/([\d,]+\.?\d*)/)
+        if (m) total = parseFloat(m[1].replace(',', ''))
+      }
+      continue
+    }
+
     const qtyCell = cells.slice(1).find(c => /^\d+$/.test(c.textContent?.trim()))
     const qty = qtyCell?.textContent?.trim() || ''
     items.push({ name, quantity: qty, category: autoDetectCat(name) })
   }
-  return items
+  return { items, total }
 }
 
 const CAT_MAP = {
@@ -116,8 +129,12 @@ export default function Shopping() {
   })
   const [showTeamPanel, setShowTeamPanel] = useState(false)
   const [copiedPid, setCopiedPid] = useState(null)
+  const [previewIsYachtness, setPreviewIsYachtness] = useState(false)
+  const [previewTotal, setPreviewTotal] = useState(null)
   const [showRemaining, setShowRemaining] = useState(false)
   const [confirmClearAll, setConfirmClearAll] = useState(false)
+  const [costItems, setCostItems] = useState([])
+  const [costItemForm, setCostItemForm] = useState({ name: '', quantity: '', category: 'other' })
   const [activeTab, setActiveTab] = useState('list') // 'list' | 'leftovers' | 'compare'
   const [leftovers, setLeftovers] = useState([])
   const [leftoverForm, setLeftoverForm] = useState({ name: '', quantity: '', category: 'other' })
@@ -244,10 +261,15 @@ export default function Shopping() {
     if (!previewItems?.length) return
     setImporting(true)
     await supabase.from('shopping_items').insert(
-      previewItems.map(item => ({ trip_id: trip.id, ...item, checked: false }))
+      previewItems.map(item => ({ trip_id: trip.id, ...item, checked: previewIsYachtness }))
     )
     reloadShoppingItems(trip.id)
     setPreviewItems(null)
+    if (previewIsYachtness) {
+      setCostModal({ open: true, source: 'yachtness', amount: previewTotal ? String(previewTotal) : '', is_cash: true })
+    }
+    setPreviewIsYachtness(false)
+    setPreviewTotal(null)
     setImporting(false)
   }
 
@@ -276,9 +298,12 @@ export default function Shopping() {
           const b64 = findHtmlBody(msgData.payload)
           if (!b64) { alert(isHe ? 'לא ניתן לקרוא את המייל' : 'Could not read email'); return }
           const html = atob(b64.replace(/-/g, '+').replace(/_/g, '/'))
-          const items = parseYachtnessEmail(html)
-          if (items.length) setPreviewItems(items)
-          else alert(isHe ? 'לא נמצאו פריטים במייל' : 'No items found in email')
+          const { items, total } = parseYachtnessEmail(html)
+          if (items.length) {
+            setPreviewItems(items)
+            setPreviewIsYachtness(true)
+            setPreviewTotal(total)
+          } else alert(isHe ? 'לא נמצאו פריטים במייל' : 'No items found in email')
         } catch (err) {
           alert('שגיאה: ' + err.message)
         }
@@ -299,7 +324,7 @@ export default function Shopping() {
     const isYachtness = costModal.source === 'yachtness'
     const gilPart = participants.find(p => p.is_gil)
 
-    const { error } = await supabase.from('expenses').insert({
+    const { data: newExp, error } = await supabase.from('expenses').insert({
       trip_id: trip.id,
       description: isYachtness
         ? (isHe ? 'הזמנת Yachtness' : 'Yachtness Order')
@@ -311,11 +336,18 @@ export default function Shopping() {
       is_paid: true,
       is_yacht_cost: false,
       paid_by: gilPart?.id || null,
-    })
+    }).select('id').single()
 
     if (!error) {
+      if (costItems.length > 0 && !isYachtness && newExp?.id) {
+        await supabase.from('expense_items').insert(
+          costItems.map(it => ({ trip_id: trip.id, expense_id: newExp.id, name: it.name, quantity: it.quantity, category: it.category }))
+        )
+      }
       reloadExpenses(trip.id)
       setCostModal({ open: false, source: 'shopping', amount: '', is_cash: true })
+      setCostItems([])
+      setCostItemForm({ name: '', quantity: '', category: 'other' })
     } else {
       alert(error.message)
     }
@@ -674,11 +706,17 @@ export default function Shopping() {
       </AnimatePresence>
 
       {/* Excel preview modal */}
-      <Modal open={!!previewItems} onClose={() => setPreviewItems(null)} title={isHe ? 'תצוגה מקדימה' : 'Preview'}>
+      <Modal open={!!previewItems} onClose={() => { setPreviewItems(null); setPreviewIsYachtness(false); setPreviewTotal(null) }} title={isHe ? 'תצוגה מקדימה' : 'Preview'}>
         <div className="space-y-3">
           <p className="text-sm text-gray-500">
             {isHe ? `נמצאו ${previewItems?.length} פריטים. לייבא?` : `Found ${previewItems?.length} items. Import?`}
           </p>
+          {previewIsYachtness && (
+            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
+              <span className="text-emerald-600 text-xs font-semibold">✅ {isHe ? 'כל הפריטים יסומנו כנרכשו (ההזמנה בוצעה)' : 'All items marked as purchased'}</span>
+              {previewTotal && <span className="ms-auto text-emerald-700 font-bold text-sm">€{previewTotal}</span>}
+            </div>
+          )}
           <div className="max-h-60 overflow-y-auto space-y-1 border border-gray-100 rounded-xl p-2">
             {previewItems?.map((item, i) => (
               <div key={i} className="flex justify-between items-center text-sm py-1 px-2 rounded-lg hover:bg-gray-50">
@@ -706,7 +744,7 @@ export default function Shopping() {
       {/* Cost expense modal */}
       <Modal
         open={costModal.open}
-        onClose={() => setCostModal(m => ({ ...m, open: false }))}
+        onClose={() => { setCostModal(m => ({ ...m, open: false })); setCostItems([]); setCostItemForm({ name: '', quantity: '', category: 'other' }) }}
         title={costModal.source === 'yachtness'
           ? (isHe ? 'עלות הזמנת Yachtness' : 'Yachtness Order Cost')
           : (isHe ? 'עלות קניות' : 'Shopping Cost')}
@@ -740,8 +778,58 @@ export default function Shopping() {
               {isHe ? 'שולם במזומן מהקופה' : 'Paid in cash from kitty'}
             </span>
           </label>
+
+          {costModal.source === 'shopping' && (
+            <div className="space-y-2 border-t border-gray-100 pt-3">
+              <p className="text-xs font-semibold text-gray-400">{isHe ? 'פריטים (אופציונלי)' : 'Items (optional)'}</p>
+              {costItems.length > 0 && (
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {costItems.map((it, i) => (
+                    <div key={i} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-1.5">
+                      <span className="flex-1 text-sm text-gray-800">{it.name}</span>
+                      {it.quantity && <span className="text-xs text-gray-400">×{it.quantity}</span>}
+                      <button onClick={() => setCostItems(prev => prev.filter((_, j) => j !== i))} className="text-red-300 active:text-red-500 p-0.5">
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
+                  placeholder={isHe ? 'שם מוצר' : 'Item name'}
+                  value={costItemForm.name}
+                  onChange={e => setCostItemForm(f => ({ ...f, name: e.target.value }))}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && costItemForm.name.trim()) {
+                      setCostItems(prev => [...prev, costItemForm])
+                      setCostItemForm({ name: '', quantity: '', category: 'other' })
+                    }
+                  }}
+                />
+                <input
+                  className="w-16 border border-gray-200 rounded-xl px-2 py-2 text-sm focus:outline-none focus:border-blue-400 text-center"
+                  placeholder={isHe ? 'כמות' : 'Qty'}
+                  value={costItemForm.quantity}
+                  onChange={e => setCostItemForm(f => ({ ...f, quantity: e.target.value }))}
+                />
+                <button
+                  onClick={() => {
+                    if (!costItemForm.name.trim()) return
+                    setCostItems(prev => [...prev, costItemForm])
+                    setCostItemForm({ name: '', quantity: '', category: 'other' })
+                  }}
+                  className="px-3 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold active:bg-blue-700 disabled:opacity-40"
+                  disabled={!costItemForm.name.trim()}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          )}
           <div className="flex gap-3 pt-1">
-            <button onClick={() => setCostModal(m => ({ ...m, open: false }))}
+            <button onClick={() => { setCostModal(m => ({ ...m, open: false })); setCostItems([]); setCostItemForm({ name: '', quantity: '', category: 'other' }) }}
               className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold active:bg-gray-50">
               {t('cancel')}
             </button>
