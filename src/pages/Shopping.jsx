@@ -54,6 +54,8 @@ function parseYachtnessEmail(html) {
     if (cells.length < 2) continue
     const name = cells[0]?.textContent?.trim()
     if (!name || name.length < 2) continue
+    // skip order number / reference rows (all digits, or starts with # or "order")
+    if (/^[#\d\-]+$/.test(name) || /^(order|הזמנה|ref|sku)/i.test(name)) continue
 
     // detect total row
     const allText = [...cells].map(c => c.textContent.trim()).join(' ')
