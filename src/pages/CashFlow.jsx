@@ -15,7 +15,7 @@ export default function CashFlow() {
   const isHe = lang === 'he'
 
   const totalCollected = participants.reduce((s, p) => s + getCollectedAmount(kittyCollections, p.id, p), 0)
-  const cashSpent = expenses.filter(e => e.is_cash).reduce((s, e) => {
+  const cashSpent = expenses.filter(e => e.is_cash || (e.is_estimate && e.actual_amount != null)).reduce((s, e) => {
     if (e.is_paid) return s + (e.is_estimate && e.actual_amount != null ? e.actual_amount : e.amount)
     // unpaid estimate with running installments — count what's already been spent
     if (e.is_estimate && !e.is_finalized && e.actual_amount != null) return s + e.actual_amount
