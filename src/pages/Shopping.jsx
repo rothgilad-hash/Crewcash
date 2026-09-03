@@ -421,17 +421,17 @@ export default function Shopping() {
   // Build comparison: all purchased items merged with leftovers
   const buildComparison = () => {
     const map = {}
-    const add = (name, nameHe, qty, source, category) => {
+    const add = (name, nameHe, qty, source, category, id) => {
       const displayName = nameHe?.trim() || name.trim()
       const key = displayName.toLowerCase()
-      if (!map[key]) map[key] = { name: displayName, category: category || 'other', bought: 0, leftover: 0, sources: [] }
+      if (!map[key]) map[key] = { name: displayName, category: category || 'other', bought: 0, leftover: 0, sources: [], sourceItems: [] }
       const n = parseFloat(qty) || 1
       if (source === 'leftover') map[key].leftover += n
-      else map[key].bought += n
+      else { map[key].bought += n; map[key].sourceItems.push({ source, id }) }
       if (source !== 'leftover' && !map[key].sources.includes(source)) map[key].sources.push(source)
     }
-    shoppingItems.forEach(i => add(i.name, i.name_he, i.quantity, 'shopping', i.category))
-    expenseItems.forEach(i => add(i.name, i.name_he, i.quantity, 'supermarket', i.category))
+    shoppingItems.forEach(i => add(i.name, i.name_he, i.quantity, 'shopping', i.category, i.id))
+    expenseItems.forEach(i => add(i.name, i.name_he, i.quantity, 'supermarket', i.category, i.id))
     leftovers.forEach(i => add(i.name, null, i.quantity, 'leftover', i.category))
     return Object.values(map).sort((a, b) => a.name.localeCompare(b.name, 'he'))
   }
@@ -537,10 +537,30 @@ export default function Shopping() {
                       }
                       loadLeftoversAndExpenseItems()
                     }
+                    const saveBought = async (val) => {
+                      const newQty = val.trim()
+                      if (!newQty || row.sourceItems.length === 0) return
+                      // update the first source item (shopping_items takes priority)
+                      const si = row.sourceItems.find(x => x.source === 'shopping') || row.sourceItems[0]
+                      const table = si.source === 'shopping' ? 'shopping_items' : 'expense_items'
+                      await supabase.from(table).update({ quantity: newQty }).eq('id', si.id)
+                      loadLeftoversAndExpenseItems()
+                      reloadShoppingItems(trip.id)
+                    }
                     return (
                       <div key={row.name} className={`grid grid-cols-4 px-4 py-2.5 border-b border-gray-50 last:border-0 items-center ${waste ? 'bg-orange-50' : ''}`}>
                         <span className="col-span-2 text-sm text-gray-800">{row.name}</span>
-                        <span className="text-center text-sm text-gray-600">{row.bought || '—'}</span>
+                        {isAdmin ? (
+                          <input
+                            className="w-full text-center text-sm text-gray-600 border-0 border-b border-gray-200 focus:outline-none bg-transparent py-0.5 placeholder-gray-200 focus:border-blue-400"
+                            placeholder="—"
+                            defaultValue={row.bought || ''}
+                            onBlur={e => saveBought(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && e.target.blur()}
+                          />
+                        ) : (
+                          <span className="text-center text-sm text-gray-600">{row.bought || '—'}</span>
+                        )}
                         {isAdmin ? (
                           <input
                             key={existingLeftover?.id}
