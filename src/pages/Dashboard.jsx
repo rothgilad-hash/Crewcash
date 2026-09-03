@@ -35,7 +35,11 @@ export default function Dashboard() {
   const uncheckedItems = shoppingItems.filter(i => !i.checked)
 
   const totalCollected = participants.reduce((s, p) => s + getCollectedAmount(kittyCollections, p.id, p), 0)
-  const cashSpent = expenses.filter(e => e.is_cash && e.is_paid).reduce((s, e) => s + getEurAmount(e), 0)
+  const cashSpent = expenses.filter(e => e.is_cash || (e.is_estimate && e.actual_amount != null)).reduce((s, e) => {
+    if (e.is_paid) return s + (e.is_estimate && e.actual_amount != null ? e.actual_amount : e.amount)
+    if (e.is_estimate && !e.is_finalized && e.actual_amount != null) return s + e.actual_amount
+    return s
+  }, 0)
   const kittyRefundsTotal = kittyRefunds.reduce((s, r) => s + r.amount, 0)
   const cashBalance = totalCollected - cashSpent - kittyRefundsTotal
   const cashPct = totalCollected > 0 ? cashBalance / totalCollected : null
