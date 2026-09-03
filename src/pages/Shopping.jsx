@@ -522,13 +522,37 @@ export default function Shopping() {
                     <span className="text-center">{isHe ? 'נשאר' : 'Left'}</span>
                   </div>
                   {rows.map(row => {
-                    const consumed = Math.max(0, row.bought - row.leftover)
                     const waste = row.leftover > 0
+                    const existingLeftover = leftovers.find(l => l.name.toLowerCase() === row.name.toLowerCase())
+                    const saveLeftover = async (val) => {
+                      const qty = val.trim()
+                      if (existingLeftover) {
+                        if (qty === '' || qty === '0') {
+                          await supabase.from('trip_leftovers').delete().eq('id', existingLeftover.id)
+                        } else {
+                          await supabase.from('trip_leftovers').update({ quantity: qty }).eq('id', existingLeftover.id)
+                        }
+                      } else if (qty && qty !== '0') {
+                        await supabase.from('trip_leftovers').insert({ trip_id: trip.id, name: row.name, quantity: qty, category: row.category })
+                      }
+                      loadLeftoversAndExpenseItems()
+                    }
                     return (
-                      <div key={row.name} className={`grid grid-cols-4 px-4 py-3 border-b border-gray-50 last:border-0 ${waste ? 'bg-orange-50' : ''}`}>
+                      <div key={row.name} className={`grid grid-cols-4 px-4 py-2.5 border-b border-gray-50 last:border-0 items-center ${waste ? 'bg-orange-50' : ''}`}>
                         <span className="col-span-2 text-sm text-gray-800">{row.name}</span>
                         <span className="text-center text-sm text-gray-600">{row.bought || '—'}</span>
-                        <span className={`text-center text-sm font-semibold ${waste ? 'text-orange-500' : 'text-gray-400'}`}>{row.leftover || '—'}</span>
+                        {isAdmin ? (
+                          <input
+                            key={existingLeftover?.id}
+                            className={`w-full text-center text-sm font-semibold border-0 border-b focus:outline-none bg-transparent py-0.5 ${waste ? 'text-orange-500 border-orange-200 focus:border-orange-400' : 'text-gray-400 border-gray-200 focus:border-blue-400 placeholder-gray-200'}`}
+                            placeholder="—"
+                            defaultValue={row.leftover || ''}
+                            onBlur={e => saveLeftover(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && e.target.blur()}
+                          />
+                        ) : (
+                          <span className={`text-center text-sm font-semibold ${waste ? 'text-orange-500' : 'text-gray-400'}`}>{row.leftover || '—'}</span>
+                        )}
                       </div>
                     )
                   })}
