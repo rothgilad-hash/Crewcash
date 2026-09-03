@@ -95,7 +95,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
   const [excludedIds, setExcludedIds] = useState([])
   const [eurRate, setEurRate] = useState(null)
   const [installments, setInstallments] = useState([])
-  const [instForm, setInstForm] = useState({ amount: '', note: '' })
+  const [instForm, setInstForm] = useState({ amount: '', note: '', date: new Date().toISOString().split('T')[0] })
   const [savingInst, setSavingInst] = useState(false)
   const autoFilledDesc = useRef(false)
 
@@ -121,7 +121,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
       setInstallments([])
       autoFilledDesc.current = false
     }
-    setInstForm({ amount: '', note: '' })
+    setInstForm({ amount: '', note: '', date: new Date().toISOString().split('T')[0] })
     setCartItems({})
   }, [expense, open])
 
@@ -131,12 +131,12 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
     const amt = parseFloat(instForm.amount)
     if (!amt || !expense?.id) return
     setSavingInst(true)
-    const newItem = { amount: amt, note: instForm.note.trim(), date: new Date().toISOString().split('T')[0] }
+    const newItem = { amount: amt, note: instForm.note.trim(), date: instForm.date || new Date().toISOString().split('T')[0] }
     const newList = [...installments, newItem]
     const total = newList.reduce((s, i) => s + i.amount, 0)
     await supabase.from('expenses').update({ installments: newList, actual_amount: total }).eq('id', expense.id)
     setInstallments(newList)
-    setInstForm({ amount: '', note: '' })
+    setInstForm({ amount: '', note: '', date: new Date().toISOString().split('T')[0] })
     reloadExpenses(trip.id)
     setSavingInst(false)
   }
@@ -492,15 +492,21 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
               <input
                 type="number"
                 inputMode="decimal"
-                className="w-24 border-2 border-amber-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-amber-500 bg-white text-center font-bold"
+                className="w-20 border-2 border-amber-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-amber-500 bg-white text-center font-bold"
                 placeholder="€"
                 value={instForm.amount}
                 onChange={e => setInstForm(f => ({ ...f, amount: e.target.value }))}
                 onKeyDown={e => e.key === 'Enter' && addInstallment()}
               />
               <input
+                type="date"
+                className="w-32 border-2 border-gray-200 rounded-xl px-2 py-2.5 text-sm focus:outline-none focus:border-gray-400 bg-white"
+                value={instForm.date}
+                onChange={e => setInstForm(f => ({ ...f, date: e.target.value }))}
+              />
+              <input
                 className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-gray-400 bg-white"
-                placeholder={isHe ? 'הערה (אופציונלי)' : 'Note (optional)'}
+                placeholder={isHe ? 'הערה' : 'Note'}
                 value={instForm.note}
                 onChange={e => setInstForm(f => ({ ...f, note: e.target.value }))}
                 onKeyDown={e => e.key === 'Enter' && addInstallment()}
