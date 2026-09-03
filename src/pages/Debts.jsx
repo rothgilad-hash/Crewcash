@@ -108,11 +108,13 @@ export default function Debts() {
           .update({ amount: lastUpdatedRow.newAmount + remaining })
           .eq('id', lastUpdatedRow.id)
       } else {
-        // Debt comes from over-refund (no shortfall rows): record as new collection overpay row
+        // No shortfall rows existed — either a first-time payment (no prior collections) or
+        // a debt from an over-refund. Only treat as overpay when prior collection rows exist.
+        const hasAnyCollections = kittyCollections.some(c => c.participant_id === receivedOpen.id)
         await supabase.from('kitty_collections').insert({
           participant_id: receivedOpen.id,
           amount: remaining,
-          target_amount: 0,
+          target_amount: hasAnyCollections ? 0 : remaining,
           round_name: receivedReason,
           collected_at: receivedDate || new Date().toISOString().slice(0, 10),
         })
