@@ -269,7 +269,11 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
       is_paid: form.is_paid,
       is_unexpected: form.is_unexpected,
       is_estimate: form.is_estimate,
-      actual_amount: form.is_estimate && form.actual_amount ? parseFloat(form.actual_amount) : null,
+      actual_amount: form.is_estimate
+        ? (installments.length > 0
+            ? installments.reduce((s, i) => s + i.amount, 0)
+            : (form.actual_amount ? parseFloat(form.actual_amount) : null))
+        : null,
       is_finalized: form.is_finalized,
       excluded_ids: excludedIds.length > 0 ? excludedIds : null
     }
