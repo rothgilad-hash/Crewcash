@@ -92,6 +92,8 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
   const [form, setForm] = useState(defaultForm)
   const [saving, setSaving] = useState(false)
   const [cartItems, setCartItems] = useState({})
+  const [customItemInput, setCustomItemInput] = useState('')
+  const [customItems, setCustomItems] = useState([])
   const [excludedIds, setExcludedIds] = useState([])
   const [eurRate, setEurRate] = useState(null)
   const [installments, setInstallments] = useState([])
@@ -123,20 +125,45 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
     }
     setInstForm({ amount: '', note: '', date: new Date().toISOString().split('T')[0] })
     setCartItems({})
+    setCustomItems([])
+    setCustomItemInput('')
   }, [expense, open])
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const syncExpenseItems = async (expenseId, allInstallments) => {
+    const itemMap = {}
+    allInstallments.forEach(inst => {
+      ;(inst.items || []).forEach(({ name, qty }) => {
+        if (!itemMap[name]) itemMap[name] = { qty: 0, category: autoDetectItemCat(name) }
+        itemMap[name].qty += parseFloat(qty) || 1
+      })
+    })
+    await supabase.from('expense_items').delete().eq('expense_id', expenseId)
+    const rows = Object.entries(itemMap).map(([name, { qty, category }]) => ({
+      expense_id: expenseId, trip_id: trip.id, name, quantity: String(qty), category,
+    }))
+    if (rows.length) await supabase.from('expense_items').insert(rows)
+  }
 
   const addInstallment = async () => {
     const amt = parseFloat(instForm.amount)
     if (!amt || !expense?.id) return
     setSavingInst(true)
-    const newItem = { amount: amt, note: instForm.note.trim(), date: instForm.date || new Date().toISOString().split('T')[0] }
+    const instItems = Object.entries(cartItems).map(([name, qty]) => ({ name, qty }))
+    const newItem = {
+      amount: amt,
+      note: instForm.note.trim(),
+      date: instForm.date || new Date().toISOString().split('T')[0],
+      items: instItems,
+    }
     const newList = [...installments, newItem]
     const total = newList.reduce((s, i) => s + i.amount, 0)
     await supabase.from('expenses').update({ installments: newList, actual_amount: total }).eq('id', expense.id)
+    await syncExpenseItems(expense.id, newList)
     setInstallments(newList)
     setInstForm({ amount: '', note: '', date: new Date().toISOString().split('T')[0] })
+    setCartItems({})
     reloadExpenses(trip.id)
     setSavingInst(false)
   }
@@ -149,6 +176,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
       installments: newList,
       actual_amount: newList.length > 0 ? total : null
     }).eq('id', expense.id)
+    await syncExpenseItems(expense.id, newList)
     setInstallments(newList)
     reloadExpenses(trip.id)
   }
@@ -180,6 +208,14 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
       setForm(f => ({ ...f, notes: list }))
       return next
     })
+  }
+
+  const addCustomItem = () => {
+    const name = customItemInput.trim()
+    if (!name) return
+    if (!customItems.includes(name)) setCustomItems(prev => [...prev, name])
+    toggleCartItem(name)
+    setCustomItemInput('')
   }
 
   const selectAlcohol = (item) => {
@@ -325,7 +361,11 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
         {/* Supermarket items */}
         {form.category === 'supermarket' && (
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">🛒 {isHe ? 'מוצרים שנקנו' : 'Items purchased'}</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              🛒 {isHe
+                ? (form.is_estimate && expense?.id && !form.is_finalized ? 'מוצרים שנקנו בתשלום זה' : 'מוצרים שנקנו')
+                : (form.is_estimate && expense?.id && !form.is_finalized ? 'Items for this purchase' : 'Items purchased')}
+            </label>
             <div className="max-h-52 overflow-y-auto border-2 border-gray-100 rounded-2xl divide-y divide-gray-50">
               {SUPERMARKET_ITEMS.map(item => {
                 const name = isHe ? item.he : item.en
@@ -349,6 +389,40 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
                   </div>
                 )
               })}
+            </div>
+            {/* Custom items */}
+            {customItems.map(name => {
+              const selected = !!cartItems[name]
+              return (
+                <div key={name} className={`flex items-center gap-3 px-3 py-2.5 transition-colors border-t border-gray-100 ${selected ? 'bg-blue-50' : ''}`}>
+                  <button onClick={() => toggleCartItem(name)}
+                    className={`w-6 h-6 rounded-lg border-2 flex-shrink-0 flex items-center justify-center transition-colors ${selected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`}>
+                    {selected && <span className="text-white text-xs font-bold">✓</span>}
+                  </button>
+                  <span className="flex-1 text-sm text-gray-800">{name}</span>
+                  {selected && (
+                    <input type="text" value={cartItems[name]}
+                      onChange={e => setCartQty(name, e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                      className="w-14 border border-gray-200 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:border-blue-400"
+                      placeholder="כמות" />
+                  )}
+                </div>
+              )
+            })}
+            {/* Free-text input */}
+            <div className="flex gap-2 p-2 border-t border-gray-100 bg-gray-50">
+              <input
+                className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-400 bg-white"
+                placeholder={isHe ? '+ הוסף מוצר אחר...' : '+ Add other item...'}
+                value={customItemInput}
+                onChange={e => setCustomItemInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addCustomItem()}
+              />
+              <button onClick={addCustomItem} disabled={!customItemInput.trim()}
+                className="px-3 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold active:bg-blue-700 disabled:opacity-30">
+                +
+              </button>
             </div>
           </div>
         )}
@@ -469,14 +543,23 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
             {installments.length > 0 && (
               <div className="border border-amber-100 rounded-2xl divide-y divide-amber-50 overflow-hidden">
                 {installments.map((inst, i) => (
-                  <div key={i} className="flex items-center gap-3 px-3 py-2.5 bg-amber-50">
-                    <span className="text-sm font-bold text-amber-700">€{inst.amount}</span>
-                    {inst.note && <span className="flex-1 text-xs text-gray-500 truncate">{inst.note}</span>}
-                    {!inst.note && <span className="flex-1" />}
-                    <span className="text-xs text-gray-400">{inst.date}</span>
-                    <button onClick={() => removeInstallment(i)} className="text-red-300 active:text-red-500 p-1">
-                      ✕
-                    </button>
+                  <div key={i} className="px-3 py-2.5 bg-amber-50 space-y-1">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-bold text-amber-700">€{inst.amount}</span>
+                      {inst.note && <span className="flex-1 text-xs text-gray-500 truncate">{inst.note}</span>}
+                      {!inst.note && <span className="flex-1" />}
+                      <span className="text-xs text-gray-400">{inst.date}</span>
+                      <button onClick={() => removeInstallment(i)} className="text-red-300 active:text-red-500 p-1">✕</button>
+                    </div>
+                    {inst.items?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 ps-1">
+                        {inst.items.map((it, j) => (
+                          <span key={j} className="text-[10px] bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-full">
+                            {it.name}{it.qty && it.qty !== '1' ? ` ×${it.qty}` : ''}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
                 <div className="flex items-center justify-between px-3 py-2 bg-amber-100">
