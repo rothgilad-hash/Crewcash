@@ -81,7 +81,8 @@ function autoDetectItemCat(name) {
 const defaultForm = {
   description: '', amount: '', currency: 'EUR', category: '',
   sub_category: '', paid_by: '', is_yacht_cost: false, is_cash: false, notes: '',
-  planned_date: '', is_paid: false, is_unexpected: false, is_estimate: false, actual_amount: ''
+  planned_date: '', is_paid: false, is_unexpected: false, is_estimate: false,
+  actual_amount: '', is_finalized: false
 }
 
 export default function AddExpenseModal({ open, onClose, expense = null }) {
@@ -92,7 +93,10 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
   const [saving, setSaving] = useState(false)
   const [cartItems, setCartItems] = useState({})
   const [excludedIds, setExcludedIds] = useState([])
-  const [eurRate, setEurRate] = useState(null) // EUR per 1 unit of selected currency
+  const [eurRate, setEurRate] = useState(null)
+  const [installments, setInstallments] = useState([])
+  const [instForm, setInstForm] = useState({ amount: '', note: '' })
+  const [savingInst, setSavingInst] = useState(false)
   const autoFilledDesc = useRef(false)
 
   // Fetch EUR rate when currency changes
@@ -109,16 +113,53 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
     if (expense) {
       setForm({ ...defaultForm, ...expense, amount: expense.amount?.toString() || '', actual_amount: expense.actual_amount?.toString() || '', paid_by: expense.paid_by || '' })
       setExcludedIds(expense.excluded_ids || [])
+      setInstallments(expense.installments || [])
       autoFilledDesc.current = true
     } else {
       setForm(defaultForm)
       setExcludedIds([])
+      setInstallments([])
       autoFilledDesc.current = false
     }
+    setInstForm({ amount: '', note: '' })
     setCartItems({})
   }, [expense, open])
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const addInstallment = async () => {
+    const amt = parseFloat(instForm.amount)
+    if (!amt || !expense?.id) return
+    setSavingInst(true)
+    const newItem = { amount: amt, note: instForm.note.trim(), date: new Date().toISOString().split('T')[0] }
+    const newList = [...installments, newItem]
+    const total = newList.reduce((s, i) => s + i.amount, 0)
+    await supabase.from('expenses').update({ installments: newList, actual_amount: total }).eq('id', expense.id)
+    setInstallments(newList)
+    setInstForm({ amount: '', note: '' })
+    reloadExpenses(trip.id)
+    setSavingInst(false)
+  }
+
+  const removeInstallment = async (idx) => {
+    if (!expense?.id) return
+    const newList = installments.filter((_, i) => i !== idx)
+    const total = newList.reduce((s, i) => s + i.amount, 0)
+    await supabase.from('expenses').update({
+      installments: newList,
+      actual_amount: newList.length > 0 ? total : null
+    }).eq('id', expense.id)
+    setInstallments(newList)
+    reloadExpenses(trip.id)
+  }
+
+  const finalizeInstallments = async () => {
+    if (!expense?.id) return
+    const total = installments.reduce((s, i) => s + i.amount, 0)
+    await supabase.from('expenses').update({ is_finalized: true, actual_amount: total || null, is_paid: true }).eq('id', expense.id)
+    reloadExpenses(trip.id)
+    onClose()
+  }
 
   const toggleCartItem = (name) => {
     setCartItems(prev => {
@@ -192,6 +233,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
       is_unexpected: form.is_unexpected,
       is_estimate: form.is_estimate,
       actual_amount: form.is_estimate && form.actual_amount ? parseFloat(form.actual_amount) : null,
+      is_finalized: form.is_finalized,
       excluded_ids: excludedIds.length > 0 ? excludedIds : null
     }
     let error, expenseId
@@ -406,33 +448,88 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
           </label>
         </div>
 
-        {/* Actual amount — only when editing an estimate */}
-        {form.is_estimate && expense?.id && (
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              ✅ {isHe ? 'סכום בפועל (אם ידוע)' : 'Actual amount (if known)'}
-            </label>
-            <input
-              type="number"
-              inputMode="decimal"
-              className="w-full border-2 border-amber-200 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-amber-500 text-gray-900 bg-amber-50 transition-colors"
-              placeholder={isHe ? 'הזן את הסכום שנשלם בפועל' : 'Enter actual amount paid'}
-              value={form.actual_amount}
-              onChange={e => set('actual_amount', e.target.value)}
-            />
-            {form.actual_amount && form.amount && (
-              (() => {
-                const diff = parseFloat(form.actual_amount) - parseFloat(form.amount)
-                const absDiff = Math.abs(diff).toFixed(2)
-                return diff === 0 ? null : (
-                  <p className={`text-xs mt-1.5 font-semibold ${diff < 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                    {diff < 0
-                      ? (isHe ? `✅ עודף של ${absDiff} ${form.currency} בקופה` : `✅ Surplus of ${absDiff} ${form.currency} in kitty`)
-                      : (isHe ? `⚠️ חוסר של ${absDiff} ${form.currency} לגיוס` : `⚠️ Shortfall of ${absDiff} ${form.currency} to collect`)}
-                  </p>
-                )
-              })()
+        {/* Installments — only when editing an estimate */}
+        {form.is_estimate && expense?.id && !form.is_finalized && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-semibold text-gray-700">
+                🧾 {isHe ? 'קניות בפועל' : 'Actual purchases'}
+              </label>
+              {installments.length > 0 && form.amount && (
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                  installments.reduce((s, i) => s + i.amount, 0) > parseFloat(form.amount)
+                    ? 'bg-red-100 text-red-600'
+                    : 'bg-amber-100 text-amber-700'
+                }`}>
+                  €{installments.reduce((s, i) => s + i.amount, 0).toFixed(0)} / €{parseFloat(form.amount).toFixed(0)}
+                </span>
+              )}
+            </div>
+
+            {installments.length > 0 && (
+              <div className="border border-amber-100 rounded-2xl divide-y divide-amber-50 overflow-hidden">
+                {installments.map((inst, i) => (
+                  <div key={i} className="flex items-center gap-3 px-3 py-2.5 bg-amber-50">
+                    <span className="text-sm font-bold text-amber-700">€{inst.amount}</span>
+                    {inst.note && <span className="flex-1 text-xs text-gray-500 truncate">{inst.note}</span>}
+                    {!inst.note && <span className="flex-1" />}
+                    <span className="text-xs text-gray-400">{inst.date}</span>
+                    <button onClick={() => removeInstallment(i)} className="text-red-300 active:text-red-500 p-1">
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between px-3 py-2 bg-amber-100">
+                  <span className="text-xs font-semibold text-amber-700">{isHe ? 'סה״כ עד כה' : 'Total so far'}</span>
+                  <span className="text-sm font-black text-amber-800">
+                    €{installments.reduce((s, i) => s + i.amount, 0).toFixed(2)}
+                  </span>
+                </div>
+              </div>
             )}
+
+            <div className="flex gap-2">
+              <input
+                type="number"
+                inputMode="decimal"
+                className="w-24 border-2 border-amber-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-amber-500 bg-white text-center font-bold"
+                placeholder="€"
+                value={instForm.amount}
+                onChange={e => setInstForm(f => ({ ...f, amount: e.target.value }))}
+                onKeyDown={e => e.key === 'Enter' && addInstallment()}
+              />
+              <input
+                className="flex-1 border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-gray-400 bg-white"
+                placeholder={isHe ? 'הערה (אופציונלי)' : 'Note (optional)'}
+                value={instForm.note}
+                onChange={e => setInstForm(f => ({ ...f, note: e.target.value }))}
+                onKeyDown={e => e.key === 'Enter' && addInstallment()}
+              />
+              <button
+                onClick={addInstallment}
+                disabled={!instForm.amount || savingInst}
+                className="px-4 py-2.5 bg-amber-500 text-white rounded-xl text-sm font-bold active:bg-amber-600 disabled:opacity-40"
+              >
+                {savingInst ? '...' : '+'}
+              </button>
+            </div>
+
+            {installments.length > 0 && (
+              <button
+                onClick={finalizeInstallments}
+                className="w-full py-3 bg-emerald-600 text-white rounded-2xl text-sm font-bold active:bg-emerald-700"
+              >
+                ✅ {isHe ? 'סיים — הקניות הסתיימו' : 'Finalize — purchases complete'}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Finalized badge */}
+        {form.is_estimate && form.is_finalized && (
+          <div className="bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-3 flex items-center justify-between">
+            <span className="text-sm font-semibold text-emerald-700">✅ {isHe ? 'הוסדר סופית' : 'Finalized'}</span>
+            <span className="text-sm font-black text-emerald-800">€{parseFloat(form.actual_amount || 0).toFixed(2)}</span>
           </div>
         )}
 

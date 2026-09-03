@@ -212,8 +212,8 @@ export default function Expenses() {
                       <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">×2</span>
                     )}
                     {exp.is_estimate && (
-                      <span className="text-[10px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">
-                        {exp.actual_amount != null ? '✓ הוסדר' : '〜 הערכה'}
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${exp.is_finalized ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                        {exp.is_finalized ? '✓ הוסדר' : exp.actual_amount != null ? `〜 €${exp.actual_amount}` : '〜 הערכה'}
                       </span>
                     )}
                   </div>

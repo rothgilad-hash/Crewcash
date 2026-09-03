@@ -15,7 +15,12 @@ export default function CashFlow() {
   const isHe = lang === 'he'
 
   const totalCollected = participants.reduce((s, p) => s + getCollectedAmount(kittyCollections, p.id, p), 0)
-  const cashSpent = expenses.filter(e => e.is_cash && e.is_paid).reduce((s, e) => s + (e.is_estimate && e.actual_amount != null ? e.actual_amount : e.amount), 0)
+  const cashSpent = expenses.filter(e => e.is_cash).reduce((s, e) => {
+    if (e.is_paid) return s + (e.is_estimate && e.actual_amount != null ? e.actual_amount : e.amount)
+    // unpaid estimate with running installments — count what's already been spent
+    if (e.is_estimate && !e.is_finalized && e.actual_amount != null) return s + e.actual_amount
+    return s
+  }, 0)
   const kittyRefundsFromTable = kittyRefunds.reduce((s, r) => s + r.amount, 0)
   const kittyRefundsLegacy = participants.reduce((s, p) => {
     const hasNewRefunds = kittyRefunds.some(r => r.participant_id === p.id)
@@ -36,7 +41,11 @@ export default function CashFlow() {
       return a.planned_date.localeCompare(b.planned_date)
     })
 
-  const totalUpcoming = unpaidCash.reduce((s, e) => s + e.amount, 0)
+  const totalUpcoming = unpaidCash.reduce((s, e) => {
+    // for running estimates: count only the remaining budget, not the full estimate
+    if (e.is_estimate && !e.is_finalized && e.actual_amount != null) return s + Math.max(0, e.amount - e.actual_amount)
+    return s + e.amount
+  }, 0)
 
   // Group by date
   const byDate = {}
@@ -56,7 +65,7 @@ export default function CashFlow() {
   }
 
   const estimateShortfall = expenses
-    .filter(e => e.is_estimate && e.actual_amount != null && e.actual_amount > e.amount)
+    .filter(e => e.is_estimate && e.is_finalized && e.actual_amount != null && e.actual_amount > e.amount)
     .reduce((s, e) => s + (e.actual_amount - e.amount), 0)
 
   const totalNeeded = totalUpcoming + estimateShortfall
