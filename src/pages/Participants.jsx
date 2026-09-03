@@ -4,10 +4,14 @@ import { useApp } from '../context/AppContext'
 import { calculateBalances, formatCurrency, getCollectedAmount, getCollectionDebt, getCollectionOverpayment, getEurAmount, getExpenseDate, getLastCollectionDate, getPostCollectionNet } from '../lib/calculations'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
-import { Plus, Star, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Star, Trash2, ChevronDown, ChevronUp, BookUser } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316']
+
+const BANK_KEY = 'crewcash_people_bank'
+const loadBank = () => { try { return JSON.parse(localStorage.getItem(BANK_KEY) || '[]') } catch { return [] } }
+const saveBank = (bank) => localStorage.setItem(BANK_KEY, JSON.stringify(bank))
 const ROUND_NAMES_HE = ['גיוס ראשון', 'גיוס שני', 'גיוס שלישי', 'גיוס רביעי', 'גיוס חמישי']
 const ROUND_NAMES_EN = ['Round 1', 'Round 2', 'Round 3', 'Round 4', 'Round 5']
 
@@ -22,7 +26,10 @@ export default function Participants() {
   const [groupAmounts, setGroupAmounts] = useState({})
   const [groupTargets, setGroupTargets] = useState({})
   const [groupDate, setGroupDate] = useState(() => new Date().toISOString().slice(0, 10))
-  const [form, setForm] = useState({ name: '', is_gil: false, joined_late: false })
+  const [form, setForm] = useState({ name: '', is_gil: false, joined_late: false, saveToBank: false })
+  const [bankOpen, setBankOpen] = useState(false)
+  const [bank, setBank] = useState(loadBank)
+  const [bankSelection, setBankSelection] = useState({})
   const [collectAmount, setCollectAmount] = useState('')
   const [collectRound, setCollectRound] = useState('')
   const [saving, setSaving] = useState(false)
@@ -53,9 +60,43 @@ export default function Participants() {
       trip_id: trip.id, name: form.name.trim(),
       is_gil: form.is_gil, joined_late: form.joined_late, amount_paid: 0
     })
-    setForm({ name: '', is_gil: false, joined_late: false })
+    if (form.saveToBank) {
+      const updated = [...bank.filter(b => b.name !== form.name.trim()), { id: crypto.randomUUID(), name: form.name.trim(), is_gil: form.is_gil }]
+      saveBank(updated)
+      setBank(updated)
+    }
+    setForm({ name: '', is_gil: false, joined_late: false, saveToBank: false })
     setAddOpen(false)
     setSaving(false)
+  }
+
+  const openBankModal = () => {
+    const init = {}
+    bank.forEach(b => { init[b.id] = { checked: false, is_gil: b.is_gil, joined_late: false } })
+    setBankSelection(init)
+    setBankOpen(true)
+  }
+
+  const handleAddFromBank = async () => {
+    const selected = bank.filter(b => bankSelection[b.id]?.checked)
+    if (!selected.length) return
+    setSaving(true)
+    const rows = selected.map(b => ({
+      trip_id: trip.id, name: b.name,
+      is_gil: bankSelection[b.id].is_gil,
+      joined_late: bankSelection[b.id].joined_late,
+      amount_paid: 0
+    }))
+    await supabase.from('participants').insert(rows)
+    setBankOpen(false)
+    setSaving(false)
+  }
+
+  const deleteFromBank = (id) => {
+    const updated = bank.filter(b => b.id !== id)
+    saveBank(updated)
+    setBank(updated)
+    setBankSelection(s => { const n = { ...s }; delete n[id]; return n })
   }
 
   const handleDelete = async (id, name) => {
@@ -311,10 +352,19 @@ export default function Participants() {
               {isHe ? 'מחק את כל הגיוסים' : 'Clear All Collections'}
             </button>
           )}
-          <button onClick={() => setAddOpen(true)}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-blue-200 text-blue-600 font-semibold text-sm bg-blue-50 active:bg-blue-100">
-            <Plus size={18} />{isHe ? 'הוסף משתתף' : 'Add Participant'}
-          </button>
+          <div className="flex gap-2">
+            {bank.length > 0 && (
+              <button onClick={openBankModal}
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border-2 border-blue-200 text-blue-600 font-semibold text-sm bg-blue-50 active:bg-blue-100 flex-shrink-0">
+                <BookUser size={18} />
+                {isHe ? 'מהרשימה' : 'From list'}
+              </button>
+            )}
+            <button onClick={() => setAddOpen(true)}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-blue-200 text-blue-600 font-semibold text-sm bg-blue-50 active:bg-blue-100">
+              <Plus size={18} />{isHe ? 'הוסף משתתף' : 'Add Participant'}
+            </button>
+          </div>
         </div>
       )}
 
@@ -346,6 +396,17 @@ export default function Participants() {
               <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.joined_late ? 'translate-x-5' : ''}`} />
             </div>
           </label>
+          <label className="flex items-center justify-between py-3 px-4 bg-gray-50 border border-gray-200 rounded-2xl cursor-pointer active:bg-gray-100">
+            <div>
+              <p className="font-semibold text-gray-800 text-sm">📋 {isHe ? 'שמור בבנק האנשים' : 'Save to people bank'}</p>
+              <p className="text-gray-400 text-xs mt-0.5">{isHe ? 'יהיה זמין לטיולים הבאים' : 'Available for future trips'}</p>
+            </div>
+            <div className="relative ms-3 flex-shrink-0">
+              <input type="checkbox" className="sr-only" checked={form.saveToBank} onChange={e => setForm(f => ({ ...f, saveToBank: e.target.checked }))} />
+              <div className={`w-11 h-6 rounded-full transition-colors ${form.saveToBank ? 'bg-blue-500' : 'bg-gray-200'}`} />
+              <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.saveToBank ? 'translate-x-5' : ''}`} />
+            </div>
+          </label>
           <div className="flex gap-3">
             <button onClick={() => setAddOpen(false)} className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold active:bg-gray-50">{t('cancel')}</button>
             <button onClick={handleAdd} disabled={saving || !form.name.trim()} className="flex-1 py-4 rounded-2xl bg-blue-600 text-white font-bold active:bg-blue-700 disabled:opacity-40">{saving ? '...' : t('save')}</button>
@@ -372,6 +433,69 @@ export default function Participants() {
           <div className="flex gap-3">
             <button onClick={() => setCollectOpen(null)} className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold active:bg-gray-50">{t('cancel')}</button>
             <button onClick={handleSaveCollection} disabled={saving || !collectAmount} className="flex-1 py-4 rounded-2xl bg-blue-600 text-white font-bold active:bg-blue-700 disabled:opacity-40">{saving ? '...' : t('save')}</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* People bank modal */}
+      <Modal open={bankOpen} onClose={() => setBankOpen(false)} title={isHe ? 'בנק אנשים' : 'People Bank'}>
+        <div className="space-y-3">
+          {bank.length === 0 ? (
+            <p className="text-center text-gray-400 py-6">{isHe ? 'הבנק ריק' : 'Bank is empty'}</p>
+          ) : (
+            <div className="space-y-2">
+              {bank.map(person => {
+                const sel = bankSelection[person.id] || { checked: false, is_gil: person.is_gil, joined_late: false }
+                const alreadyIn = participants.some(p => p.name === person.name)
+                return (
+                  <div key={person.id} className={`rounded-2xl border-2 overflow-hidden transition-colors ${sel.checked ? 'border-blue-400 bg-blue-50' : 'border-gray-100 bg-white'} ${alreadyIn ? 'opacity-40' : ''}`}>
+                    <label className={`flex items-center gap-3 px-4 py-3 ${alreadyIn ? '' : 'cursor-pointer'}`}>
+                      <input type="checkbox" className="w-5 h-5 accent-blue-500 flex-shrink-0"
+                        checked={sel.checked} disabled={alreadyIn}
+                        onChange={e => setBankSelection(s => ({ ...s, [person.id]: { ...sel, checked: e.target.checked } }))} />
+                      <span className="font-semibold text-gray-900 flex-1">{person.name}</span>
+                      {alreadyIn && <span className="text-xs text-gray-400">{isHe ? 'כבר בטיול' : 'already added'}</span>}
+                      {!alreadyIn && (
+                        <button onClick={(e) => { e.preventDefault(); deleteFromBank(person.id) }}
+                          className="text-gray-300 active:text-red-400 p-1 flex-shrink-0">
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </label>
+                    {sel.checked && !alreadyIn && (
+                      <div className="px-4 pb-3 flex gap-3 border-t border-blue-100">
+                        <label className="flex items-center gap-2 flex-1 cursor-pointer pt-2">
+                          <div className="relative flex-shrink-0">
+                            <input type="checkbox" className="sr-only" checked={sel.is_gil}
+                              onChange={e => setBankSelection(s => ({ ...s, [person.id]: { ...sel, is_gil: e.target.checked } }))} />
+                            <div className={`w-9 h-5 rounded-full transition-colors ${sel.is_gil ? 'bg-amber-400' : 'bg-gray-200'}`} />
+                            <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${sel.is_gil ? 'translate-x-4' : ''}`} />
+                          </div>
+                          <span className="text-xs font-semibold text-gray-700">⭐ {isHe ? 'כפול' : 'Double'}</span>
+                        </label>
+                        <label className="flex items-center gap-2 flex-1 cursor-pointer pt-2">
+                          <div className="relative flex-shrink-0">
+                            <input type="checkbox" className="sr-only" checked={sel.joined_late}
+                              onChange={e => setBankSelection(s => ({ ...s, [person.id]: { ...sel, joined_late: e.target.checked } }))} />
+                            <div className={`w-9 h-5 rounded-full transition-colors ${sel.joined_late ? 'bg-orange-400' : 'bg-gray-200'}`} />
+                            <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${sel.joined_late ? 'translate-x-4' : ''}`} />
+                          </div>
+                          <span className="text-xs font-semibold text-gray-700">⏰ {isHe ? 'הצטרף מאוחר' : 'Late'}</span>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          <div className="flex gap-3 pt-1">
+            <button onClick={() => setBankOpen(false)} className="flex-1 py-4 rounded-2xl border-2 border-gray-200 text-gray-700 font-semibold active:bg-gray-50">{t('cancel')}</button>
+            <button onClick={handleAddFromBank}
+              disabled={saving || !Object.values(bankSelection).some(s => s.checked)}
+              className="flex-1 py-4 rounded-2xl bg-blue-600 text-white font-bold active:bg-blue-700 disabled:opacity-40">
+              {saving ? '...' : (isHe ? 'הוסף לטיול' : 'Add to trip')}
+            </button>
           </div>
         </div>
       </Modal>
