@@ -936,10 +936,16 @@ export default function Shopping() {
                     {group.items.map(item => (
                       <motion.div key={item.id} layout exit={{ opacity: 0, height: 0 }}
                         className="flex items-center gap-3 px-4 py-3.5">
-                        <button onClick={() => toggleItem(item)}
-                          className="text-gray-300 active:text-blue-500 transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center">
-                          <Square size={24} />
-                        </button>
+                        {isAdmin ? (
+                          <button onClick={() => toggleItem(item)}
+                            className="text-gray-300 active:text-blue-500 transition-colors flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center">
+                            <Square size={24} />
+                          </button>
+                        ) : (
+                          <div className="min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0">
+                            <Square size={24} className="text-gray-200" />
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-gray-900">{item.name}</p>
                           {item.quantity && <p className="text-sm text-gray-400 mt-0.5">{item.quantity}</p>}
@@ -979,10 +985,16 @@ export default function Shopping() {
           <div className="divide-y divide-gray-50">
             {uncat.map(item => (
               <div key={item.id} className="flex items-center gap-3 px-4 py-3.5">
-                <button onClick={() => toggleItem(item)}
-                  className="text-gray-300 active:text-blue-500 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
-                  <Square size={24} />
-                </button>
+                {isAdmin ? (
+                  <button onClick={() => toggleItem(item)}
+                    className="text-gray-300 active:text-blue-500 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
+                    <Square size={24} />
+                  </button>
+                ) : (
+                  <div className="min-w-[44px] min-h-[44px] flex items-center justify-center">
+                    <Square size={24} className="text-gray-200" />
+                  </div>
+                )}
                 <div className="flex-1">
                   <p className="font-medium text-gray-900">{item.name}</p>
                   {item.quantity && <p className="text-sm text-gray-400">{item.quantity}</p>}
@@ -1018,6 +1030,12 @@ export default function Shopping() {
                 <div className="divide-y divide-gray-50">
                   {unchecked.map(item => (
                     <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                      {isAdmin && (
+                        <button onClick={() => toggleItem(item)}
+                          className="text-gray-300 active:text-blue-500 transition-colors flex-shrink-0 min-w-[36px] min-h-[36px] flex items-center justify-center">
+                          <Square size={20} />
+                        </button>
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-800">{item.name}</p>
                         {item.quantity && <p className="text-xs text-gray-400">{item.quantity}</p>}
@@ -1049,10 +1067,16 @@ export default function Shopping() {
           <div className="divide-y divide-gray-50">
             {checked.map(item => (
               <div key={item.id} className="flex items-center gap-3 px-4 py-3.5">
-                <button onClick={() => toggleItem(item)}
-                  className="text-emerald-500 min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0">
-                  <CheckSquare2 size={24} />
-                </button>
+                {isAdmin ? (
+                  <button onClick={() => toggleItem(item)}
+                    className="text-emerald-500 min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0">
+                    <CheckSquare2 size={24} />
+                  </button>
+                ) : (
+                  <div className="min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0">
+                    <CheckSquare2 size={24} className="text-emerald-300" />
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-gray-400 line-through text-sm flex-1">{item.name}</p>
