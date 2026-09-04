@@ -79,6 +79,7 @@ export default {
 
     subcat_insurance_main: 'ביטוח ראשי',
     subcat_insurance_deductible: 'הקטנת השתתפות עצמית',
+    subcat_insurance_rental_car: 'ביטוח רכב מושכר',
     subcat_transport_taxi_il: 'מונית בישראל',
     subcat_transport_taxi_abroad: 'מוניות בחו"ל',
     subcat_transport_car_rental: 'השכרת רכב',

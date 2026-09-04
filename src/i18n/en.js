@@ -74,6 +74,7 @@ export default {
 
     subcat_insurance_main: 'Main Insurance',
     subcat_insurance_deductible: 'Deductible Reduction',
+    subcat_insurance_rental_car: 'Rental Car Insurance',
     subcat_transport_taxi_il: 'Taxi in Israel',
     subcat_transport_taxi_abroad: 'Taxis Abroad',
     subcat_transport_car_rental: 'Car Rental',

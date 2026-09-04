@@ -47,7 +47,7 @@ const ALCOHOL_ITEMS = [
 ]
 
 const SUBCATEGORIES = {
-  insurance: ['insurance_main', 'insurance_deductible'],
+  insurance: ['insurance_main', 'insurance_deductible', 'insurance_rental_car'],
   transport: ['transport_taxi_il', 'transport_taxi_abroad', 'transport_car_rental'],
   fuel: ['fuel_yacht', 'fuel_car_rental'],
   gear: ['gear_defibrillator'],
