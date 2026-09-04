@@ -114,7 +114,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
   useEffect(() => {
     if (expense) {
       setForm({ ...defaultForm, ...expense, amount: expense.amount?.toString() || '', actual_amount: expense.actual_amount?.toString() || '', paid_by: expense.paid_by || '' })
-      setExcludedIds(expense.excluded_ids || [])
+      setExcludedIds((expense.excluded_ids || []).filter(id => participants.some(p => p.id === id)))
       setInstallments(expense.installments || [])
       autoFilledDesc.current = true
     } else {
