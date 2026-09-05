@@ -173,9 +173,6 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
       const next = { ...prev }
       if (next[name]) delete next[name]
       else next[name] = '1'
-      // auto-fill notes
-      const list = Object.entries(next).map(([n, q]) => `${n} x${q}`).join(', ')
-      setForm(f => ({ ...f, notes: list }))
       return next
     })
   }
@@ -183,8 +180,6 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
   const setCartQty = (name, qty) => {
     setCartItems(prev => {
       const next = { ...prev, [name]: qty }
-      const list = Object.entries(next).map(([n, q]) => `${n} x${q}`).join(', ')
-      setForm(f => ({ ...f, notes: list }))
       return next
     })
   }
