@@ -652,12 +652,18 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               📅 {isHe ? 'תאריך ההוצאה' : 'Expense date'}
             </label>
-            <input
-              type="date"
-              className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500 text-gray-900 bg-white transition-colors"
-              value={form.planned_date}
-              onChange={e => set('planned_date', e.target.value)}
-            />
+            <div className="flex gap-2 items-center">
+              <input
+                type="date"
+                className="flex-1 border-2 border-gray-200 rounded-2xl px-4 py-3.5 focus:outline-none focus:border-blue-500 text-gray-900 bg-white transition-colors"
+                value={form.planned_date}
+                onChange={e => set('planned_date', e.target.value)}
+              />
+              {form.planned_date && (
+                <button onClick={() => set('planned_date', '')}
+                  className="text-gray-400 active:text-gray-600 px-2 py-1 text-lg">✕</button>
+              )}
+            </div>
           </div>
         )}
 
