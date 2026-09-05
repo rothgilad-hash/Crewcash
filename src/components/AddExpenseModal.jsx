@@ -7,31 +7,6 @@ import Modal from './Modal'
 
 const CATEGORIES = ['yacht', 'fuel', 'food', 'supermarket', 'alcohol', 'transport', 'activities', 'gear', 'accommodation', 'health', 'insurance', 'yacht_services', 'other']
 
-const SUPERMARKET_ITEMS = [
-  { he: 'שישיית מים',     en: 'Water (6-pack)' },
-  { he: 'שישיית זירו',   en: 'Zero soda' },
-  { he: 'לחם',            en: 'Bread' },
-  { he: 'טונה',           en: 'Tuna cans' },
-  { he: 'זיתים',          en: 'Olives' },
-  { he: 'עגבניות',        en: 'Tomatoes' },
-  { he: 'מלפפונים',       en: 'Cucumbers' },
-  { he: 'אבטיח',          en: 'Watermelon' },
-  { he: 'ביצים',          en: 'Eggs' },
-  { he: 'גאודה',          en: 'Gouda' },
-  { he: 'גבינת פטה',     en: 'Feta cheese' },
-  { he: 'יוגרטים',        en: 'Yogurts' },
-  { he: 'חלב',            en: 'Milk' },
-  { he: 'חמאה',           en: 'Butter' },
-  { he: 'סלמי',           en: 'Salami' },
-  { he: 'סלמון מעושן',   en: 'Smoked salmon' },
-  { he: 'נייר טואלט',    en: 'Toilet paper' },
-  { he: 'סבון כלים',      en: 'Dish soap' },
-  { he: 'שקיות זבל',     en: 'Garbage bags' },
-  { he: 'קרם הגנה',      en: 'Sunscreen' },
-  { he: 'משחת שיניים',   en: 'Toothpaste' },
-  { he: "תפוצ'יפס",      en: 'Chips' },
-  { he: 'עוגיות',         en: 'Cookies' },
-]
 
 const ALCOHOL_ITEMS = [
   { he: 'יין לבן',  en: 'White wine' },
@@ -371,31 +346,8 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
                 ? (form.is_estimate && expense?.id && !form.is_finalized ? 'מוצרים שנקנו בתשלום זה' : 'מוצרים שנקנו')
                 : (form.is_estimate && expense?.id && !form.is_finalized ? 'Items for this purchase' : 'Items purchased')}
             </label>
-            <div className="max-h-52 overflow-y-auto border-2 border-gray-100 rounded-2xl divide-y divide-gray-50">
-              {SUPERMARKET_ITEMS.map(item => {
-                const name = isHe ? item.he : item.en
-                const selected = !!cartItems[name]
-                return (
-                  <div key={name} className={`flex items-center gap-3 px-3 py-2.5 transition-colors ${selected ? 'bg-blue-50' : ''}`}>
-                    <button onClick={() => toggleCartItem(name)}
-                      className={`w-6 h-6 rounded-lg border-2 flex-shrink-0 flex items-center justify-center transition-colors ${selected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`}>
-                      {selected && <span className="text-white text-xs font-bold">✓</span>}
-                    </button>
-                    <span className="flex-1 text-sm text-gray-800">{name}</span>
-                    {selected && (
-                      <input
-                        type="text" value={cartItems[name]}
-                        onChange={e => setCartQty(name, e.target.value)}
-                        onClick={e => e.stopPropagation()}
-                        className="w-14 border border-gray-200 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:border-blue-400"
-                        placeholder="כמות"
-                      />
-                    )}
-                  </div>
-                )
-              })}
-            </div>
             {/* Custom items */}
+            <div className="border-2 border-gray-100 rounded-2xl divide-y divide-gray-50">
             {customItems.map(name => {
               const selected = !!cartItems[name]
               return (
@@ -415,8 +367,9 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
                 </div>
               )
             })}
+            </div>
             {/* Free-text input */}
-            <div className="flex gap-2 p-2 border-t border-gray-100 bg-gray-50">
+            <div className="flex gap-2 mt-2">
               <input
                 className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-400 bg-white"
                 placeholder={isHe ? '+ הוסף מוצר אחר...' : '+ Add other item...'}
