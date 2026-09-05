@@ -150,7 +150,8 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
     const total = newList.reduce((s, i) => s + i.amount, 0)
     await supabase.from('expenses').update({
       installments: newList,
-      actual_amount: newList.length > 0 ? total : null
+      actual_amount: newList.length > 0 ? total : null,
+      ...(newList.length === 0 ? { notes: null, planned_date: null } : {}),
     }).eq('id', expense.id)
     await syncExpenseItems(expense.id, newList)
     setInstallments(newList)
