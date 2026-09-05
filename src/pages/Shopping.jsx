@@ -533,16 +533,47 @@ export default function Shopping() {
           {loadingData ? <p className="text-center text-gray-400 text-sm py-8">...</p> : (() => {
             const rows = buildComparison()
             if (!rows.length) return <p className="text-center text-gray-400 text-sm py-8">{isHe ? 'אין נתונים' : 'No data'}</p>
+            const copyReport = () => {
+                const catGroups = {}
+                rows.forEach(row => {
+                  const catKey = row.category || 'other'
+                  if (!catGroups[catKey]) catGroups[catKey] = []
+                  catGroups[catKey].push(row)
+                })
+                const lines = [`📊 ${isHe ? 'דוח צריכה — ' + (trip?.name || '') : 'Consumption Report — ' + (trip?.name || '')}\n`]
+                CATS.forEach(cat => {
+                  const items = catGroups[cat.key]
+                  if (!items?.length) return
+                  lines.push(isHe ? cat.he : cat.en)
+                  items.forEach(row => {
+                    const consumed = Math.max(0, row.bought - row.leftover)
+                    const parts = [`קנינו: ${row.bought || 0}`, `נשאר: ${row.leftover || 0}`, `נצרך: ${consumed}`]
+                    lines.push(`  • ${row.name} — ${parts.join(', ')}`)
+                  })
+                  lines.push('')
+                })
+                navigator.clipboard.writeText(lines.join('\n'))
+              }
+
             return (
               <>
-                <p className="text-xs text-gray-400 text-center">{isHe ? 'קנינו מול נשאר — לתכנון הטיול הבא' : 'Bought vs leftover — plan the next trip'}</p>
+                <p className="text-xs text-gray-400 text-center">{isHe ? 'קנינו · נשאר · נצרך — לתכנון הטיול הבא' : 'Bought · Left · Consumed — plan the next trip'}</p>
+                {isAdmin && (
+                  <button onClick={copyReport}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-white border border-gray-200 text-gray-700 font-semibold text-sm active:bg-gray-50 shadow-sm">
+                    <Copy size={15} />
+                    {isHe ? 'העתק דוח לוואטסאפ' : 'Copy Report'}
+                  </button>
+                )}
                 <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-                  <div className="grid grid-cols-4 px-4 py-2 bg-gray-50 text-xs font-bold text-gray-400 border-b border-gray-100">
+                  <div className="grid grid-cols-5 px-3 py-2 bg-gray-50 text-xs font-bold text-gray-400 border-b border-gray-100">
                     <span className="col-span-2">{isHe ? 'מוצר' : 'Item'}</span>
                     <span className="text-center">{isHe ? 'קנינו' : 'Bought'}</span>
                     <span className="text-center">{isHe ? 'נשאר' : 'Left'}</span>
+                    <span className="text-center text-blue-400">{isHe ? 'נצרך' : 'Used'}</span>
                   </div>
                   {rows.map(row => {
+                    const consumed = Math.max(0, row.bought - row.leftover)
                     const waste = row.leftover > 0
                     const existingLeftover = leftovers.find(l => l.name.toLowerCase() === row.name.toLowerCase())
                     const saveLeftover = async (val) => {
@@ -561,7 +592,6 @@ export default function Shopping() {
                     const saveBought = async (val) => {
                       const newQty = val.trim()
                       if (!newQty || row.sourceItems.length === 0) return
-                      // update the first source item (shopping_items takes priority)
                       const si = row.sourceItems.find(x => x.source === 'shopping') || row.sourceItems[0]
                       const table = si.source === 'shopping' ? 'shopping_items' : 'expense_items'
                       await supabase.from(table).update({ quantity: newQty }).eq('id', si.id)
@@ -569,8 +599,8 @@ export default function Shopping() {
                       reloadShoppingItems(trip.id)
                     }
                     return (
-                      <div key={row.name} className={`grid grid-cols-4 px-4 py-2.5 border-b border-gray-50 last:border-0 items-center ${waste ? 'bg-orange-50' : ''}`}>
-                        <span className="col-span-2 text-sm text-gray-800">{row.name}</span>
+                      <div key={row.name} className={`grid grid-cols-5 px-3 py-2.5 border-b border-gray-50 last:border-0 items-center ${waste ? 'bg-orange-50' : ''}`}>
+                        <span className="col-span-2 text-sm text-gray-800 truncate pr-1">{row.name}</span>
                         {isAdmin ? (
                           <input
                             key={`bought-${row.name}-${row.bought}`}
@@ -595,6 +625,7 @@ export default function Shopping() {
                         ) : (
                           <span className={`text-center text-sm font-semibold ${waste ? 'text-orange-500' : 'text-gray-400'}`}>{row.leftover || '—'}</span>
                         )}
+                        <span className={`text-center text-sm font-bold ${consumed > 0 ? 'text-blue-500' : 'text-gray-300'}`}>{consumed || '—'}</span>
                       </div>
                     )
                   })}
