@@ -573,6 +573,7 @@ export default function Shopping() {
                         <span className="col-span-2 text-sm text-gray-800">{row.name}</span>
                         {isAdmin ? (
                           <input
+                            key={`bought-${row.name}-${row.bought}`}
                             className="w-full text-center text-sm text-gray-600 border-0 border-b border-gray-200 focus:outline-none bg-transparent py-0.5 placeholder-gray-200 focus:border-blue-400"
                             placeholder="—"
                             defaultValue={row.bought || ''}
