@@ -447,12 +447,18 @@ export default function Shopping() {
     })
     expenseItems.forEach(i => {
       const key = (i.name_he?.trim() || i.name.trim()).toLowerCase()
-      // expense_items takes precedence over shopping_items for the same name
+      const n = parseFloat(i.quantity) || 1
       if (map[key]) {
-        const n = parseFloat(i.quantity) || 1
-        map[key].bought = n
-        map[key].sourceItems = [{ source: 'supermarket', id: i.id }]
-        if (!map[key].sources.includes('supermarket')) map[key].sources = ['supermarket']
+        if (map[key].sources.includes('supermarket')) {
+          // same item from multiple expense records — accumulate
+          map[key].bought += n
+          map[key].sourceItems.push({ source: 'supermarket', id: i.id })
+        } else {
+          // came from shopping_items — expense takes precedence, replace
+          map[key].bought = n
+          map[key].sourceItems = [{ source: 'supermarket', id: i.id }]
+          map[key].sources = ['supermarket']
+        }
       } else {
         add(i.name, i.name_he, i.quantity, 'supermarket', i.category, i.id)
       }
