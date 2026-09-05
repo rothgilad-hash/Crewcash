@@ -286,6 +286,11 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
     if (!expense?.id) return
     if (!window.confirm(t('confirmDelete'))) return
     await supabase.from('expenses').delete().eq('id', expense.id)
+    reloadExpenses(trip.id)
+    setForm(defaultForm)
+    setCartItems({})
+    setCustomItems([])
+    setCustomItemInput('')
     onClose()
   }
 
