@@ -154,6 +154,9 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
     }).eq('id', expense.id)
     await syncExpenseItems(expense.id, newList)
     setInstallments(newList)
+    setInstForm({ amount: '', note: '', date: new Date().toISOString().split('T')[0] })
+    setCartItems({})
+    setForm(f => ({ ...f, notes: '' }))
     reloadExpenses(trip.id)
   }
 
