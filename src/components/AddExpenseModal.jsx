@@ -125,6 +125,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
     const amt = parseFloat(instForm.amount)
     if (!amt || !expense?.id) return
     setSavingInst(true)
+    console.log('[addInstallment] cartItems:', JSON.stringify(cartItems), 'customItems:', customItems)
     const instItems = Object.entries(cartItems).map(([name, qty]) => ({ name, qty }))
     const newItem = {
       amount: amt,
@@ -284,6 +285,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
   const handleDelete = async () => {
     if (!expense?.id) return
     if (!window.confirm(t('confirmDelete'))) return
+    await supabase.from('expense_items').delete().eq('expense_id', expense.id)
     await supabase.from('expenses').delete().eq('id', expense.id)
     reloadExpenses(trip.id)
     setForm(defaultForm)
