@@ -434,35 +434,8 @@ export default function Shopping() {
       else { map[key].bought += n; map[key].sourceItems.push({ source, id }) }
       if (source !== 'leftover' && !map[key].sources.includes(source)) map[key].sources.push(source)
     }
-    shoppingItems.forEach(i => {
-      const key = (i.name_he?.trim() || i.name.trim()).toLowerCase()
-      // If same name already seen from shopping, replace rather than add (handles duplicate imports)
-      if (map[key]) {
-        const n = parseFloat(i.quantity) || 1
-        map[key].bought = n
-        map[key].sourceItems = [{ source: 'shopping', id: i.id }]
-      } else {
-        add(i.name, i.name_he, i.quantity, 'shopping', i.category, i.id)
-      }
-    })
-    expenseItems.forEach(i => {
-      const key = (i.name_he?.trim() || i.name.trim()).toLowerCase()
-      const n = parseFloat(i.quantity) || 1
-      if (map[key]) {
-        if (map[key].sources.includes('supermarket')) {
-          // same item from multiple expense records — accumulate
-          map[key].bought += n
-          map[key].sourceItems.push({ source: 'supermarket', id: i.id })
-        } else {
-          // came from shopping_items — expense takes precedence, replace
-          map[key].bought = n
-          map[key].sourceItems = [{ source: 'supermarket', id: i.id }]
-          map[key].sources = ['supermarket']
-        }
-      } else {
-        add(i.name, i.name_he, i.quantity, 'supermarket', i.category, i.id)
-      }
-    })
+    shoppingItems.forEach(i => add(i.name, i.name_he, i.quantity, 'shopping', i.category, i.id))
+    expenseItems.forEach(i => add(i.name, i.name_he, i.quantity, 'supermarket', i.category, i.id))
     leftovers.forEach(i => add(i.name, null, i.quantity, 'leftover', i.category))
     return Object.values(map).sort((a, b) => a.name.localeCompare(b.name, 'he'))
   }
