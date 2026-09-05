@@ -430,10 +430,20 @@ export default function Shopping() {
       else { map[key].bought += n; map[key].sourceItems.push({ source, id }) }
       if (source !== 'leftover' && !map[key].sources.includes(source)) map[key].sources.push(source)
     }
-    shoppingItems.forEach(i => add(i.name, i.name_he, i.quantity, 'shopping', i.category, i.id))
+    shoppingItems.forEach(i => {
+      const key = (i.name_he?.trim() || i.name.trim()).toLowerCase()
+      // If same name already seen from shopping, replace rather than add (handles duplicate imports)
+      if (map[key]) {
+        const n = parseFloat(i.quantity) || 1
+        map[key].bought = n
+        map[key].sourceItems = [{ source: 'shopping', id: i.id }]
+      } else {
+        add(i.name, i.name_he, i.quantity, 'shopping', i.category, i.id)
+      }
+    })
     expenseItems.forEach(i => {
       const key = (i.name_he?.trim() || i.name.trim()).toLowerCase()
-      // If this item already came from the shopping list, replace rather than add (same purchase, two sources)
+      // expense_items takes precedence over shopping_items for the same name
       if (map[key]) {
         const n = parseFloat(i.quantity) || 1
         map[key].bought = n
