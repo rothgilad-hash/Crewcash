@@ -68,7 +68,7 @@ export default function Expenses() {
   const total = filtered.reduce((s, e) => s + getEurAmount(e), 0)
 
   const estimateSummary = expenses
-    .filter(e => e.is_estimate && e.actual_amount != null)
+    .filter(e => e.is_estimate && e.is_finalized && e.actual_amount != null)
     .reduce((s, e) => {
       const diff = e.actual_amount - e.amount // positive = overage, negative = surplus
       return s + diff
