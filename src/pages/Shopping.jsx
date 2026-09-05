@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabase'
@@ -143,6 +143,10 @@ export default function Shopping() {
   const [loadingData, setLoadingData] = useState(false)
   const fileRef = useRef(null)
   const isHe = lang === 'he'
+
+  useEffect(() => {
+    if (activeTab !== 'list') loadLeftoversAndExpenseItems()
+  }, [activeTab])
 
   const loadLeftoversAndExpenseItems = async () => {
     if (!trip?.id) return
@@ -468,7 +472,7 @@ export default function Shopping() {
           { key: 'compare', label: isHe ? '📊 השוואה' : '📊 Compare' },
         ].map(tab => (
           <button key={tab.key}
-            onClick={() => { setActiveTab(tab.key); if (tab.key !== 'list') loadLeftoversAndExpenseItems() }}
+            onClick={() => { setActiveTab(tab.key); if (tab.key !== 'list') loadLeftoversAndExpenseItems(); }}
             className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${activeTab === tab.key ? 'bg-white shadow text-blue-600' : 'text-gray-500'}`}>
             {tab.label}
           </button>
