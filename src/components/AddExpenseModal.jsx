@@ -165,8 +165,32 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
   const finalizeInstallments = async () => {
     if (!expense?.id) return
     const total = installments.reduce((s, i) => s + i.amount, 0)
+    const budget = parseFloat(form.amount)
+    const overage = total - budget
+
     await supabase.from('expenses').update({ is_finalized: true, actual_amount: total || null, is_paid: true }).eq('id', expense.id)
     reloadExpenses(trip.id)
+
+    if (overage > 0.01) {
+      const confirmed = window.confirm(
+        `⚠️ חרגת ב-€${overage.toFixed(0)} מהאומדן.\nהאם להוסיף את החריגה (€${overage.toFixed(0)}) כהוצאה בלתי צפויה?`
+      )
+      if (confirmed) {
+        await supabase.from('expenses').insert({
+          trip_id: trip.id,
+          description: `חריגה מאומדן — ${expense.description}`,
+          amount: overage,
+          currency: expense.currency || 'EUR',
+          eur_rate: 1,
+          category: expense.category,
+          is_unexpected: true,
+          is_cash: true,
+          is_paid: true,
+        })
+        reloadExpenses(trip.id)
+      }
+    }
+
     onClose()
   }
 

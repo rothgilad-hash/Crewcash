@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { supabase } from '../lib/supabase'
-import { formatCurrency, getCollectedAmount } from '../lib/calculations'
+import { formatCurrency, getCollectedAmount, getEurAmount } from '../lib/calculations'
 import { CheckCircle2, Circle, AlertTriangle, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -67,6 +67,16 @@ export default function CashFlow() {
   const estimateShortfall = expenses
     .filter(e => e.is_estimate && e.is_finalized && e.actual_amount != null && e.actual_amount > e.amount)
     .reduce((s, e) => s + (e.actual_amount - e.amount), 0)
+
+  const estimateSurplus = expenses
+    .filter(e => e.is_estimate && e.is_finalized && e.actual_amount != null && e.actual_amount < e.amount)
+    .reduce((s, e) => s + (e.amount - e.actual_amount), 0)
+
+  const unexpectedTotal = expenses
+    .filter(e => e.is_unexpected)
+    .reduce((s, e) => s + getEurAmount(e), 0)
+
+  const netReconciliation = estimateSurplus - unexpectedTotal
 
   const totalNeeded = totalUpcoming + estimateShortfall
   const fundraiseNeeded = totalNeeded > cashBalance ? totalNeeded - cashBalance : 0
@@ -368,6 +378,41 @@ export default function CashFlow() {
               })()}
             </div>
           )}
+        </motion.div>
+      )}
+      {/* Reconciliation: estimate surplus vs unexpected expenses */}
+      {(estimateSurplus > 0 || unexpectedTotal > 0) && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18 }}
+          className={`rounded-3xl p-5 shadow-sm border ${netReconciliation >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'}`}
+        >
+          <p className="text-sm font-bold text-gray-700 mb-3">
+            ⚖️ {isHe ? 'פשרה: עודפים מול בלתי צפויות' : 'Reconciliation'}
+          </p>
+          <div className="space-y-2">
+            {estimateSurplus > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">{isHe ? 'עודף מאומדנים' : 'Estimate surplus'}</span>
+                <span className="font-bold text-emerald-600">+{formatCurrency(estimateSurplus, 'EUR')}</span>
+              </div>
+            )}
+            {unexpectedTotal > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">{isHe ? 'הוצאות בלתי צפויות' : 'Unexpected expenses'}</span>
+                <span className="font-bold text-red-500">−{formatCurrency(unexpectedTotal, 'EUR')}</span>
+              </div>
+            )}
+            <div className={`flex justify-between text-sm font-black pt-2 border-t ${netReconciliation >= 0 ? 'border-emerald-100 text-emerald-700' : 'border-red-100 text-red-600'}`}>
+              <span>{isHe ? 'נטו' : 'Net'}</span>
+              <span>
+                {netReconciliation >= 0
+                  ? `✅ +${formatCurrency(netReconciliation, 'EUR')} ${isHe ? '— אין גיוס שני' : '— no 2nd collection'}`
+                  : `⚠️ −${formatCurrency(Math.abs(netReconciliation), 'EUR')} ${isHe ? '— נדרש גיוס שני' : '— 2nd collection needed'}`}
+              </span>
+            </div>
+          </div>
         </motion.div>
       )}
     </div>
