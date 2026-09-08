@@ -13,6 +13,7 @@ export default {
     leaderboard: 'דירוג',
     report: 'דוח',
     cash: 'מזומן',
+    notes: 'תובנות',
     settings: 'הגדרות',
 
     // Landing

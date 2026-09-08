@@ -12,6 +12,7 @@ export default {
     leaderboard: 'Rankings',
     report: 'Report',
     cash: 'Cash',
+    notes: 'Insights',
     settings: 'Settings',
 
     createTrip: 'Create New Trip',

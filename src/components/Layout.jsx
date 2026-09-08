@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext'
 import { motion } from 'framer-motion'
 import {
   LayoutDashboard, Receipt, Users, ArrowLeftRight,
-  ShoppingCart, Wallet, FileText, Settings, Moon, Sun
+  ShoppingCart, Wallet, FileText, Settings, Moon, Sun, Lightbulb
 } from 'lucide-react'
 
 const NAV = [
@@ -16,6 +16,7 @@ const NAV = [
   { to: '/shopping', icon: ShoppingCart, key: 'shopping' },
   { to: '/cash', icon: Wallet, key: 'cash' },
   { to: '/report', icon: FileText, key: 'report' },
+  { to: '/notes', icon: Lightbulb, key: 'notes' },
 ]
 
 export default function Layout({ children }) {

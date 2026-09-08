@@ -12,6 +12,7 @@ import Compare from './pages/Compare'
 import CashFlow from './pages/CashFlow'
 import Report from './pages/Report'
 import Settings from './pages/Settings'
+import Notes from './pages/Notes'
 
 function JoinRedirect() {
   const { joinTrip } = useApp()
@@ -52,6 +53,7 @@ function ProtectedApp() {
         <Route path="/compare" element={<Compare />} />
         <Route path="/cash" element={<CashFlow />} />
         <Route path="/report" element={<Report />} />
+        <Route path="/notes" element={<Notes />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>
     </Layout>
