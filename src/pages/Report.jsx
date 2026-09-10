@@ -3,25 +3,34 @@ import { useTranslation } from 'react-i18next'
 import { useApp } from '../context/AppContext'
 import { calculateBalances, formatCurrency, getCategoryIcon, getEurAmount, getExpenseDate, getCollectedAmount, getCollectionOverpayment, getLastCollectionDate, getPostCollectionNet } from '../lib/calculations'
 import { motion } from 'framer-motion'
-import { FileText, Trash2 } from 'lucide-react'
+import { FileText, Trash2, Clipboard, Check } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
 import SignaturePad from '../components/SignaturePad'
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316']
 
+const CAT_HE = {
+  yacht: 'יאכטה', fuel: 'דלק', food: 'מסעדות', supermarket: 'סופר',
+  alcohol: 'אלכוהול', transport: 'תחבורה', activities: 'פעילויות',
+  gear: 'ציוד', accommodation: 'לינה', health: 'בריאות',
+  insurance: 'ביטוח', yacht_services: 'שירותי יאכטה', other: 'אחר',
+}
+
 export default function Report() {
   const { t } = useTranslation()
-  const { participants, expenses, kittyRefunds, kittyCollections, lang, isAdmin, reloadRefunds, reloadCollections, reloadExpenses, trip, setExpenses } = useApp()
+  const { participants, expenses, kittyRefunds, kittyCollections, lang, isAdmin, reloadRefunds, reloadCollections, reloadExpenses, trip, setExpenses, shoppingItems } = useApp()
   const isHe = lang === 'he'
 
-  const [editRefund, setEditRefund] = useState(null) // { refund, name }
+  const [editRefund, setEditRefund] = useState(null)
   const [editAmount, setEditAmount] = useState('')
   const [editDate, setEditDate] = useState('')
   const [editRound, setEditRound] = useState(1)
   const [editSaving, setEditSaving] = useState(false)
   const [sigOpen, setSigOpen] = useState(false)
   const [sigTarget, setSigTarget] = useState(null)
+  const [copying, setCopying] = useState(false)
+  const [generating, setGenerating] = useState(false)
 
   const handleDeleteAll = async () => {
     if (!window.confirm(isHe ? 'למחוק את כל הנתונים? (הוצאות, גיוסים, החזרים)' : 'Delete all data? (expenses, collections, refunds)')) return
@@ -96,104 +105,228 @@ export default function Report() {
   const cashBalance = totalCollected - cashSpent - kittyRefundsTotal
   const kittyPct = totalCollected > 0 ? cashBalance / totalCollected : 0
 
-  const generatePDF = () => {
-    const totalCollected = participants.reduce((s, p) => s + getCollectedAmount(kittyCollections, p.id, p), 0)
+  const collectReportData = async () => {
+    const [{ data: notes }, { data: leftovers }, { data: expenseItems }] = await Promise.all([
+      supabase.from('trip_notes').select('*').eq('trip_id', trip.id).order('created_at'),
+      supabase.from('trip_leftovers').select('*').eq('trip_id', trip.id).order('category'),
+      supabase.from('expense_items').select('*').eq('trip_id', trip.id),
+    ])
+    return { notes: notes || [], leftovers: leftovers || [], expenseItems: expenseItems || [] }
+  }
 
-    // Category breakdown
-    const catBreakdown = runningExpenses.reduce((acc, e) => {
-      acc[e.category] = (acc[e.category] || 0) + getEurAmount(e)
+  const buildReportSections = (notes, leftovers, expenseItems) => {
+    const fmt = (n) => `€${Math.round(n).toLocaleString('he-IL')}`
+    const fmtDate = (d) => d ? new Date(d).toLocaleDateString('he-IL', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
+
+    const totalCollected = participants.reduce((s, p) => s + getCollectedAmount(kittyCollections, p.id, p), 0)
+    const N = participants.length
+
+    const catBreakdown = expenses.reduce((acc, e) => {
+      const cat = CAT_HE[e.category] || e.category
+      acc[cat] = (acc[cat] || 0) + getEurAmount(e)
       return acc
     }, {})
 
-    // Daily breakdown
     const byDay = expenses.reduce((acc, e) => {
-      const day = (e.created_at || '').slice(0, 10)
+      const day = (e.planned_date || e.created_at || '').slice(0, 10)
       if (day) acc[day] = (acc[day] || 0) + getEurAmount(e)
       return acc
     }, {})
+    const days = Object.keys(byDay).sort()
+    const numDays = days.length || 1
+    const avgDaily = totalExpenses / numDays
 
-    const fmt = (n) => `€${Math.round(n).toLocaleString('he-IL')}`
+    const estimateExpenses = expenses.filter(e => e.is_estimate)
+    const unexpectedExpenses = expenses.filter(e => e.is_unexpected)
+
+    const crewNames = participants.map(p => `${p.name}${p.is_gil ? ' ⭐' : ''}${p.joined_late ? ' (הצטרף מאוחר)' : ''}`).join(', ')
+
+    return { fmt, fmtDate, totalCollected, N, catBreakdown, byDay, days, numDays, avgDaily, estimateExpenses, unexpectedExpenses, crewNames }
+  }
+
+  const generatePDF = async () => {
+    setGenerating(true)
+    const { notes, leftovers, expenseItems } = await collectReportData()
+    const { fmt, fmtDate, totalCollected, N, catBreakdown, byDay, days, numDays, avgDaily, estimateExpenses, unexpectedExpenses, crewNames } = buildReportSections(notes, leftovers, expenseItems)
+    setGenerating(false)
+
+    const tripTitle = `שייט ${trip.destination || ''} ${trip.year || ''} — ${trip.name || ''}`
 
     const html = `<!DOCTYPE html>
 <html dir="rtl" lang="he">
 <head>
 <meta charset="utf-8"/>
-<title>דוח כספי — ${isHe ? 'טיול' : 'Trip'}</title>
+<title>${tripTitle}</title>
 <style>
-  body { font-family: Arial, sans-serif; color: #1a1a2e; margin: 0; padding: 24px; font-size: 13px; }
-  h1 { font-size: 26px; margin-bottom: 4px; color: #1e3a8a; }
-  h2 { font-size: 15px; color: #3b82f6; border-bottom: 2px solid #dbeafe; padding-bottom: 4px; margin-top: 28px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-  th { background: #eff6ff; color: #1e40af; font-size: 11px; padding: 6px 10px; text-align: right; }
-  td { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; }
-  .total { font-weight: bold; background: #f8fafc; }
-  .green { color: #059669; } .red { color: #dc2626; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
-  .card { background: #f8fafc; border-radius: 8px; padding: 12px 16px; }
-  .card-label { font-size: 11px; color: #94a3b8; margin-bottom: 2px; }
-  .card-value { font-size: 20px; font-weight: 900; color: #1e293b; }
-  @media print { body { padding: 10px; } }
+  body { font-family: Arial, sans-serif; color: #1a1a2e; margin: 0; padding: 28px 32px; font-size: 13px; line-height: 1.6; }
+  h1 { font-size: 24px; margin-bottom: 2px; color: #1e3a8a; }
+  h2 { font-size: 14px; color: #1e40af; border-bottom: 2px solid #dbeafe; padding-bottom: 4px; margin-top: 28px; margin-bottom: 8px; }
+  h3 { font-size: 13px; color: #374151; margin: 12px 0 4px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12px; }
+  th { background: #eff6ff; color: #1e40af; padding: 6px 8px; text-align: right; font-size: 11px; }
+  td { padding: 5px 8px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .total td { font-weight: bold; background: #f8fafc; }
+  .green { color: #059669; } .red { color: #dc2626; } .orange { color: #d97706; }
+  .grid4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin: 10px 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+  .card { background: #f8fafc; border-radius: 8px; padding: 10px 14px; border: 1px solid #e2e8f0; }
+  .card-label { font-size: 10px; color: #94a3b8; }
+  .card-value { font-size: 18px; font-weight: 900; color: #1e293b; }
+  .badge { display: inline-block; padding: 1px 6px; border-radius: 10px; font-size: 10px; font-weight: bold; }
+  .badge-blue { background: #dbeafe; color: #1e40af; }
+  .badge-orange { background: #fef3c7; color: #92400e; }
+  .badge-green { background: #d1fae5; color: #065f46; }
+  .badge-red { background: #fee2e2; color: #991b1b; }
+  .note-block { background: #fafafa; border-right: 3px solid #3b82f6; padding: 8px 12px; margin: 6px 0; border-radius: 0 6px 6px 0; }
+  .page-break { page-break-before: always; }
+  @media print { body { padding: 12px 16px; } .page-break { page-break-before: always; } }
 </style>
 </head>
 <body>
-<h1>⛵ CrewCash — דוח כספי</h1>
-<p style="color:#64748b; margin:0">${new Date().toLocaleDateString('he-IL', { day:'numeric', month:'long', year:'numeric' })}</p>
 
-<div class="grid2">
-  <div class="card"><div class="card-label">סך הוצאות</div><div class="card-value">${fmt(totalExpenses + yachtTotal)}</div></div>
+<h1>⛵ ${tripTitle}</h1>
+<p style="color:#64748b;margin:2px 0 0">צוות: ${crewNames}</p>
+<p style="color:#94a3b8;font-size:11px;margin:2px 0 16px">הופק ב-${new Date().toLocaleDateString('he-IL', { day:'numeric', month:'long', year:'numeric' })}</p>
+
+<h2>📊 סיכום כספי</h2>
+<div class="grid4">
+  <div class="card"><div class="card-label">סך כל ההוצאות</div><div class="card-value">${fmt(totalExpenses + yachtTotal + unexpectedExpenses.reduce((s,e)=>s+getEurAmount(e),0))}</div></div>
+  <div class="card"><div class="card-label">עלות לאדם</div><div class="card-value">${fmt((totalExpenses + yachtTotal)/N)}</div></div>
   <div class="card"><div class="card-label">סך גיוסים</div><div class="card-value">${fmt(totalCollected)}</div></div>
+  <div class="card"><div class="card-label">ממוצע יומי</div><div class="card-value">${fmt(avgDaily)}</div></div>
+</div>
+<div class="grid4">
   <div class="card"><div class="card-label">יאכטה</div><div class="card-value">${fmt(yachtTotal)}</div></div>
   <div class="card"><div class="card-label">הוצאות שוטפות</div><div class="card-value">${fmt(totalExpenses)}</div></div>
+  <div class="card"><div class="card-label">הוצאות לא צפויות</div><div class="card-value">${fmt(unexpectedExpenses.reduce((s,e)=>s+getEurAmount(e),0))}</div></div>
+  <div class="card"><div class="card-label">ימי שייט (עם הוצאות)</div><div class="card-value">${numDays}</div></div>
 </div>
 
-<h2>📊 פירוט לפי קטגוריה</h2>
+<h2>📋 פירוט לפי קטגוריה</h2>
 <table>
-  <tr><th>קטגוריה</th><th>סכום</th><th>אחוז</th></tr>
+  <tr><th>קטגוריה</th><th>סכום</th><th>%</th><th>לאדם</th></tr>
   ${Object.entries(catBreakdown).sort((a,b)=>b[1]-a[1]).map(([cat,amt]) =>
-    `<tr><td>${getCategoryIcon(cat)} ${cat}</td><td>${fmt(amt)}</td><td>${Math.round(amt/totalExpenses*100)}%</td></tr>`
+    `<tr><td>${cat}</td><td>${fmt(amt)}</td><td>${Math.round(amt/(totalExpenses+yachtTotal)*100)}%</td><td>${fmt(amt/N)}</td></tr>`
   ).join('')}
-  <tr class="total"><td>סה"כ</td><td>${fmt(totalExpenses)}</td><td>100%</td></tr>
+  <tr class="total"><td>סה"כ</td><td>${fmt(totalExpenses+yachtTotal)}</td><td>100%</td><td>${fmt((totalExpenses+yachtTotal)/N)}</td></tr>
 </table>
 
-<h2>📅 פירוט יומי (כרונולוגי)</h2>
+<h2>📅 פירוט יומי</h2>
 <table>
-  <tr><th>תאריך</th><th>סכום</th></tr>
-  ${Object.entries(byDay).sort((a,b)=>a[0].localeCompare(b[0])).map(([day,amt]) =>
-    `<tr><td>${new Date(day).toLocaleDateString('he-IL',{weekday:'short',day:'numeric',month:'short'})}</td><td>${fmt(amt)}</td></tr>`
-  ).join('')}
+  <tr><th>תאריך</th><th>הוצאות</th><th>סכום</th></tr>
+  ${days.map(day => {
+    const dayExpenses = expenses.filter(e => (e.planned_date || e.created_at || '').slice(0,10) === day)
+    return `<tr><td>${fmtDate(day)}</td><td style="font-size:11px;color:#64748b">${dayExpenses.map(e=>e.description).join(' · ')}</td><td>${fmt(byDay[day])}</td></tr>`
+  }).join('')}
+  <tr class="total"><td>סה"כ</td><td></td><td>${fmt(Object.values(byDay).reduce((s,v)=>s+v,0))}</td></tr>
 </table>
 
-<h2>💸 הוצאות מגדולה לקטנה</h2>
+<h2>💸 כל ההוצאות בפירוט</h2>
 <table>
-  <tr><th>הוצאה</th><th>קטגוריה</th><th>תאריך</th><th>סכום</th></tr>
-  ${[...expenses].sort((a,b)=>getEurAmount(b)-getEurAmount(a)).map(e =>
-    `<tr><td>${e.description}</td><td>${e.category}</td><td>${(e.created_at||'').slice(0,10)}</td><td>${fmt(getEurAmount(e))}</td></tr>`
-  ).join('')}
-</table>
-
-<h2>👥 יתרה לאדם</h2>
-<table>
-  <tr><th>שם</th><th>חייב לקופה</th><th>גויס</th><th>יתרה</th></tr>
-  ${participants.map(p => {
-    const b = balances[p.id] || { owes:0 }
-    const col = getCollectedAmount(kittyCollections, p.id, p)
-    const netToCollect = Math.round(b.owes*100)/100
-    const rem = Math.round((netToCollect - col)*100)/100
+  <tr><th>תיאור</th><th>קטגוריה</th><th>תאריך</th><th>סוג</th><th>שילם</th><th>סכום</th></tr>
+  ${[...expenses].sort((a,b)=>(a.planned_date||a.created_at||'').localeCompare(b.planned_date||b.created_at||'')).map(e => {
+    const payer = participants.find(p => p.id === e.paid_by)
+    const badges = []
+    if (e.is_estimate) badges.push('<span class="badge badge-blue">הערכה</span>')
+    if (e.is_unexpected) badges.push('<span class="badge badge-orange">לא צפוי</span>')
+    if (e.is_yacht_cost) badges.push('<span class="badge badge-blue">יאכטה</span>')
+    if (e.is_cash) badges.push('<span class="badge badge-green">מזומן</span>')
     return `<tr>
-      <td>${p.name}${p.is_gil?' ⭐':''}${p.joined_late?' ⏰':''}</td>
-      <td>${fmt(netToCollect)}</td>
-      <td>${fmt(col)}</td>
-      <td class="${rem>0.5?'red':rem<-0.5?'green':''}">${Math.abs(rem)<=0.5?'✓':rem>0?fmt(rem):`+${fmt(Math.abs(rem))}`}</td>
+      <td>${e.description}${e.notes ? `<br><span style="font-size:10px;color:#94a3b8">${e.notes}</span>` : ''}</td>
+      <td>${CAT_HE[e.category]||e.category}</td>
+      <td style="white-space:nowrap">${fmtDate(e.planned_date || e.created_at)}</td>
+      <td>${badges.join(' ')}</td>
+      <td>${payer ? payer.name : '—'}</td>
+      <td>${fmt(getEurAmount(e))}</td>
     </tr>`
   }).join('')}
 </table>
 
-<h2>💡 הצעות ייעול</h2>
-<ul>
-  ${totalExpenses/participants.length > 150 ? '<li>עלות לאדם גבוהה — שקול להפחית הוצאות אלכוהול/פעילויות</li>' : ''}
-  <li>ממוצע יומי: ${fmt(totalExpenses / Math.max(Object.keys(byDay).length, 1))} ליום</li>
-  <li>עלות לאדם: ${fmt((totalExpenses+yachtTotal)/participants.length)}</li>
-</ul>
+${estimateExpenses.length > 0 ? `
+<h2>🎯 הערכות מול בפועל</h2>
+<table>
+  <tr><th>תיאור</th><th>תקציב</th><th>בפועל</th><th>סטייה</th><th>סטטוס</th></tr>
+  ${estimateExpenses.map(e => {
+    const budget = e.amount
+    const actual = e.actual_amount
+    const diff = actual != null ? actual - budget : null
+    return `<tr>
+      <td>${e.description}</td>
+      <td>${fmt(budget)}</td>
+      <td>${actual != null ? fmt(actual) : '—'}</td>
+      <td class="${diff==null?'':diff>0?'red':'green'}">${diff==null?'—':diff>0?`+${fmt(diff)}`:fmt(diff)}</td>
+      <td>${e.is_finalized ? '<span class="badge badge-green">סגור</span>' : '<span class="badge badge-blue">פתוח</span>'}</td>
+    </tr>`
+  }).join('')}
+</table>` : ''}
+
+${unexpectedExpenses.length > 0 ? `
+<h2>⚡ הוצאות לא צפויות</h2>
+<table>
+  <tr><th>תיאור</th><th>קטגוריה</th><th>תאריך</th><th>סכום</th><th>לאדם</th></tr>
+  ${unexpectedExpenses.map(e => `<tr>
+    <td>${e.description}</td>
+    <td>${CAT_HE[e.category]||e.category}</td>
+    <td>${fmtDate(e.planned_date||e.created_at)}</td>
+    <td>${fmt(getEurAmount(e))}</td>
+    <td>${fmt(getEurAmount(e)/N)}</td>
+  </tr>`).join('')}
+  <tr class="total"><td colspan="3">סה"כ</td><td>${fmt(unexpectedExpenses.reduce((s,e)=>s+getEurAmount(e),0))}</td><td>${fmt(unexpectedExpenses.reduce((s,e)=>s+getEurAmount(e),0)/N)}</td></tr>
+</table>` : ''}
+
+<h2 class="page-break">👥 פירוט לאדם</h2>
+${participants.map(p => {
+  const b = balances[p.id] || { owes: 0 }
+  const col = getCollectedAmount(kittyCollections, p.id, p)
+  const netToCollect = Math.round(b.owes * 100) / 100
+  const myExpenses = expenses.filter(e => e.paid_by === p.id)
+  const totalPaid = myExpenses.reduce((s,e) => s + getEurAmount(e), 0)
+  const refundsTotal = kittyRefunds.filter(r => r.participant_id === p.id).reduce((s,r) => s+r.amount, 0)
+  return `
+  <h3>${p.name}${p.is_gil?' ⭐':''}${p.joined_late?' (הצטרף מאוחר)':''}</h3>
+  <div class="grid4" style="margin-bottom:4px">
+    <div class="card"><div class="card-label">חלק בהוצאות</div><div class="card-value" style="font-size:14px">${fmt(netToCollect)}</div></div>
+    <div class="card"><div class="card-label">גויס ממנו</div><div class="card-value" style="font-size:14px">${fmt(col)}</div></div>
+    <div class="card"><div class="card-label">שילם ישירות</div><div class="card-value" style="font-size:14px">${fmt(totalPaid)}</div></div>
+    <div class="card"><div class="card-label">קיבל החזר</div><div class="card-value" style="font-size:14px">${fmt(refundsTotal)}</div></div>
+  </div>
+  ${myExpenses.length > 0 ? `<p style="font-size:11px;color:#64748b;margin:2px 0">הוצאות שמימן: ${myExpenses.map(e=>e.description).join(', ')}</p>` : ''}
+  `
+}).join('')}
+
+${(shoppingItems||[]).length > 0 ? `
+<h2>🛒 רשימת קניות</h2>
+<div class="grid2">
+  <div>
+    <h3>נרכש (${(shoppingItems||[]).filter(i=>i.checked).length} פריטים)</h3>
+    <table>
+      <tr><th>מוצר</th><th>כמות</th></tr>
+      ${(shoppingItems||[]).filter(i=>i.checked).map(i=>`<tr><td>${i.name_he||i.name}</td><td>${i.quantity||'—'}</td></tr>`).join('')}
+    </table>
+  </div>
+  <div>
+    <h3>לא נרכש (${(shoppingItems||[]).filter(i=>!i.checked).length} פריטים)</h3>
+    <table>
+      <tr><th>מוצר</th><th>כמות</th></tr>
+      ${(shoppingItems||[]).filter(i=>!i.checked).map(i=>`<tr><td>${i.name_he||i.name}</td><td>${i.quantity||'—'}</td></tr>`).join('')}
+    </table>
+  </div>
+</div>` : ''}
+
+${leftovers.length > 0 ? `
+<h2>📦 שאריות שהושארו ביאכטה</h2>
+<table>
+  <tr><th>מוצר</th><th>קטגוריה</th><th>כמות</th></tr>
+  ${leftovers.map(i=>`<tr><td>${i.name}</td><td>${CAT_HE[i.category]||i.category}</td><td>${i.quantity||'—'}</td></tr>`).join('')}
+</table>` : ''}
+
+${notes.length > 0 ? `
+<h2>💡 תובנות מהשייט</h2>
+${notes.map(n=>`<div class="note-block">
+  <p style="font-size:11px;color:#94a3b8;margin:0 0 4px">${fmtDate(n.created_at)}</p>
+  <p style="margin:0">${n.content}</p>
+</div>`).join('')}` : ''}
 
 <script>window.onload = () => window.print()</script>
 </body></html>`
@@ -203,17 +336,139 @@ export default function Report() {
     w.document.close()
   }
 
+  const copyForAI = async () => {
+    setCopying(true)
+    const { notes, leftovers, expenseItems } = await collectReportData()
+    const { fmt, fmtDate, totalCollected, N, catBreakdown, byDay, days, numDays, avgDaily, estimateExpenses, unexpectedExpenses, crewNames } = buildReportSections(notes, leftovers, expenseItems)
+
+    const tripTitle = `שייט ${trip.destination || ''} ${trip.year || ''} — ${trip.name || ''}`
+
+    const lines = []
+    lines.push(`# ${tripTitle}`)
+    lines.push(`**צוות:** ${crewNames}`)
+    lines.push(`**תאריך הפקת הדוח:** ${new Date().toLocaleDateString('he-IL')}`)
+    lines.push(`**מספר ימי שייט (עם הוצאות):** ${numDays}`)
+    lines.push('')
+
+    lines.push('## סיכום כספי')
+    lines.push(`- סך כל ההוצאות: ${fmt(totalExpenses + yachtTotal + unexpectedExpenses.reduce((s,e)=>s+getEurAmount(e),0))}`)
+    lines.push(`- יאכטה: ${fmt(yachtTotal)}`)
+    lines.push(`- הוצאות שוטפות: ${fmt(totalExpenses)}`)
+    lines.push(`- הוצאות לא צפויות: ${fmt(unexpectedExpenses.reduce((s,e)=>s+getEurAmount(e),0))}`)
+    lines.push(`- עלות לאדם (ללא לא צפויות): ${fmt((totalExpenses + yachtTotal)/N)}`)
+    lines.push(`- ממוצע יומי: ${fmt(avgDaily)}`)
+    lines.push(`- סך גיוסים: ${fmt(totalCollected)}`)
+    lines.push('')
+
+    lines.push('## פירוט לפי קטגוריה')
+    Object.entries(catBreakdown).sort((a,b)=>b[1]-a[1]).forEach(([cat,amt]) => {
+      lines.push(`- ${cat}: ${fmt(amt)} (${Math.round(amt/(totalExpenses+yachtTotal)*100)}%, לאדם: ${fmt(amt/N)})`)
+    })
+    lines.push('')
+
+    lines.push('## פירוט יומי')
+    days.forEach(day => {
+      const dayExp = expenses.filter(e => (e.planned_date||e.created_at||'').slice(0,10) === day)
+      lines.push(`- ${fmtDate(day)}: ${fmt(byDay[day])} — ${dayExp.map(e=>e.description).join(', ')}`)
+    })
+    lines.push('')
+
+    lines.push('## כל ההוצאות (כרונולוגי)')
+    ;[...expenses].sort((a,b)=>(a.planned_date||a.created_at||'').localeCompare(b.planned_date||b.created_at||'')).forEach(e => {
+      const payer = participants.find(p => p.id === e.paid_by)
+      const tags = [e.is_estimate?'הערכה':null, e.is_unexpected?'לא צפוי':null, e.is_yacht_cost?'יאכטה':null, e.is_cash?'מזומן':null].filter(Boolean)
+      lines.push(`- ${e.description} | ${CAT_HE[e.category]||e.category} | ${fmtDate(e.planned_date||e.created_at)} | ${fmt(getEurAmount(e))}${payer?` | שולם ע"י ${payer.name}`:''}${tags.length?` | [${tags.join(', ')}]`:''}${e.notes?` | הערה: ${e.notes}`:''}`)
+    })
+    lines.push('')
+
+    if (estimateExpenses.length > 0) {
+      lines.push('## הערכות מול בפועל')
+      estimateExpenses.forEach(e => {
+        const diff = e.actual_amount != null ? e.actual_amount - e.amount : null
+        lines.push(`- ${e.description}: תקציב ${fmt(e.amount)}, בפועל ${e.actual_amount!=null?fmt(e.actual_amount):'לא נסגר'}, סטייה: ${diff==null?'—':diff>0?`+${fmt(diff)}`:fmt(diff)} | ${e.is_finalized?'סגור':'פתוח'}`)
+      })
+      lines.push('')
+    }
+
+    if (unexpectedExpenses.length > 0) {
+      lines.push('## הוצאות לא צפויות')
+      unexpectedExpenses.forEach(e => {
+        lines.push(`- ${e.description}: ${fmt(getEurAmount(e))} (לאדם: ${fmt(getEurAmount(e)/N)})`)
+      })
+      lines.push('')
+    }
+
+    lines.push('## פירוט לאדם')
+    participants.forEach(p => {
+      const b = balances[p.id] || { owes: 0 }
+      const col = getCollectedAmount(kittyCollections, p.id, p)
+      const netToCollect = Math.round(b.owes * 100) / 100
+      const myExpenses = expenses.filter(e => e.paid_by === p.id)
+      const totalPaid = myExpenses.reduce((s,e) => s + getEurAmount(e), 0)
+      const refundsTotal = kittyRefunds.filter(r => r.participant_id === p.id).reduce((s,r) => s+r.amount, 0)
+      lines.push(`### ${p.name}${p.is_gil?' (גיל - משלם ×2 על יאכטה)':''}${p.joined_late?' (הצטרף מאוחר)':''}`)
+      lines.push(`- חלק בהוצאות: ${fmt(netToCollect)}`)
+      lines.push(`- גויס ממנו: ${fmt(col)}`)
+      lines.push(`- שילם ישירות: ${fmt(totalPaid)}`)
+      lines.push(`- קיבל החזר: ${fmt(refundsTotal)}`)
+      if (myExpenses.length > 0) lines.push(`- הוצאות שמימן: ${myExpenses.map(e=>e.description).join(', ')}`)
+      lines.push('')
+    })
+
+    if ((shoppingItems||[]).length > 0) {
+      lines.push('## רשימת קניות')
+      const purchased = (shoppingItems||[]).filter(i=>i.checked)
+      const remaining = (shoppingItems||[]).filter(i=>!i.checked)
+      if (purchased.length > 0) {
+        lines.push(`### נרכש (${purchased.length} פריטים)`)
+        purchased.forEach(i => lines.push(`- ${i.name_he||i.name}${i.quantity?` (${i.quantity})`:''}` ))
+      }
+      if (remaining.length > 0) {
+        lines.push(`### לא נרכש (${remaining.length} פריטים)`)
+        remaining.forEach(i => lines.push(`- ${i.name_he||i.name}${i.quantity?` (${i.quantity})`:''}`))
+      }
+      lines.push('')
+    }
+
+    if (leftovers.length > 0) {
+      lines.push('## שאריות שהושארו ביאכטה')
+      leftovers.forEach(i => lines.push(`- ${i.name}${i.quantity?` (${i.quantity})`:''}  | ${CAT_HE[i.category]||i.category}`))
+      lines.push('')
+    }
+
+    if (notes.length > 0) {
+      lines.push('## תובנות מהשייט')
+      notes.forEach(n => lines.push(`### ${fmtDate(n.created_at)}\n${n.content}`))
+      lines.push('')
+    }
+
+    await navigator.clipboard.writeText(lines.join('\n'))
+    setCopying(false)
+    setTimeout(() => setCopying(false), 2000)
+  }
+
   return (
     <div className="p-4 space-y-4">
 
-      {/* PDF export button */}
-      <button
-        onClick={generatePDF}
-        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-blue-600 text-white font-semibold text-sm active:bg-blue-700"
-      >
-        <FileText size={18} />
-        {isHe ? 'הורד דוח PDF' : 'Export PDF Report'}
-      </button>
+      {/* Export buttons */}
+      <div className="flex gap-2">
+        <button
+          onClick={generatePDF}
+          disabled={generating}
+          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-blue-600 text-white font-semibold text-sm active:bg-blue-700 disabled:opacity-50"
+        >
+          <FileText size={16} />
+          {generating ? '...' : (isHe ? 'הורד דוח PDF' : 'PDF Report')}
+        </button>
+        <button
+          onClick={copyForAI}
+          disabled={copying}
+          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-violet-600 text-white font-semibold text-sm active:bg-violet-700 disabled:opacity-50"
+        >
+          {copying ? <Check size={16} /> : <Clipboard size={16} />}
+          {copying ? (isHe ? 'הועתק!' : 'Copied!') : (isHe ? 'העתק לקלוד / AI' : 'Copy for AI')}
+        </button>
+      </div>
 
       {isAdmin && (expenses.length > 0 || kittyCollections.length > 0 || kittyRefunds.length > 0) && (
         <button
