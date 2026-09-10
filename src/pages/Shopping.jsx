@@ -134,6 +134,7 @@ export default function Shopping() {
   const [previewTotal, setPreviewTotal] = useState(null)
   const [showRemaining, setShowRemaining] = useState(false)
   const [confirmClearAll, setConfirmClearAll] = useState(false)
+  const [showList, setShowList] = useState(false)
   const [costItems, setCostItems] = useState([])
   const [costItemForm, setCostItemForm] = useState({ name: '', quantity: '', category: 'other' })
   const [activeTab, setActiveTab] = useState('list') // 'list' | 'leftovers' | 'compare'
@@ -946,6 +947,23 @@ export default function Shopping() {
         </div>
       )}
 
+      {/* Toggle show/hide list */}
+      {shoppingItems.length > 0 && (
+        <button
+          onClick={() => setShowList(v => !v)}
+          className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-white border border-gray-200 shadow-sm text-sm font-semibold text-gray-600 active:bg-gray-50"
+        >
+          <span>{isHe ? 'רשימת הקניות' : 'Shopping List'}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">{unchecked.length} {isHe ? 'פריטים' : 'items'}</span>
+            {showList ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+          </div>
+        </button>
+      )}
+
+      <AnimatePresence>
+      {showList && <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden space-y-4">
+
       {/* Grouped unchecked — collapsible categories */}
       {grouped.map(group => (
         <div key={group.key} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -983,7 +1001,7 @@ export default function Shopping() {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900">{item.name}</p>
+                          <p className="font-medium text-gray-900">{item.name_he || item.name}</p>
                           {item.quantity && <p className="text-sm text-gray-400 mt-0.5">{item.quantity}</p>}
                           {isAdmin && (
                             <input
@@ -993,7 +1011,6 @@ export default function Shopping() {
                               onBlur={e => { if (e.target.value !== (item.name_he || '')) saveNameHe(item.id, e.target.value) }}
                             />
                           )}
-                          {!isAdmin && item.name_he && <p className="text-xs text-blue-400 mt-0.5">{item.name_he}</p>}
                         </div>
                         {isAdmin && (
                           <button onClick={() => deleteItem(item.id)}
@@ -1073,7 +1090,7 @@ export default function Shopping() {
                         </button>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800">{item.name}</p>
+                        <p className="text-sm font-medium text-gray-800">{item.name_he || item.name}</p>
                         {item.quantity && <p className="text-xs text-gray-400">{item.quantity}</p>}
                       </div>
                       <span className="text-xs text-gray-300">
@@ -1115,7 +1132,7 @@ export default function Shopping() {
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-gray-400 line-through text-sm flex-1">{item.name}</p>
+                    <p className="text-gray-400 line-through text-sm flex-1">{item.name_he || item.name}</p>
                     {isAdmin ? (
                       <input
                         className="w-12 text-xs text-gray-500 border-0 border-b border-gray-200 focus:outline-none focus:border-blue-400 bg-transparent text-center placeholder-gray-300"
@@ -1132,21 +1149,15 @@ export default function Shopping() {
                       <span className="text-xs text-gray-400">×{item.quantity}</span>
                     ) : null}
                   </div>
-                  {isAdmin && (
-                    <input
-                      className="mt-1 text-xs text-blue-500 border-0 border-b border-blue-200 focus:outline-none focus:border-blue-400 bg-transparent w-full placeholder-blue-200"
-                      placeholder={isHe ? '+ שם בעברית' : '+ Hebrew name'}
-                      defaultValue={item.name_he || ''}
-                      onBlur={e => { if (e.target.value !== (item.name_he || '')) saveNameHe(item.id, e.target.value) }}
-                    />
-                  )}
-                  {!isAdmin && item.name_he && <p className="text-xs text-blue-400 mt-0.5">{item.name_he}</p>}
                 </div>
               </div>
             ))}
           </div>
         </div>
       )}
+
+      </motion.div>}
+      </AnimatePresence>
 
       {/* Add button */}
       {isAdmin && (
