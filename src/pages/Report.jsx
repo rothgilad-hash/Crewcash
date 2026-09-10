@@ -194,7 +194,7 @@ export default function Report() {
 <h2>📊 סיכום כספי</h2>
 <div class="grid4">
   <div class="card"><div class="card-label">סך כל ההוצאות</div><div class="card-value">${fmt(totalExpenses + yachtTotal + unexpectedExpenses.reduce((s,e)=>s+getEurAmount(e),0))}</div></div>
-  <div class="card"><div class="card-label">עלות לאדם</div><div class="card-value">${fmt((totalExpenses + yachtTotal)/N)}</div></div>
+  <div class="card"><div class="card-label">עלות ממוצעת לאדם</div><div class="card-value">${fmt((totalExpenses + yachtTotal)/N)}</div></div>
   <div class="card"><div class="card-label">סך גיוסים</div><div class="card-value">${fmt(totalCollected)}</div></div>
   <div class="card"><div class="card-label">ממוצע יומי</div><div class="card-value">${fmt(avgDaily)}</div></div>
 </div>
@@ -363,7 +363,7 @@ ${notes.map(n=>`<div class="note-block">
     lines.push(`- יאכטה: ${fmt(yachtTotal)}`)
     lines.push(`- הוצאות שוטפות: ${fmt(totalExpenses)}`)
     lines.push(`- הוצאות לא צפויות: ${fmt(unexpectedExpenses.reduce((s,e)=>s+getEurAmount(e),0))}`)
-    lines.push(`- עלות לאדם (ללא לא צפויות): ${fmt((totalExpenses + yachtTotal)/N)}`)
+    lines.push(`- עלות ממוצעת לאדם (ללא לא צפויות): ${fmt((totalExpenses + yachtTotal)/N)} (שים לב: גיל שילם ×2 על היאכטה — ראה פירוט לאדם)`)
     lines.push(`- ממוצע יומי: ${fmt(avgDaily)}`)
     lines.push(`- סך גיוסים: ${fmt(totalCollected)}`)
     lines.push('')
