@@ -234,8 +234,10 @@ export default function Report() {
     if (e.is_unexpected) badges.push('<span class="badge badge-orange">לא צפוי</span>')
     if (e.is_yacht_cost) badges.push('<span class="badge badge-blue">יאכטה</span>')
     if (e.is_cash) badges.push('<span class="badge badge-green">מזומן</span>')
+    const subLine = e.sub_category ? `<br><span style="font-size:10px;color:#6366f1">↳ ${e.sub_category.replace(/_/g,' ')}</span>` : ''
+    const noteLine = e.notes ? `<br><span style="font-size:10px;color:#94a3b8">📝 ${e.notes}</span>` : ''
     return `<tr>
-      <td>${e.description}${e.notes ? `<br><span style="font-size:10px;color:#94a3b8">${e.notes}</span>` : ''}</td>
+      <td>${e.description}${subLine}${noteLine}</td>
       <td>${CAT_HE[e.category]||e.category}</td>
       <td style="white-space:nowrap">${fmtDate(e.planned_date || e.created_at)}</td>
       <td>${badges.join(' ')}</td>
@@ -385,7 +387,7 @@ ${notes.map(n=>`<div class="note-block">
     ;[...expenses].sort((a,b)=>(a.planned_date||a.created_at||'').localeCompare(b.planned_date||b.created_at||'')).forEach(e => {
       const payer = participants.find(p => p.id === e.paid_by)
       const tags = [e.is_estimate?'הערכה':null, e.is_unexpected?'לא צפוי':null, e.is_yacht_cost?'יאכטה':null, e.is_cash?'מזומן':null].filter(Boolean)
-      lines.push(`- ${e.description} | ${CAT_HE[e.category]||e.category} | ${fmtDate(e.planned_date||e.created_at)} | ${fmt(getEurAmount(e))}${payer?` | שולם ע"י ${payer.name}`:''}${tags.length?` | [${tags.join(', ')}]`:''}${e.notes?` | הערה: ${e.notes}`:''}`)
+      lines.push(`- ${e.description} | ${CAT_HE[e.category]||e.category}${e.sub_category?` / ${e.sub_category.replace(/_/g,' ')}`:''} | ${fmtDate(e.planned_date||e.created_at)} | ${fmt(getEurAmount(e))}${payer?` | שולם ע"י ${payer.name}`:''}${tags.length?` | [${tags.join(', ')}]`:''}${e.notes?` | הערה: ${e.notes}`:''}`)
     })
     lines.push('')
 
