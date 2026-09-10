@@ -120,6 +120,8 @@ export default function Report() {
 
     const totalCollected = participants.reduce((s, p) => s + getCollectedAmount(kittyCollections, p.id, p), 0)
     const N = participants.length
+    const totalShares = participants.reduce((s, p) => s + (p.is_gil ? 2 : 1), 0)
+    const getYachtShare = (p) => yachtTotal * (p.is_gil ? 2 : 1) / totalShares
 
     const catBreakdown = expenses.reduce((acc, e) => {
       const cat = CAT_HE[e.category] || e.category
@@ -141,13 +143,13 @@ export default function Report() {
 
     const crewNames = participants.map(p => `${p.name}${p.is_gil ? ' ⭐' : ''}${p.joined_late ? ' (הצטרף מאוחר)' : ''}`).join(', ')
 
-    return { fmt, fmtDate, totalCollected, N, catBreakdown, byDay, days, numDays, avgDaily, estimateExpenses, unexpectedExpenses, crewNames }
+    return { fmt, fmtDate, totalCollected, N, totalShares, getYachtShare, catBreakdown, byDay, days, numDays, avgDaily, estimateExpenses, unexpectedExpenses, crewNames }
   }
 
   const generatePDF = async () => {
     setGenerating(true)
     const { notes, leftovers, expenseItems } = await collectReportData()
-    const { fmt, fmtDate, totalCollected, N, catBreakdown, byDay, days, numDays, avgDaily, estimateExpenses, unexpectedExpenses, crewNames } = buildReportSections(notes, leftovers, expenseItems)
+    const { fmt, fmtDate, totalCollected, N, totalShares, getYachtShare, catBreakdown, byDay, days, numDays, avgDaily, estimateExpenses, unexpectedExpenses, crewNames } = buildReportSections(notes, leftovers, expenseItems)
     setGenerating(false)
 
     const tripTitle = `שייט ${trip.destination || ''} ${trip.year || ''} — ${trip.name || ''}`
@@ -283,11 +285,17 @@ ${participants.map(p => {
   const myExpenses = expenses.filter(e => e.paid_by === p.id)
   const totalPaid = myExpenses.reduce((s,e) => s + getEurAmount(e), 0)
   const refundsTotal = kittyRefunds.filter(r => r.participant_id === p.id).reduce((s,r) => s+r.amount, 0)
+  const yachtShare = Math.round(getYachtShare(p) * 100) / 100
+  const totalTripCost = Math.round((netToCollect + yachtShare) * 100) / 100
   return `
   <h3>${p.name}${p.is_gil?' ⭐':''}${p.joined_late?' (הצטרף מאוחר)':''}</h3>
   <div class="grid4" style="margin-bottom:4px">
-    <div class="card"><div class="card-label">חלק בהוצאות</div><div class="card-value" style="font-size:14px">${fmt(netToCollect)}</div></div>
+    <div class="card"><div class="card-label">חלק בהוצאות שוטפות</div><div class="card-value" style="font-size:14px">${fmt(netToCollect)}</div></div>
+    <div class="card"><div class="card-label">חלק ביאכטה${p.is_gil?' (×2)':''}</div><div class="card-value" style="font-size:14px">${fmt(yachtShare)}</div></div>
+    <div class="card" style="border:2px solid #3b82f6"><div class="card-label">⭐ סך עלות הטיול</div><div class="card-value" style="font-size:16px;color:#1e40af">${fmt(totalTripCost)}</div></div>
     <div class="card"><div class="card-label">גויס ממנו</div><div class="card-value" style="font-size:14px">${fmt(col)}</div></div>
+  </div>
+  <div class="grid2" style="margin-bottom:4px">
     <div class="card"><div class="card-label">שילם ישירות</div><div class="card-value" style="font-size:14px">${fmt(totalPaid)}</div></div>
     <div class="card"><div class="card-label">קיבל החזר</div><div class="card-value" style="font-size:14px">${fmt(refundsTotal)}</div></div>
   </div>
@@ -339,7 +347,7 @@ ${notes.map(n=>`<div class="note-block">
   const copyForAI = async () => {
     setCopying(true)
     const { notes, leftovers, expenseItems } = await collectReportData()
-    const { fmt, fmtDate, totalCollected, N, catBreakdown, byDay, days, numDays, avgDaily, estimateExpenses, unexpectedExpenses, crewNames } = buildReportSections(notes, leftovers, expenseItems)
+    const { fmt, fmtDate, totalCollected, N, totalShares, getYachtShare, catBreakdown, byDay, days, numDays, avgDaily, estimateExpenses, unexpectedExpenses, crewNames } = buildReportSections(notes, leftovers, expenseItems)
 
     const tripTitle = `שייט ${trip.destination || ''} ${trip.year || ''} — ${trip.name || ''}`
 
@@ -406,8 +414,12 @@ ${notes.map(n=>`<div class="note-block">
       const myExpenses = expenses.filter(e => e.paid_by === p.id)
       const totalPaid = myExpenses.reduce((s,e) => s + getEurAmount(e), 0)
       const refundsTotal = kittyRefunds.filter(r => r.participant_id === p.id).reduce((s,r) => s+r.amount, 0)
+      const yachtShare = Math.round(getYachtShare(p) * 100) / 100
+      const totalTripCost = Math.round((netToCollect + yachtShare) * 100) / 100
       lines.push(`### ${p.name}${p.is_gil?' (גיל - משלם ×2 על יאכטה)':''}${p.joined_late?' (הצטרף מאוחר)':''}`)
-      lines.push(`- חלק בהוצאות: ${fmt(netToCollect)}`)
+      lines.push(`- **סך עלות הטיול: ${fmt(totalTripCost)}**`)
+      lines.push(`- חלק בהוצאות שוטפות: ${fmt(netToCollect)}`)
+      lines.push(`- חלק ביאכטה${p.is_gil?' (×2)':''}: ${fmt(yachtShare)}`)
       lines.push(`- גויס ממנו: ${fmt(col)}`)
       lines.push(`- שילם ישירות: ${fmt(totalPaid)}`)
       lines.push(`- קיבל החזר: ${fmt(refundsTotal)}`)
