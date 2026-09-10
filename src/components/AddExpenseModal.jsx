@@ -154,7 +154,9 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
       actual_amount: newList.length > 0 ? total : null,
       ...(newList.length === 0 ? { notes: null, planned_date: null } : {}),
     }
-    const { error } = await supabase.from('expenses').update(updateData).eq('id', expense.id)
+    console.log('[removeInstallment] sending update:', JSON.stringify(updateData))
+    const { data: updResult, error } = await supabase.from('expenses').update(updateData).eq('id', expense.id).select('actual_amount, installments')
+    console.log('[removeInstallment] result:', JSON.stringify(updResult), 'error:', error)
     if (error) { alert('שגיאת מחיקה: ' + error.message); return }
     await syncExpenseItems(expense.id, newList)
     setInstallments(newList)
