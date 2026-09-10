@@ -149,17 +149,19 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
     if (!expense?.id) return
     const newList = installments.filter((_, i) => i !== idx)
     const total = newList.reduce((s, i) => s + i.amount, 0)
-    const { error } = await supabase.from('expenses').update({
+    const updateData = {
       installments: newList,
       actual_amount: newList.length > 0 ? total : null,
       ...(newList.length === 0 ? { notes: null, planned_date: null } : {}),
-    }).eq('id', expense.id)
+    }
+    const { error } = await supabase.from('expenses').update(updateData).eq('id', expense.id)
     if (error) { alert('שגיאת מחיקה: ' + error.message); return }
     await syncExpenseItems(expense.id, newList)
     setInstallments(newList)
     setInstForm({ amount: '', note: '', date: new Date().toISOString().split('T')[0] })
     setCartItems({})
-    setForm(f => ({ ...f, notes: '' }))
+    // Clear form.actual_amount so handleSave doesn't restore the old value
+    setForm(f => ({ ...f, notes: '', actual_amount: newList.length > 0 ? String(newList.reduce((s, i) => s + i.amount, 0)) : '' }))
     reloadExpenses(trip.id)
   }
 
