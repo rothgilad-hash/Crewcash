@@ -125,7 +125,6 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
     const amt = parseFloat(instForm.amount)
     if (!amt || !expense?.id) return
     setSavingInst(true)
-    console.log('[addInstallment] cartItems:', JSON.stringify(cartItems), 'customItems:', customItems)
     const instItems = Object.entries(cartItems).map(([name, qty]) => ({ name, qty }))
     const newItem = {
       amount: amt,
@@ -154,9 +153,7 @@ export default function AddExpenseModal({ open, onClose, expense = null }) {
       actual_amount: newList.length > 0 ? total : null,
       ...(newList.length === 0 ? { notes: null, planned_date: null } : {}),
     }
-    console.log('[removeInstallment] sending update:', JSON.stringify(updateData))
-    const { data: updResult, error } = await supabase.from('expenses').update(updateData).eq('id', expense.id).select('actual_amount, installments')
-    console.log('[removeInstallment] result:', JSON.stringify(updResult), 'error:', error)
+    const { error } = await supabase.from('expenses').update(updateData).eq('id', expense.id)
     if (error) { alert('שגיאת מחיקה: ' + error.message); return }
     await syncExpenseItems(expense.id, newList)
     setInstallments(newList)
