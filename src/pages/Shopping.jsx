@@ -1002,7 +1002,22 @@ export default function Shopping() {
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-gray-900">{item.name_he || item.name}</p>
-                          {item.quantity && <p className="text-sm text-gray-400 mt-0.5">{item.quantity}</p>}
+                          {isAdmin ? (
+                            <input
+                              className="w-16 text-xs text-gray-500 border-0 border-b border-gray-200 focus:outline-none focus:border-blue-400 bg-transparent mt-0.5 placeholder-gray-300"
+                              placeholder={isHe ? 'כמות' : 'Qty'}
+                              defaultValue={item.quantity || ''}
+                              onBlur={async e => {
+                                if (e.target.value !== (item.quantity || '')) {
+                                  await supabase.from('shopping_items').update({ quantity: e.target.value || null }).eq('id', item.id)
+                                  reloadShoppingItems(trip.id)
+                                }
+                              }}
+                              onKeyDown={e => e.key === 'Enter' && e.target.blur()}
+                            />
+                          ) : item.quantity ? (
+                            <p className="text-sm text-gray-400 mt-0.5">{item.quantity}</p>
+                          ) : null}
                           {isAdmin && (
                             <input
                               className="mt-1 text-xs text-blue-500 border-0 border-b border-blue-200 focus:outline-none focus:border-blue-400 bg-transparent w-full placeholder-blue-200"
