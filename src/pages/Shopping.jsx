@@ -1002,6 +1002,7 @@ export default function Shopping() {
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-gray-900">{item.name_he || item.name}</p>
+                          {item.name_he && item.name_he !== item.name && <p className="text-xs text-gray-300 leading-tight">{item.name}</p>}
                           {isAdmin ? (
                             <input
                               className="w-16 text-xs text-gray-500 border-0 border-b border-gray-200 focus:outline-none focus:border-blue-400 bg-transparent mt-0.5 placeholder-gray-300"
@@ -1029,7 +1030,7 @@ export default function Shopping() {
                         </div>
                         {isAdmin && (
                           <button onClick={() => deleteItem(item.id)}
-                            className="text-gray-200 active:text-red-400 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0">
+                            className="text-red-300 active:text-red-500 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0">
                             <Trash2 size={16} />
                           </button>
                         )}
